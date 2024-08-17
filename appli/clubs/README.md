@@ -1,1 +1,1 @@
-Contient les fichiers de connexion aux base de données propres aux clubs
+Contient les fichiers de connexion aux bases de données propres aux clubs
