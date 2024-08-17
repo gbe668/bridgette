@@ -1,0 +1,790 @@
+/* Eléments principaux de la page */
+
+body {
+    background: #F5F5DC;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    color: #181818;
+}
+h1 {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+h2 {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+h3 {
+    font-size: 1.0em;
+    font-weight: bold;
+}
+p {
+    font-size: 1.0em;
+}
+td	{
+	padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	color:black;
+	font-size:1.0em;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:'Trebuchet MS', Arial, sans-serif;
+	text-align:center;
+	/* vertical-align:bottom; */
+	border:none;
+	//white-space:nowrap;
+}
+
+div.return {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+}
+.return:hover {
+	cursor: pointer;
+}
+
+.popup {
+	position: fixed;
+	width: 200px;
+	transform: translate(-50%, 100px);
+	border: 1px solid;
+	box-shadow: 20px 20px 150px 20px #000000;
+	display: none;
+	background: #f1f1f1;
+	z-index: 10;
+}
+.section_invisible {
+	 display:none;
+}
+.numtable {
+	font-size:4em;
+	border-radius:5px;
+	border:3px solid black;
+	padding:5px 20px;
+	background-color:lightgreen;
+}
+.notable {
+	background-color:lightgreen;
+}
+.numpaire {
+	font-weight:bold;
+	border-radius:5px;
+	border:1px solid #FFA550;
+	padding:3px 15px;
+	background-color:#FFA550;
+}
+.numetui {
+	font-size:4em;
+	font-weight:bold;
+	border-radius:50px;
+	border:3px solid black;
+	padding:5px 20px;
+	background-color:white;
+}
+.numetui:hover {
+	cursor: pointer;
+}
+.numetui2 {
+	font-size:2.5em;
+	font-weight:bold;
+	border-radius:10px;
+	border:2px solid black;
+	padding:5px 5px;
+	min-width: 40px;
+}
+.oklight {
+	background-color:lightgreen;
+	cursor: pointer;
+}
+.oklight:hover {
+	cursor: pointer;
+}
+.kolight {
+	background-color:lightgrey;
+}
+.defparm {
+	text-align:right;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-right:none;
+	border-left:none;
+}
+.valparm {
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-right:none;
+	border-left:none;
+}
+.xtr {
+	height:20.0pt;
+	height:20;
+}
+.xtr_invisible {
+	 display:none;
+}
+.xtr_sel {
+	background-color:lightblue;
+}
+.xtd_invisible {
+	 display:none;
+}
+/******* Tableau des paires - bridge41 */
+.xTitre {
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	height:15.0pt;
+}
+.xPaire {
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	height:40.0pt;
+	width:20%;
+}
+.xPaire:hover {
+	background-color:lightgreen;
+	cursor: pointer;
+}
+.xPairesel {
+	background-color:green;
+}
+.xNumero {
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	background:#E2EFDA;
+	height:20.0pt;
+	width:25%;
+}
+.xNumero:hover {
+	background-color:#468ccf;
+	cursor: pointer;
+}
+.xNom {
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	height:20.0pt;
+	width: 55%;
+}
+.xNom:hover {
+	background-color:#468ccf;
+	cursor: pointer;
+}
+/*
+// Sélection d'une ligne dans un tableau
+// Utilisé dans:
+// - bridge20: affichage de la liste des derniers tournoid
+// -
+*/
+.xtrsel {
+	height:20.0pt;
+	border:1pt solid windowtext;
+	}
+.xtrsel:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+
+/* liste des joueurs dans bridge41.js et bridge11.js */
+.xNom41 {
+	font-size:1.2em;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	height:25.0pt;
+}
+.xNom41:hover {
+	background-color:#468ccf;
+	cursor: pointer;
+}
+/**********************/
+.xPos {
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	height:20.0pt;
+}
+/******* Tableau de sélection de la table - mitch61 */
+.xtr61 {
+	height:20.0pt;
+	border:1pt solid windowtext;
+	}
+.xNom61 {
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	height:20.0pt;
+	}
+.xPaire61 {
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	height:40.0pt;
+	}
+.xPaire61:hover {
+	background-color:#468ccf;
+	cursor: pointer;
+}
+.xTitre61 {
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	height:15.0pt;
+}
+.xtr61:hover {
+	background-color:lightblue;
+}
+/***********************/
+.xDigit {
+	font-size:1.5em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	margin-left: auto;
+    margin-right: auto;
+	background:white;
+	width:8em;
+	height:1.5em;
+	margin-block-end: 0.5em;
+	}
+.xsmallDigit {
+	font-size:1em;
+	text-align:left;
+	margin-left: auto;
+    margin-right: auto;
+	vertical-align:middle;
+	background-color:#F5F5EC;
+	}
+.smallDigitfocus{
+	border:.5pt solid windowtext;
+	background:white;
+}
+.canselect:hover{
+	background-color:lightblue;
+	cursor: pointer;
+}
+.icone {
+	height:20px;
+}
+.xTypt {	/* formatage tableau liste des type de tournoi */
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	padding-left: 2px;
+	padding-right: 2px;
+	border-top:none;
+	border-left:none;
+	}
+.xTxt1 {	/* formatage tableau liste des joueurs effacés */
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	padding-left: 5px;
+	padding-right: 5px;
+	background:#E2EFDA;
+	height:20.0pt;
+	}
+.xTxt1:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xContact {	/* formatage tableau liste des contacts */
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	padding-left: 5px;
+	padding-right: 5px;
+	background:#E2EFDA;
+	height:20.0pt;
+	}
+.xContact:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xMemo {	/* formatage memo contact */
+	vertical-align:middle;
+	background-color:white;
+	border:1.5pt windowtext;
+	border-style: none none solid none;	/* top right bottom left */
+	padding-left: 5px;
+	padding-right: 5px;
+	height:20.0pt;
+	}
+.xNum1 {	/* formatage tableau liste des joueurs effacés */
+	font-size:1.2em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:#E2EFDA;
+	height:30.0pt;
+	width: 30.0pt;}
+.xNum1:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xNum2 {
+	font-size:1.5em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	background:#E2EFDA;
+	width: 30.0pt;
+	height:20.0pt;
+	border:.5pt solid windowtext;
+}
+.xNum2:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xNumSmall {
+	font-size:1em;
+}
+.xNum65 {
+	font-size:1.8em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	background:#E2EFDA;
+	width: 30.0pt;
+	/* height:30.0pt; */
+	border:.5pt solid windowtext;
+}
+.xNum65:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xNum6 {
+	font-size:1.5em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	background:#9c9c9c;
+	width: 30.0pt;
+	height:20.0pt;
+	border:.5pt solid windowtext;
+}
+.xBid {
+	font-size:1.5em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	background:#5cbf2a;
+	width: 30.0pt;
+	height:20.0pt;
+	border-radius:5px;
+}
+.xBid:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xBidmask {
+	background:#9c9c9c;
+}
+.xTxt2
+	{vertical-align:middle;
+	border:.5pt solid windowtext;
+	padding-left: 10px;
+	padding-right: 10px;
+	height:30.0pt;
+	}
+.xNum3 {
+	font-size:1em;
+	/* font-weight:bold; */
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:#E2EFDA;
+	padding-left: 10px;
+	padding-right: 10px;
+	border-top:none;
+	border-left:none;
+	height:20.0pt;
+	width: 30.0pt;
+}
+.xNum3:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xNum4 {
+	font-size:1.2em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+.xNum4:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xNum5 {
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	font-size:1em;
+	//font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	padding-left: 1px;
+	padding-right: 1px;
+}
+.xNum5:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xNumOk {
+	font-size:1.5em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:#E2EFDA;
+	height:50.0pt;
+	width: 40.0pt;}
+.xNumOk:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xSmallOk {
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:#E2EFDA;
+	height:40.0pt;
+	}
+.xSmallOk:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xres {
+	font-size:1em;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid;
+	border-top:none;
+	border-left:none;
+	background:#E2EFDA;
+	width: 40.0pt;
+	}
+.xres2 {
+	font-size:1em;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid;
+	border-top:none;
+	border-left:none;
+	background:#E2EFDA;
+	width: 40.0pt;
+	}
+.xres2:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.phonn {
+	font-size:1em;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid;
+	background:#E2EFDA;
+	width: 16.0pt;
+	}
+.xCnxtel
+	{font-size:1.1em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:grey;
+	}
+.xCnxtel:hover {
+	background-color:lightblue;
+}
+.xCnxtelOk
+	{font-size:1.1em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background-color:green;
+	}	
+.xCnxtelKo
+	{font-size:1.1em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background-color:red;
+	}
+.xPasse {font-size:1.2em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:#E2EFDA;
+	height:20.0pt;
+	width: 40.0pt;
+	}
+.xPasse:hover {
+	background-color:lightblue;
+	cursor: pointer;
+}
+.xJouepar {
+	font-size:1.0em;
+	text-align:center;
+	vertical-align:middle;
+	height:20.0pt;
+}
+.xContrat
+	{font-size:1.0em;
+	font-weight:bold;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	border-top:none;
+	border-left:none;
+	border-right:none;
+	border-bottom:none;
+	background:#E2EFDA;
+	height:20.0pt;}
+.fauxnumero {
+	background-color:yellow;
+	}
+.bonnumero {
+	background-color:green;
+	}
+.pairens {
+	background-color:yellow;
+	}
+.notour {
+	background-color:#FFCCCB;
+	padding-left: 5px;
+	padding-right: 5px;
+	}
+.myBigButton {
+	box-shadow: 0px 10px 14px -7px #3e7327;
+	background:linear-gradient(to bottom, #547345 5%, #27590c 100%);
+	background-color:#547345;
+	border-radius:10px;
+	border:1px solid #4b8f29;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:1.2em;
+	font-weight:bold;
+	padding:15px 10px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #5b8a3c;
+	width:90%;
+	max-width: 350px;
+	margin:auto;
+}
+.myBigButton:hover {
+	background:linear-gradient(to bottom, #27590c 5%, #547345 100%);
+	background-color:#27590c;}
+.myBigButton:active {
+	position:relative;
+	top:1px;
+}
+.mySmallButton {
+	box-shadow: 0px 10px 14px -7px #3e7327;
+	background:linear-gradient(to bottom, #547345 5%, #27590c 100%);
+	background-color:#547345;
+	border-radius:10px;
+	border:1px solid #4b8f29;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:1em;
+	font-weight:bold;
+	padding:10px 10px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #5b8a3c;
+	width:80%;
+	max-width: 300px;
+	margin:auto;
+}
+.mySmallButton:hover {
+	background:linear-gradient(to bottom, #27590c 5%, #547345 100%);
+	background-color:#27590c;}
+.mySmallButton:active {
+	position:relative;
+	top:1px;
+}
+.myButton {
+	box-shadow:inset 0px 1px 0px 0px #bee2f9;
+	background-color:lightblue;	/*#63b8ee; */
+	border-radius:6px;
+	border:1px solid #3866a3;
+	display:inline-block;
+	cursor:pointer;
+	color:#14396a;
+	font-family:Arial;
+	font-size:16px;
+	font-weight:bold;
+	padding:6px 12px;
+	text-decoration:none;
+}
+.myButton:hover {
+	background-color:#63b8ee; /*#468ccf;*/
+	cursor: pointer;
+}
+.myButton:active {
+	position:relative;
+	top:1px;
+}
+.myStartButton {
+	box-shadow: 0px 10px 20px -10px black;
+	background-color:lightblue;	/*#63b8ee; */
+	border-radius:40px;
+	border:4px solid #3866a3;
+	display:inline-block;
+	cursor:pointer;
+	color:#14396a;
+	font-family:Arial;
+	font-size:18px;
+	font-weight:bold;
+	padding:20px 20px;
+	text-decoration:none;
+}
+.myStartButton:hover {
+	background-color:#468ccf;
+	cursor: pointer;
+}
+.myStartButton:active {
+	position:relative;
+	top:1px;
+}
+.mButton {
+	background-color:lightblue;
+	border-radius:2px;
+	border:1px solid #3866a3;
+	display:inline-block;
+	cursor:pointer;
+	color:#14396a;
+	font-family:Arial;
+	font-size:14px;
+	font-weight:normal;
+}
+.mButton:hover {
+	background-color:#63b8ee;
+	cursor: pointer;
+}
+.annule {
+	background-color:#FFCCCB;
+;
+}
+.okButton {
+	box-shadow:inset 0px 1px 0px 0px #bee2f9;
+	border-radius:6px;
+	border:1px solid #3866a3;
+	display:inline-block;
+	cursor:pointer;
+	color:#14396a;
+	font-family:Arial;
+	font-size:15px;
+	font-weight:bold;
+	padding:6px 24px;
+	text-decoration:none;
+}
+.oktogoon {
+	background-color:#77d42a;
+}
+.kotogoon {
+	background-color:#f24537;
+}
+.vulnerable {
+	color: red;
+}
+.nonvulnerable {
+	color: green;
+}
+.notused {
+	background-color: grey;
+}
+/* Eléments saisie numéro du joueur */
+.box {
+  border: 2px solid #c4c4c4;
+  padding: 30px 25px 10px 25px;
+  background: lightblue;
+  margin: 30px auto;
+  width: 300px;
+}
+h1.box-logo a {
+  text-decoration:none;
+}
+h1.box-title {
+  color: black;
+  font-weight: 300;
+  padding: 15px 25px;
+  line-height: 20px;
+  font-size: 25px;
+  text-align:center;
+  margin: -27px -26px 26px;
+}
+.box-button {
+  border-radius: 5px;
+  background: #d2483c;
+  text-align: center;
+  cursor: pointer;
+  font-size: 19px;
+  width: 100%;
+  height: 51px;
+  padding: 0;
+  color: #fff;
+  border: 0;
+  outline:0;
+}
+.box-register {
+  text-align:center;
+  margin-bottom:0px;
+}
+.box-register a {
+  text-decoration:none;
+   color:darkblue;
+}
+.box-input {
+  font-size: 14px;
+  background: white;
+  border: 1px solid black;
+  margin-bottom: 10px;
+  padding-left:10px;
+  border-radius: 5px;
+  width: 200px;
+  height: 30px;
+}
+.box-input:focus {
+	outline: none;
+	border: 2px solid green;
+}
+.sucess {
+  text-align: center;
+  color: black;
+}
+.sucess a {
+  text-decoration: none;
+  color: #58aef7;
+}
+p.errorMessage {
+    background-color: #e66262;
+    border: #AA4502 1px solid;
+    padding: 5px 10px;
+    color: #FFFFFF;
+    border-radius: 3px;
+}
