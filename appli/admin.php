@@ -56,6 +56,7 @@ function countElements() {
 	
 	$dbh = null;
 }
+countElements();
 
 $nomtables = Array();
 $dimtables = Array();
@@ -69,6 +70,16 @@ function display_sizedb() {
 	}
 	print '</tbody></table>';	
 }
+
+function getversionsql() {
+	$dbh = connectBDD();
+	$sql = "SELECT VERSION();";
+	$sth = $dbh->query( $sql );
+	$v = $sth->fetchColumn();
+	$dbh = null;
+	return $v;
+}
+
 function compute_sizedb() {
 	global $nomtables, $dimtables, $db_name, $prefix;
 	$sql_sizedb = "SELECT table_name AS 'Table',
@@ -335,13 +346,11 @@ function importbdd() {
 	
 	<p><button class="myButton" onclick="toggleAffichageBDD()">Base de données</button></p>
 	<div id="section_bdd" class="section_invisible">
-	<?php
-	countElements();
-	?>
 	<p>Joueurs enregistrés: <?php echo $nbjoueurs; ?></p>
 	<p>Tournois enregistrés: <?php echo $nbtournois; ?><p>
 	<p>Donnes jouées: <?php echo $nbdonnes; ?></p>
 	<p>Diagrammes enregistrés: <?php echo $nbdiagrammes; ?></p>
+	<p>Version base de données: <?php echo getversionsql(); ?></p>
 	<p>Taille base de données: <?php echo compute_sizedb(); ?> kiloOctets</p>
 	<p>Si la taille de la base de données dépasse 90% de <?php echo $maxSizeBDD; ?> kiloOctets,</br>il est peut-être temps de supprimer les anciens tournois.</p>
 	<?php
