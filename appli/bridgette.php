@@ -2,7 +2,7 @@
 require("configuration.php");
 require("bridgette_bdd.php");
 
-$file_version = $relpgm."version.txt";
+$file_version = "version.txt";
 if ( file_exists( $file_version ) ) {
 	$version = file_get_contents( $file_version );
 }
