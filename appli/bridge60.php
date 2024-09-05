@@ -55,6 +55,10 @@ function goto20() {
 	var nextstring = "bridge20.php";
 	location.replace( nextstring );
 };
+function goto25() {
+	var nextstring = "bridge25.php";
+	location.replace( nextstring );
+};
 function goto59() {
 	var nextstring = "bridge59.php";
 	location.replace( nextstring );
@@ -185,6 +189,8 @@ function cdemoins() {
 	?>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto20()">Affichage derniers résultats</button></p>
+	<p>&nbsp;</p>
+	<p><button class="mySmallButton" onclick="goto25()">Recherche partenaire</button></p>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto59()">Calcul de la marque</button></p>
 	<p>&nbsp;</p>
