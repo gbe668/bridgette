@@ -21,6 +21,9 @@ $joueur = getJoueur( $userid );
 </head>
 
 <script>
+var parametres = <?php echo json_encode($parametres); ?>;
+console.log( parametres.opendays );
+
 function passAndroid( parms ) {
 	Android.processNext( JSON.stringify(parms) );
 };

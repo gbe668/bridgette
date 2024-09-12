@@ -1,6 +1,7 @@
 <?php
 // paramètrage général
 // valeurs par défaut
+$defopendays = array( 'lundi' =>'1', 'mardi' => '1', 'mercredi' => '1', 'jeudi' => '1', 'vendredi' => '1', 'samedi' => '1', 'dimanche' => '1' );	// ouvert tous les jours par défaut
 $parametres = array(
 	'mailcopie' => "",
 	
@@ -29,12 +30,15 @@ $parametres = array(
 	
 	'param1'  => 0,		// $teston
 	'param2'  => 0,		// ???
+	
+	'opendays'=> $defopendays,
 );
 // valeurs enregistrées
 if ( file_exists( $file_params ) ) {
 	$parametres = json_decode( file_get_contents( $file_params ), true );
 	if ( !isset($parametres['avancem'] ) ) $parametres['avancem'] = 0;
 	if ( !isset($parametres['avanceh'] ) ) $parametres['avanceh'] = 1;
+	if ( !isset($parametres['opendays'] ) ) $parametres['opendays'] = $defopendays;
 }
 
 //tests de qualification

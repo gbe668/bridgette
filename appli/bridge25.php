@@ -30,6 +30,9 @@ else $userid = $resultIdent['userid'];
 </head>
 
 <script>
+var parametres = <?php echo json_encode($parametres); ?>;
+console.log( parametres.opendays );
+
 function gotoindex() {
 	var nextstring = "bridgette.php";
 	location.replace( nextstring );

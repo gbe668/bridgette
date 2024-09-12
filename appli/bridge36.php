@@ -7,6 +7,7 @@ if( !isDirecteur() ){
 	header("Location: logdirecteur.php");
 	exit(); 
 }
+$opendays = $parametres['opendays'];
 ?>
 
 <!DOCTYPE HTML>
@@ -21,7 +22,8 @@ if( !isDirecteur() ){
 </head>
 
 <script>
-const parametres = <?php echo json_encode($parametres); ?>;
+var parametres = <?php echo json_encode($parametres); ?>;
+console.log( <?php echo $opendays['mardi']; ?> );
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
@@ -58,6 +60,16 @@ function verifSyntaxe() {
 		}
 	}
 	else parametres.mailcopie = "";
+	
+	// jours d'ouverture du club
+	parametres.opendays.lundi 		= day_1.checked ? "1" : "0";
+	parametres.opendays.mardi 		= day_2.checked ? "1" : "0";
+	parametres.opendays.mercredi 	= day_3.checked ? "1" : "0";
+	parametres.opendays.jeudi 		= day_4.checked ? "1" : "0";
+	parametres.opendays.vendredi 	= day_5.checked ? "1" : "0";
+	parametres.opendays.samedi 		= day_6.checked ? "1" : "0";
+	parametres.opendays.dimanche 	= day_7.checked ? "1" : "0";
+	//console.log( parametres.opendays );
 	
 	// durées
 	str = $("#dureedonne").val();
@@ -306,6 +318,16 @@ function saveparams() {
 	<table border="0" style="margin:auto;"><tbody>
 	<tr><td colspan="2" style="background-color:lightgreen;">Mail en copie des résultats<td></tr>
 	<tr><td colspan="2"><input type="text" id="mailcopie" name="mailcopie" value="<?php echo $parametres['mailcopie'] ?>"  placeholder="adresse mail" size="40"></td></tr>
+	
+	<tr><td colspan="2" style="background-color:lightgreen;">Ouverture du club<td></tr>
+	<tr><td colspan="2">Jours d'ouverture du club pour la recherche de partenaire</br>
+	Lundi<input type="checkbox" id="day_1" <?php echo ($opendays['lundi']=="1")?'checked':'' ?> >&nbsp;
+	Mardi<input type="checkbox" id="day_2" <?php echo ($opendays['mardi']=="1")?'checked':'' ?> >&nbsp;
+	Mercredi<input type="checkbox" id="day_3" <?php echo ($opendays['mercredi']=="1")?'checked':'' ?> >&nbsp;
+	Jeudi<input type="checkbox" id="day_4" <?php echo ($opendays['jeudi']=="1")?'checked':'' ?> >&nbsp;
+	Vendredi<input type="checkbox" id="day_5" <?php echo ($opendays['vendredi']=="1")?'checked':'' ?> >&nbsp;
+	Samedi<input type="checkbox" id="day_6" <?php echo ($opendays['samedi']=="1")?'checked':'' ?> >&nbsp;
+	Dimanche<input type="checkbox" id="day_7" <?php echo ($opendays['dimanche']=="1")?'checked':'' ?> >&nbsp;</td></tr>
 	
 	<tr><td colspan="2" style="background-color:lightgreen;">Durées de jeu<td></tr>
 	<tr><td class="defparm">Durée pour jouer une donne:</br><em>entre 5 et 15 minutes</br>7.5 minutes habituellement</em></td>
