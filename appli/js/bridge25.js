@@ -135,9 +135,13 @@ $( function() {
 			$("#inscription").show();
 		});
 } );
+const listeJours = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi' ];
 function noTournois(date){
-	var dd = date.getDay();
-	if ( (dd === 1)||(dd === 2)||(dd === 4)||(dd === 5) )  /* Monday */
+	console.log( parametres.opendays );
+	var dd = date.getDay();		// de 1 à 7
+	var jour = listeJours[dd];
+	if ( parametres.opendays[jour] == '1' )
+	//if ( (dd === 1)||(dd === 2)||(dd === 4)||(dd === 5) )  /* Monday */
 		return [ true, "", "" ]
 	else
 		return [ false, "closed", "Pas de tournoi ce jour" ]
