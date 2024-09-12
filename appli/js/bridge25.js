@@ -137,8 +137,8 @@ $( function() {
 } );
 const listeJours = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi' ];
 function noTournois(date){
-	console.log( parametres.opendays );
-	var dd = date.getDay();		// de 1 à 7
+	//console.log( parametres.opendays );
+	var dd = date.getDay();		// de 0 (dimanche) à 6 (samedi)
 	var jour = listeJours[dd];
 	if ( parametres.opendays[jour] == '1' )
 	//if ( (dd === 1)||(dd === 2)||(dd === 4)||(dd === 5) )  /* Monday */
