@@ -14,7 +14,20 @@ var cartes = [ cartesP, cartesC, cartesK, cartesT ];
 var dealfield;
 var dealtest = "N:.63.AKQ987.A9732 A8654.KQ5.T.QJT6 J973.J98742.3.K4 KQT2.AT.J6542.85";
 
-function displaydeal( deal ) {
+const etuis = Array (
+	Array (0,0,0,0),	// n°etui, donneur, vulns, vuleo 
+	Array (1,1,0,0),  Array (2,2,1,0),  Array (3,3,0,1),  Array (4,4,1,1),
+	Array (5,1,1,0),  Array (6,2,0,1),  Array (7,3,1,1),  Array (8,4,0,0),
+	Array (9,1,0,1),  Array (10,2,1,1), Array (11,3,0,0), Array (12,4,1,0),
+	Array (13,1,1,1), Array (14,2,0,0), Array (15,3,1,0), Array (16,4,0,1),
+	Array (17,1,0,0), Array (18,2,1,0), Array (19,3,0,1), Array (20,4,1,1),
+	Array (21,1,1,0), Array (22,2,0,1), Array (23,3,1,1), Array (24,4,0,0),
+	Array (25,1,0,1), Array (26,2,1,1), Array (27,3,0,0), Array (28,4,1,0),
+	Array (29,1,1,1), Array (30,2,0,0), Array (31,3,1,0), Array (32,4,0,1),
+	Array (33,1,0,0), Array (34,2,1,0), Array (35,3,0,1), Array (36,4,1,1)
+);
+
+function displaydeal( deal, etui ) {
 	var ligne, enmain;
 	var points = [0,0,0,0,0];
 	let n = deal.length;
@@ -61,6 +74,23 @@ function displaydeal( deal ) {
 	$("#ph_ouest").text( points[4] );
 	$("#points_honneurs").show();
 	$("#msg").text( "" );
+	
+	let colorns = etuis[etui][2] ? "red" : "green";
+	let coloreo = etuis[etui][3] ? "red" : "green";
+	
+	$("#diagrowtop").css('border-top-color', colorns )
+		.css('border-left-color', coloreo )
+		.css('border-right-color', coloreo );
+	$("#diagrowmid1").css('border-color', coloreo );
+	$("#diagrowmid2").css('border-color', coloreo );
+	$("#diagrowbottom").css('border-bottom-color', colorns )
+		.css('border-left-color', coloreo )
+		.css('border-right-color', coloreo );
+	$("#ph_nord").css('border-color', colorns );
+	$("#ph_sud").css('border-color', colorns );
+	$("#ph_ouest").css('border-color', coloreo );	
+	$("#ph_est").css('border-color', coloreo );	
+	
 	return true;
 }
 function initcanselect() {
