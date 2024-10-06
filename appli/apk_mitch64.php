@@ -256,7 +256,7 @@ document.addEventListener('visibilitychange', function (event) {
 	
 	var diagramme = String( "<?php echo $diagramme; ?>" );
 	console.log( diagramme );
-	if ( displaydeal( diagramme ) == true ) $("#section_diagramme").removeClass( "section_invisible");
+	if ( displaydeal( diagramme, donne ) == true ) $("#section_diagramme").removeClass( "section_invisible");
 	</script>
 	</div>
 </body>

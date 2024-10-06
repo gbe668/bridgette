@@ -40,7 +40,7 @@ function key_select( nbr ) {
 		$("#section_resultat").html(html);
 		ndiag = "#ndiag_0";
 		//console.log("ndiag", ndiag, $(ndiag).text());
-		if ( displaydeal( $(ndiag).text() ) == false ) $("#section_diagramme").addClass( "section_invisible" );
+		if ( displaydeal( $(ndiag).text(), actuel ) == false ) $("#section_diagramme").addClass( "section_invisible" );
 		else {
 			$("#section_diagramme").removeClass( "section_invisible" );
 			elmnt = document.getElementById("tablenav");

@@ -97,7 +97,7 @@ function clickValidiags() {
 	pairesNS  = parseInt( "<?php echo $pairesNS; ?>" );
 	pairesEO  = parseInt( "<?php echo $pairesEO; ?>" );
 	var diagramme = String( "<?php echo $diagramme; ?>" );
-	if ( displaydeal( diagramme ) == true ) $("#section_diagramme").removeClass( "section_invisible");
+	if ( displaydeal( diagramme, etui ) == true ) $("#section_diagramme").removeClass( "section_invisible");
 	</script>
 	
 	<p><button class="mySmallButton" onclick="goto43()">Retour au tableau de bord</button></p>

@@ -216,7 +216,7 @@ function print_tables_saisie_contrat() {
 }
 function print_section_diagramme() {
 	global $relimg;
-	
+
 	print '<div id="section_diagramme" class="section_invisible">';
 	print '<table border="1" style="width:100%; max-width: 350px; margin:auto;" class="notranslate"><tbody>';
     print '<tr><td>&nbsp;</td><td>&nbsp;</td>';
@@ -230,25 +230,26 @@ function print_section_diagramme() {
 	
     print '<tr><td style="width:10%;"><img src="'.$relimg.'pique.png" height="18" style="vertical-align:middle" /></td>';
 	print '<td class="xsmallDigit" id="ligne_13">&nbsp;</td>';
-	print '<td style="border:.5pt solid windowtext;border-bottom:none;">Nord</td>';
+	print '<td id="diagrowtop" style="border:2pt solid windowtext; border-bottom:none;">Nord</td>';
 	print '<td style="width:10%;"><img src="'.$relimg.'pique.png" height="18" style="vertical-align:middle" /></td>';
 	print '<td style="width:35%;" class="xsmallDigit" id="ligne_5">&nbsp;</td></tr>';
 	
 	print '<tr><td><img src="'.$relimg.'coeur.png" height="18" /></td>';
 	print '<td class="xsmallDigit" id="ligne_14">&nbsp;</td>';
-	print '<td style="border:.5pt solid windowtext;border-bottom:none;border-top:none">&nbsp;</td>';
+	print '<td id="diagrowmid1" style="border:2pt solid windowtext; border-bottom:none; border-top:none">&nbsp;</td>';
 	print '<td><img src="'.$relimg.'coeur.png" height="18" /></td>';
 	print '<td class="xsmallDigit" id="ligne_6">&nbsp;</td></tr>';
 	
 	print '<tr><td><img src="'.$relimg.'carreau.png" alt="carreau" height="18" /></td>';
 	print '<td class="xsmallDigit" id="ligne_15">&nbsp;</td>';
-	print '<td style="border:.5pt solid windowtext;border-bottom:none;border-top:none">&nbsp;</td>';
+	print '<td id="diagrowmid2" style="border:2pt solid windowtext; border-bottom:none; border-top:none">&nbsp;</td>';
 	print '<td><img src="'.$relimg.'carreau.png" alt="carreau" height="18" /></td>';
 	print '<td class="xsmallDigit" id="ligne_7">&nbsp;</td></tr>';
 	
 	print '<tr><td><img src="'.$relimg.'trefle.png" alt="trefle" height="18" /></td>';
 	print '<td class="xsmallDigit" id="ligne_16">&nbsp;</td>';
-	print '<td style="border:.5pt solid windowtext;border-top:none;">Sud</td>';
+	print '<td id="diagrowbottom" style="border:2pt solid windowtext;
+	border-top:none">Sud</td>';
 	print '<td><img src="'.$relimg.'trefle.png" alt="trefle" height="18" /></td>';
 	print '<td class="xsmallDigit" id="ligne_8">&nbsp;</td></tr>';
 	
