@@ -218,7 +218,7 @@ function print_section_diagramme() {
 	global $relimg;
 
 	print '<div id="section_diagramme" class="section_invisible">';
-	print '<table border="1" style="width:100%; max-width: 350px; margin:auto;" class="notranslate"><tbody>';
+	print '<table border="1" style="width:100%; max-width: 350px; margin:auto; border-collapse: collapse;" class="notranslate"><tbody>';
     print '<tr><td>&nbsp;</td><td>&nbsp;</td>';
 	print '<td style="width:15%;"><img src="'.$relimg.'pique.png" height="18" style="vertical-align:middle" /></td><td colspan="2" class="xsmallDigit" id="ligne_1">&nbsp;</td></tr>';
 	print '<tr><td>&nbsp;</td><td>&nbsp;</td>';
