@@ -143,7 +143,8 @@ $(function() {
 	<p>et dont le nom commence par: <button id="btn3"></button></p>
 	</div>
 
-	<p><span style='color:grey'>En gris les anciens joueurs</span></br>Date dernier tournoi joué</br>Nombre de tournois en BDD joués</p>
+	<p><span style='color:grey'>En gris les anciens joueurs</span></br>
+	<span style='color:blue'>En bleu les joueurs "android"</span></br>Date dernier tournoi joué</br>Nombre de tournois en BDD joués</p>
 	
 	<div id='listejoueurs'>
 	<?php
