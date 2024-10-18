@@ -1564,7 +1564,7 @@ function purge_Tournoi($idt) {
 	}
 	$dbh = null;
 };
-function del_Tournoi($id) {			// true si OK, false sinon
+function eraseTournoi($id) {			// true si OK, false sinon
 	global $tab_tournois;
 	purge_Tournoi($id);
 	$dbh = connectBDD();
@@ -2725,11 +2725,10 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 						(SELECT idj2 AS idj, idtournoi FROM $tab_pairesEO) UNION
 						(SELECT idj4 AS idj, idtournoi FROM $tab_pairesEO) UNION
 						(SELECT idj3 AS idj, idtournoi FROM $tab_pairesNS) ) T1
-						group by idj )
-				FULL JOIN $tab_tournois ON maxid = $tab_tournois.id 
-				WHERE etat = '$st_closed' ) T2
-			ON $tab_joueurs.id = T2.idj
-			WHERE numero >= '$min_noclub' and (T2.idj = id OR T2.idj IS NULL) $groupe $filtrage	ORDER BY $ordre;";
+						group by idj ) T2
+				LEFT JOIN $tab_tournois ON T2.maxid = $tab_tournois.id ) T3
+			ON $tab_joueurs.id = T3.idj
+			WHERE numero >= '$min_noclub' and (T3.idj = id OR T3.idj IS NULL) $groupe $filtrage	ORDER BY $ordre;";
 	//$str = "<p>$sql</p>";
 	$str = '<table border="1" style="margin:auto;"><tbody>';
 	$str .= "<tr>";
