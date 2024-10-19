@@ -2708,27 +2708,31 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	if ( $liste == 2 ) $groupe = "and datesupp > 0";	// inactifs
 	if ( $liste == 3 ) $groupe = "";	// tous
 	
-	//if ( strlen($filtre) > 1) {
-		//$likename = "%" . $filtre . "%";
-		//$filtrage = "and (nom like '$likename' or prenom like '$likename')";
+	if ( $ordre == "tournoi") {
+		$selordre = "maxtournoi desc, nom";
+	}
+	else $selordre = $ordre;
+	
 	if ( strlen($filtre) > 0) {
 		$likename = $filtre . "%";
 		$filtrage = "and nom like '$likename'";
 	}
 	else $filtrage = "";
 	
-	$sql = "SELECT id, numero, prenom, nom, email, password, nbfois, tournoi, datesupp FROM $tab_joueurs
-			LEFT JOIN (
-				SELECT idj, nbfois, maxid, tournoi FROM (
-					SELECT idj, COUNT(*) AS nbfois, MAX(idtournoi) as maxid FROM (
-						(SELECT idj1 AS idj, idtournoi FROM $tab_pairesNS) UNION
-						(SELECT idj2 AS idj, idtournoi FROM $tab_pairesEO) UNION
-						(SELECT idj4 AS idj, idtournoi FROM $tab_pairesEO) UNION
-						(SELECT idj3 AS idj, idtournoi FROM $tab_pairesNS) ) T1
-						group by idj ) T2
-				LEFT JOIN $tab_tournois ON T2.maxid = $tab_tournois.id ) T3
-			ON $tab_joueurs.id = T3.idj
-			WHERE numero >= '$min_noclub' and (T3.idj = id OR T3.idj IS NULL) $groupe $filtrage	ORDER BY $ordre;";
+	$sql = "SELECT $tab_joueurs.id, numero, prenom, nom, email, password,
+				COUNT(*) AS nbfois, MAX($tab_tournois.tournoi) as maxtournoi, datesupp
+			FROM (
+				(SELECT idj1 AS idj, idtournoi FROM $tab_pairesNS) UNION
+				(SELECT idj2 AS idj, idtournoi FROM $tab_pairesEO) UNION
+				(SELECT idj3 AS idj, idtournoi FROM $tab_pairesNS) UNION
+				(SELECT idj4 AS idj, idtournoi FROM $tab_pairesEO) ) T2
+			LEFT JOIN $tab_joueurs  ON $tab_joueurs.id  = T2.idj
+			LEFT JOIN $tab_tournois ON $tab_tournois.id = T2.idtournoi
+			WHERE $tab_tournois.etat = $st_closed AND $tab_joueurs.numero >= $min_noclub $groupe $filtrage
+			GROUP BY $tab_joueurs.id
+			ORDER BY $selordre;";
+	
+	
 	//$str = "<p>$sql</p>";
 	$str = '<table border="1" style="margin:auto;"><tbody>';
 	$str .= "<tr>";
@@ -2751,7 +2755,7 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 			}
 			$str .= "<td id='$nr' class='xTxt1 canclick' $s>" . $row['prenom'] ." ". $row['nom'] . "</td>";
 		}
-		$str .= "<td class='xTxt1'>" . $row['tournoi'] . "</td>";
+		$str .= "<td class='xTxt1'>" . $row['maxtournoi'] . "</td>";
 		$str .= "<td class='xTxt1'>" . $row['nbfois'] . "</td>";
 		$str .= "</tr>";
 		}
