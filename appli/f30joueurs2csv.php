@@ -39,7 +39,9 @@ if ( $nbl > 0 ) {
 		$str .= $row[ 'prenom' ] . ',';
 		$str .= $row[ 'nom' ] . ',';
 		$str .= $row[ 'email' ] . ',';
-		$str .= $row[ 'datesupp' ] . "\n";
+		if ( $row[ 'datesupp' ]>0 ) $dd= date('Y-m-d', $row[ 'datesupp' ]);
+		else $dd = " ";
+		$str .= $dd . "\n";
 	}
 }
 else {
