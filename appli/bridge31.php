@@ -47,6 +47,7 @@ function goto40() {
 	<input type="radio" id="female" name="gender" value="Me">
 	<p>Prénom:(*)&nbsp;<input type="text" id="fname" name="fname" placeholder="Prénom" size="20"></p>
 	<p>&nbsp;&nbsp;&nbsp;&nbsp;Nom:(*)&nbsp;<input type="text" id="lname" name="lname" placeholder="Nom" size="20">
+	<p>Téléphone:&nbsp;<input type="text" id="phone" name="phone" placeholder="Numéro" size="20">
 	<p>&nbsp;&nbsp;Email:&nbsp;<input type="text" id="email1" name="email1" placeholder="monadresse@mondomaine" size="40"></p>
 	<p>N°club:&nbsp;<input type="text" id="noclub" name="noclub" placeholder="N° club" size="4" readonly>&nbsp;non modifiable</br>attribué automatiquement</p>
 	

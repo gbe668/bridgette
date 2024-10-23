@@ -8,12 +8,12 @@ if( !isDirecteur() ){
 	exit(); 
 }
 
-function updateJoueur( $idj, $gender, $fname, $lname, $email ) {
+function updateJoueur( $idj, $gender, $fname, $lname, $phone, $email ) {
 	global $tab_joueurs;
 	if ( $idj ) {
 		$dbh = connectBDD();
 		$joueur = $gender . " " . strtoupper( $lname );
-		$sql = "UPDATE $tab_joueurs SET joueur='$joueur' , genre='$gender', prenom='$fname', nom='$lname', email='$email' where id='$idj';";
+		$sql = "UPDATE $tab_joueurs SET joueur='$joueur' , genre='$gender', prenom='$fname', nom='$lname', telephone='$phone', email='$email' where id='$idj';";
 		$sth = $dbh->query( $sql );
 		$result['success'] = 1;
 		$result['msg'] = $gender . " " . $fname . " " . $lname . " est à jour.";
@@ -29,11 +29,12 @@ function updateJoueur( $idj, $gender, $fname, $lname, $email ) {
 // Fetching Values From URL
 
 $idjoueur = $_GET['idjoueur'];
-$gender = $_GET['gender'];
-$fname = $_GET['fname'];
-$lname = $_GET['lname'];
-$email = $_GET['email'];
-$res = updateJoueur( $idjoueur, $gender, $fname, $lname, $email );
+$gender = htmlspecialchars( $_GET['gender'] );
+$fname	= htmlspecialchars( $_GET['fname'] );
+$lname	= htmlspecialchars( $_GET['lname'] );
+$phone	= htmlspecialchars( $_GET['phone'] );
+$email	= htmlspecialchars( $_GET['email'] );
+$res = updateJoueur( $idjoueur, $gender, $fname, $lname, $phone, $email );
 
 echo json_encode( $res );
 ?>

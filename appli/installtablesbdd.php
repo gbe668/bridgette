@@ -15,6 +15,7 @@ $sql_joueurs = "CREATE TABLE IF NOT EXISTS $tab_joueurs (
     genre VARCHAR(3),
     prenom VARCHAR(32),
     nom VARCHAR(32),
+    telephone VARCHAR(32),
 	email VARCHAR(64) DEFAULT '',
 	password VARCHAR(64),
     datesupp VARCHAR(16) DEFAULT '0',

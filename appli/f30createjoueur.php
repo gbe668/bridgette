@@ -8,7 +8,7 @@ if( !isDirecteur() ){
 	exit(); 
 }
 
-function insertJoueur( $gender, $fname, $lname, $email, $password ) {
+function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 	global $tab_joueurs;
 	global $min_noclub, $max_noclub, $del_noclub;
 	$result = array( "ok" => 0, "noclub" => 0, "msg" => "message" );	// Ok/Ko, noclub, message
@@ -56,7 +56,7 @@ function insertJoueur( $gender, $fname, $lname, $email, $password ) {
 		}
 		if ( $result["ok"] == 1 ) {
 			// enregistrer le joueur
-			$sql = "INSERT into $tab_joueurs ( numero, joueur, genre, prenom, nom, email, password ) values ( '$prevnum', '$joueur', '$gender', '$fname', '$lname', '$email', '$password' );";
+			$sql = "INSERT into $tab_joueurs ( numero, joueur, genre, prenom, nom, telephone,email, password ) values ( '$prevnum', '$joueur', '$gender', '$fname', '$lname', '$phone', '$email', '$password' );";
 			$sth = $dbh->query( $sql );
 			if ( $gender == "Me" ) $result["msg"] = "$fname $lname est enregistrée.";
 			else $result["msg"] = "$fname $lname est enregistré.";
@@ -77,7 +77,7 @@ function insertJoueur( $gender, $fname, $lname, $email, $password ) {
 				$idj = $row[ 'id' ];
 				$numero = $row[ 'numero' ];
 				
-				$sql = "UPDATE $tab_joueurs SET joueur='$joueur', genre='$gender', prenom='$fname', nom='$lname', email='$email', password='$password', datesupp=0 where id='$idj';";
+				$sql = "UPDATE $tab_joueurs SET joueur='$joueur', genre='$gender', prenom='$fname', nom='$lname', telephone='$phone', email='$email', password='$password', datesupp=0 where id='$idj';";
 				$sth = $dbh->query( $sql );
 				$result["ok"] = 1;
 				$result["noclub"] = $numero;
@@ -115,9 +115,10 @@ function insertJoueur( $gender, $fname, $lname, $email, $password ) {
 $gender = htmlspecialchars( $_GET['gender'] );
 $fname	= htmlspecialchars( $_GET['fname'] );
 $lname	= htmlspecialchars( $_GET['lname'] );
+$phone	= htmlspecialchars( $_GET['phone'] );
 $email	= htmlspecialchars( $_GET['email'] );
 $password = "bridgette";
-$res = insertJoueur( $gender, $fname, $lname, $email, $password );
+$res = insertJoueur( $gender, $fname, $lname, $phone, $email, $password );
 
 echo json_encode( array( 'success'=>$res["ok"], 'numero'=>$res["noclub"], 'msg'=>$res["msg"] ) );
 ?>

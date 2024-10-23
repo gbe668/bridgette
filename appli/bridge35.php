@@ -7,6 +7,10 @@ if( !isDirecteur() ){
 	header("Location: logdirecteur.php");
 	exit(); 
 }
+
+$idjoueur = htmlspecialchars( $_GET['id'] );
+$joueur = getJoueur( $idjoueur );
+
 ?>
 
 <!DOCTYPE HTML>
@@ -68,18 +72,13 @@ function effacerjoueur() {
 	<div style="text-align:center; max-width:350px; margin:auto;">
 	
 	<h2>Edition d'un joueur</h2>
-	<?php
-	$idjoueur = htmlspecialchars( $_GET['id'] );
-	$joueur = getJoueur( $idjoueur );
-	?>
-	
 	<p>Les champs marqués (*) sont obligatoires</p>
-	
 	<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Genre:(*) Monsieur <input type="radio" id="male" name="gender" <?php echo ($joueur['genre']=='Mr')?'checked':'' ?> value="Mr"> Madame
 	<input type="radio" id="female" name="gender" <?php echo ($joueur['genre']=='Me')?'checked':'' ?>  value="Me">
 	
 	<p>Prénom:(*)&nbsp;<input type="text" id="fname" value="<?php echo $joueur['prenom'] ?>" size="20"></p>
 	<p>&nbsp;&nbsp;&nbsp;&nbsp;Nom:(*)&nbsp;<input type="text" id="lname" value="<?php echo $joueur['nom'] ?>" size="20">
+	<p>Téléphone:&nbsp;<input type="text" id="phone" name="phone" value="<?php echo $joueur['phone'] ?>" size="20">
 	<p>&nbsp;&nbsp;Email:&nbsp;<input type="text" id="email1" value="<?php echo $joueur['email'] ?>" size="40"></p>
 	<p>N°club:&nbsp;<input type="text" id="noclub" name="noclub" value="<?php echo $joueur['numero'] ?>" size="4" readonly>&nbsp;non modifiable</br>attribué automatiquement</p>
 	

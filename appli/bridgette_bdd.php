@@ -2633,6 +2633,7 @@ function _getJoueur( $dbh, $id ) {
 			$joueur['prenom'] = $row[ 'prenom' ];
 			$joueur['nom'] = $row[ 'nom' ];
 			$joueur['nomcomplet'] = $joueur['prenom'] . " " . $joueur['nom'];
+			$joueur['phone'] = $row[ 'telephone' ];
 			$joueur['email'] = $row[ 'email' ];
 			$joueur['datesupp'] = $row[ 'datesupp' ];
 		};
@@ -2719,19 +2720,17 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	}
 	else $filtrage = "";
 	
-	$sql = "SELECT $tab_joueurs.id, numero, prenom, nom, email, password,
-				COUNT(*) AS nbfois, MAX($tab_tournois.tournoi) as maxtournoi, datesupp
-			FROM (
-				(SELECT idj1 AS idj, idtournoi FROM $tab_pairesNS) UNION
-				(SELECT idj2 AS idj, idtournoi FROM $tab_pairesEO) UNION
-				(SELECT idj3 AS idj, idtournoi FROM $tab_pairesNS) UNION
-				(SELECT idj4 AS idj, idtournoi FROM $tab_pairesEO) ) T2
-			LEFT JOIN $tab_joueurs  ON $tab_joueurs.id  = T2.idj
-			LEFT JOIN $tab_tournois ON $tab_tournois.id = T2.idtournoi
-			WHERE $tab_tournois.etat = $st_closed AND $tab_joueurs.numero >= $min_noclub $groupe $filtrage
-			GROUP BY $tab_joueurs.id
-			ORDER BY $selordre;";
-	
+	$sql = "SELECT $tab_joueurs.id, numero, prenom, nom, email, password, nbfois, tournoi, datesupp
+			FROM $tab_joueurs
+			LEFT JOIN (
+				SELECT idj, COUNT(*) AS nbfois, MAX(idtournoi) as maxid FROM (
+					(SELECT idj1 AS idj, idtournoi FROM $tab_pairesNS) UNION
+					(SELECT idj2 AS idj, idtournoi FROM $tab_pairesEO) UNION
+					(SELECT idj3 AS idj, idtournoi FROM $tab_pairesNS) UNION
+					(SELECT idj4 AS idj, idtournoi FROM $tab_pairesEO) ) T1
+				group by idj ) T2 ON T2.idj = $tab_joueurs.id
+			LEFT JOIN $tab_tournois ON T2.maxid = $tab_tournois.id 
+			WHERE numero >= $min_noclub $groupe $filtrage ORDER BY $selordre;";
 	
 	//$str = "<p>$sql</p>";
 	$str = '<table border="1" style="margin:auto;"><tbody>';
@@ -2755,7 +2754,7 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 			}
 			$str .= "<td id='$nr' class='xTxt1 canclick' $s>" . $row['prenom'] ." ". $row['nom'] . "</td>";
 		}
-		$str .= "<td class='xTxt1'>" . $row['maxtournoi'] . "</td>";
+		$str .= "<td class='xTxt1'>" . $row['tournoi'] . "</td>";
 		$str .= "<td class='xTxt1'>" . $row['nbfois'] . "</td>";
 		$str .= "</tr>";
 		}
