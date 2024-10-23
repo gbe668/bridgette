@@ -1,5 +1,5 @@
 // variable saisie nom du joueur
-var idjoueur, gender, fname, lname, email;
+var idjoueur, gender, fname, lname, phone, email;
 var strname = "";
 var idj  = Array();
 var numj = Array();
@@ -7,6 +7,7 @@ var jouj = Array();
 var genj = Array();
 var prej = Array();
 var nomj = Array();
+var phoj = Array();
 var emaj = Array();
 var oldjoueurs = Array();
 var datesupp = Array();
@@ -20,6 +21,7 @@ function razfields() {
 	$("#joueur").val("");
 	$("#fname").val("");
 	$("#lname").val("");
+	$("#phone").val("");
 	$("#email").val("");
 	$("#noclub").val("");
 	$("#msgerr").text( "" );
@@ -29,6 +31,9 @@ function razfields() {
 
 function isAlpha(str) {
   return /^[a-zA-Zéèêëç\s-]+$/.test(str);
+}
+function isNumeric(str) {
+  return /^(\s*[0-9]+\s*)+$/.test(str);
 }
 function isEmail(email) {
   const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -48,6 +53,7 @@ function verifSyntaxe() {
 		$("#msgerr1").text( "Genre non précisé" );
 		return false;
 	}
+	
 	fname = $("#fname").val();
 	fname = fname.trim();
 	$("#fname").val( fname );
@@ -59,6 +65,7 @@ function verifSyntaxe() {
 		$("#msgerr1").text( "Prénom: caractères non alphabétiques" );
 		return false;
 	}
+	
 	lname = $("#lname").val();
 	lname = lname.trim();
 	$("#lname").val( lname );
@@ -70,6 +77,16 @@ function verifSyntaxe() {
 		$("#msgerr1").text( "Nom: caractères non alphabétiques" );
 		return false;
 	}
+	
+	phone = $("#phone").val();
+	phone = phone.trim();
+	$("#phone").val( phone );
+	if ( (phone.length > 0)&&(!isNumeric( phone)) ) {
+		$("#msgerr1").text( "Téléphone: caractères non numériques" );
+		return false;
+	}
+	$("#phone").val( phone );
+	
 	// mise en forme de l'email
 	email = $("#email1").val();
 	email = email.trim( email );
@@ -86,7 +103,7 @@ function creerjoueur() {
 		email = "";	//pour ne pas stocker en bdd un email erroné
 	}
 	$.get("f30createjoueur.php",
-		{ gender:gender, fname:fname, lname:lname, email:email },
+		{ gender:gender, fname:fname, lname:lname, phone:phone, email:email },
 		function(strjson) {
 			$("#noclub").val( strjson.numero );
 			$("#msgerr1").html( strjson.msg );
@@ -100,7 +117,7 @@ function modifierjoueur() {
 		email = "";	//pour ne pas stocker en bdd un email erroné
 	}
 	$.get("f30updatejoueur.php", 
-		{ idjoueur:idjoueur, gender:gender, fname:fname, lname:lname, email:email },
+		{ idjoueur:idjoueur, gender:gender, fname:fname, lname:lname, phone:phone, email:email },
 		function(strjson) {
 			$("#msgerr1").text( strjson.msg );
 		}, "json");
