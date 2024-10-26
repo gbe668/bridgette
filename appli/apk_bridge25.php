@@ -47,6 +47,10 @@ function cdeplus() {
 function cdemoins() {
 	$("#afficheplus").addClass( "section_invisible" );
 }
+function masquerecherche() {
+	$("#section_inscription").hide();
+	$("#section_edition").hide();
+}
 </script>
  
  <body>
@@ -70,6 +74,7 @@ function cdemoins() {
 	<h3>Choisssez une date de tournoi:</h3>
 	<div id="datetournoi"></div>
 	<p id="msg">&nbsp;</p>
+	<div id="section_recherche">
 	<div id="section_inscription">
 		<p>Vous recherchez un partenaire ?</br>Alors, inscrivez-vous !</p>
 		<p>Prénom Nom <input type="text" id="name" placeholder="Nom" size="20" value="<?php
@@ -78,12 +83,15 @@ function cdemoins() {
 		<p>Tél Contact <input type="text" id="contact" placeholder="Téléphone" size="20"></p>
 		<p><textarea type="text" id="memo"  Cols="40" Rows="5" placeholder="Optionnel, un petit mot pour vous présenter et plus ..."></textarea></p>
 		<p><button class="mButton" onclick="insertContact()">Enregistrer</button></p>
+		<p><button class="myButton" onclick="masquerecherche()">Masque recherche</button></p>
 	</div>
 	<div id="section_edition">
 		<p>Joueur <b><span id='nomjoueur'></span></b></p>
 		<p>Tél Contact <input type="text" id="contact2" placeholder="Téléphone" size="20"></p>
 		<p><textarea type="text" id="memo2"  Cols="40" Rows="5" placeholder="Optionnel, un petit mot pour vous présenter et plus ..."></textarea></p>
 		<p><button class="mButton" onclick='updateContact()'>Mettre à jour</button> <button class="mButton" onclick='eraseContact()'>Se désinscrire</button> <button class="mButton annule" onclick='annuleEraseContact()'>Annuler</button></p>
+		<p><button class="myButton" onclick="masquerecherche()">Masque recherche</button></p>
+	</div>
 	</div>
 	<p id="msgerr">&nbsp;</p>
 	
