@@ -161,6 +161,10 @@ $(document).ready(function() {
 		seltournoi( figs[2] );
 	});
 });
+function topwindow() {
+	elmnt = document.getElementById("topwindow");
+	elmnt.scrollIntoView();
+}
 function cdeplus() {
 	if ( $("#afficheplus").hasClass( "section_invisible" ) )
 		$("#afficheplus").removeClass( "section_invisible" );
@@ -182,7 +186,7 @@ function exportypes() {
  
  <body>
 	<div style="text-align:center; max-width:350px; margin:auto;">
-	<h2 style='text-align: center'>Affichage des résultats</h2>
+	<h2 style='text-align: center' id='topwindow'>Affichage des résultats</h2>
 	<?php
 	$maxt = $parametres['maxt'];
 	print "<h3>Liste des $maxt derniers tournois</h3>";
@@ -199,7 +203,7 @@ function exportypes() {
 	</script>
 	<p id="msg">&nbsp;</p>
 	
-	<p><button class="mySmallButton" onclick="cdeplus()">Affiche/masque types tournois</button></p>
+	<p><button class="myButton" onclick="cdeplus()">Affiche/masque types tournois</button></p>
 	<div id="afficheplus" class="section_invisible">
 	<div id="listetypes">
 	<?php
@@ -207,11 +211,12 @@ function exportypes() {
 	//print '<p><button onClick="exportypes()">Exporter les types de tournoi</button></p>';
 	?>
 	</div>
-	<p><button class="mySmallButton" onclick="cdemoins()">Masque types tournois</button></p>
+	<p><button class="myButton" onclick="cdemoins()">Masque types tournois</button></p>
 	</div>
 	
 	<p><button class="mySmallButton" onclick="gotoindex()">Retour page d'accueil</button></p>
 	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="gotoindex()"/>
+	<div class="top"><img src="images/upwindow.png" style="width:40px;" onclick="topwindow()"/></div>
 	</div>
 	
 	<?php

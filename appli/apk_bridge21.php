@@ -123,13 +123,13 @@ $(document).on( "click", "td.xres", function(event) {
 	print '</div>';
 	print_section_diagramme();
 	?>
-	<p><button class="mySmallButton" onclick="display_roadmap()">Affichage feuille de route</button></p>
+	<p><button class="myButton" onclick="display_roadmap()">Affichage feuille de route</button></p>
 	</div>
 	
 	<div id="section_roadmap" class='section_invisible'>
 	<h3 id="team" >Cliquez sur une paire</br>pour afficher sa feuille de route</h3>
 	<div id="roadmap" >feuille de route</div>
-	<p><button class="mySmallButton" onclick="display_donnes()">Affichage donnes</button></p>
+	<p><button class="myButton" onclick="display_donnes()">Affichage donnes</button></p>
 	</div>
 	
 	<p><button class="mySmallButton" onclick="goto20()">Retour liste des tournois</button></p>

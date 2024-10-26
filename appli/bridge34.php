@@ -19,25 +19,6 @@ if( !isDirecteur() ){
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
-	<style>
-	div.return {
-	  position: fixed;
-	  top: 10px;
-	  right: 10px;
-	}
-	.return:hover {
-		cursor: pointer;
-	}
-	div.top {
-	  position: fixed;
-	  bottom: 10px;
-	  right: 10px;
-	}
-	.top:hover {
-		cursor: pointer;
-	}
-	</style>
-	
 </head>
 
 <script>

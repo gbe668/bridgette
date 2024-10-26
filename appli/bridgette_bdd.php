@@ -2762,6 +2762,29 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	$dbh = null;
 	return $str;
 };
+function htmlAnnuaire() {
+	global $tab_joueurs, $min_noclub;
+	$dbh = connectBDD();
+	
+	$sql = "SELECT id, prenom, nom, telephone
+			FROM $tab_joueurs
+			WHERE numero >= $min_noclub ORDER BY nom;";
+	
+	$str = "<table border='1' style='margin:auto;'><tbody>";
+	$str .= "<tr>";
+	$str .= "<th class='xTxt1'>Joueur</th>";
+	$str .= "<th class='xTxt1'>Téléphone</th>";
+	$str .= "</tr>";
+	foreach  ($dbh->query($sql) as $row) {
+		$str .= "<tr>";
+		$str .= "<td class='xTxt1'>" . $row['prenom'] ." ". $row['nom'] . "</td>";
+		$str .= "<td class='xTxt1'>" . $row['telephone'] . "</td>";
+		$str .= "</tr>";
+	}
+	$str .= "</tbody></table>";
+	$dbh = null;
+	return $str;
+};
 
 // fonctions utilisant la table $tab_connexions
 function _razCnxTables( $dbh ) {

@@ -125,6 +125,10 @@ $(document).ready(function() {
 		seltournoi( figs[2] );
 	});
 });
+function topwindow() {
+	elmnt = document.getElementById("topwindow");
+	elmnt.scrollIntoView();
+}
 function cdeplus() {
 	if ( $("#afficheplus").hasClass( "section_invisible" ) )
 		$("#afficheplus").removeClass( "section_invisible" );
@@ -181,7 +185,7 @@ $( function() {
  
  <body>
 	<div style="text-align:center; max-width:350px; margin:auto;">
-	<h2 style='text-align: center'>Affichage des résultats</h2>
+	<h2 style='text-align: center' id='topwindow'>Affichage des résultats</h2>
 	<?php
 	$maxt = $parametres['maxt'];
 	print "<h3>Liste des $maxt derniers tournois</h3>";
@@ -198,14 +202,14 @@ $( function() {
 	</script>
 	<p id="msg">&nbsp;</p>
 	
-	<p><button class="mySmallButton" onclick="cdeplus()">Affiche / masque types de tournoi</button></p>
+	<p><button class="myButton" onclick="cdeplus()">Affiche / masque types de tournoi</button></p>
 	<div id="afficheplus" class="section_invisible">
 	<div id="listetypes">
 	<?php
 	print htmlTableTypeTournois();
 	?>
 	</div>
-	<p><button class="mySmallButton" onclick="cdemoins()">Masque types de tournoi</button></p>
+	<p><button class="myButton" onclick="cdemoins()">Masque types de tournoi</button></p>
 	</div>
 	
 	<?php
@@ -213,6 +217,7 @@ $( function() {
 		getClassement();
 	}
 	?>
+	<div class="top"><img src="<?php echo $relimg.'upwindow.png'; ?>" style="width:40px;" onclick="topwindow()"/></div>
 	</div>
  </body>
 </html>
