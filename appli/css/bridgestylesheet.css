@@ -45,6 +45,15 @@ div.return {
 	cursor: pointer;
 }
 
+div.top {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+}
+.top:hover {
+	cursor: pointer;
+}
+
 .popup {
 	position: fixed;
 	width: 200px;
