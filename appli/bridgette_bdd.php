@@ -2710,7 +2710,7 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	if ( $liste == 3 ) $groupe = "";	// tous
 	
 	if ( $ordre == "tournoi") {
-		$selordre = "maxtournoi desc, nom";
+		$selordre = "tournoi desc, nom";
 	}
 	else $selordre = $ordre;
 	
