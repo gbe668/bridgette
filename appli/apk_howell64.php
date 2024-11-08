@@ -188,7 +188,7 @@ document.addEventListener('visibilitychange', function (event) {
 				if ( $changement == 0 and $cpt > 0 ) {
 					print htmlResultatPaquet($idtournoi, $numNS, $numEO );
 				
-					print "<h3>Attention</br>les joueurs changent de position !</h3>";
+					//print "<h3>Attention</br>les joueurs changent de position !</h3>";
 					print '<p><button class="myStartButton" onclick="goto62()">Passez à la</br>position suivante</button></p>';
 					//
 					// ajout le 12/07/2024

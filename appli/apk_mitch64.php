@@ -208,11 +208,9 @@ document.addEventListener('visibilitychange', function (event) {
 				//print htmlResultatPaquet($idtournoi, $numNS, $oldEO );
 				print htmlResultatPaquet($idtournoi, $numtable, $oldEO );
 				
-				print "<h3>Attention</br>les Est-Ouest changent de position";
 				if ( ( $position == $saut ) and ( $saut > 0) ) {
-					print "</br>en sautant une table</h3>";
+					print "<h3>Les Est-Ouest sautent une table</h3>";
 				}
-				else print " !</h3>";
 				print "<p><button class='myStartButton' onclick='goto62()'>Passez à la</br>position suivante</button></p>";
 				//
 				// ajout le 12/07/2024
