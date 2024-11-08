@@ -218,6 +218,13 @@ class Donnejouee {
 			this.vuleo   = etuis[etui][3];
 			this.texteDonneur = st_position[ this.donneur ] + " donneur - " + st_vulnerable[ this.vulns+2*this.vuleo ];
 			$("#texteDonneur").html( this.texteDonneur );
+		
+			let colorns = etuis[etui][2] ? "red" : "green";
+			let coloreo = etuis[etui][3] ? "red" : "green";
+			$("#etui").css('border-top-color', colorns )
+				.css('border-left-color', coloreo )
+				.css('border-right-color', coloreo )
+				.css('border-bottom-color', colorns );
 		}
 	}
 	clearniv() {
