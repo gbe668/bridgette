@@ -127,6 +127,7 @@ document.addEventListener('visibilitychange', function (event) {
 			$p = getposhowell( $idtype, $paire, $notour, $paquet );	
 			$table   = $p['table'];
 			$firstdonne = $p['last'] + 1;	// 1ère donne du paquet
+			$etuis = liste_etuis( $firstdonne, $paquet );
 			$adversaire = $p['adversaire'];
 
 			if ( ($notour <= $mintour)||($parametres['avanceh'] == 0) ) {
@@ -136,9 +137,7 @@ document.addEventListener('visibilitychange', function (event) {
 					print "<h2>Patientez table</h2><h2><span class='numtable'>$table</span></h2>";
 					print '<p>en attendant la fin du tour.</p>';
 				
-					//print "<h3>Récupérer les étuis:</br>";
-					//print liste_etuis( $firstdonne, $paquet );
-					//print "</h3>";
+					//print "<h3>Récupérer les étuis:</br>$etuis</h3>";
 
 					print '<p><button class="myStartButton" onclick="goto64relais()">Si joueurs OK</br>cliquez ICI</br>pour continuer</button></p>';
 				}
@@ -169,9 +168,7 @@ document.addEventListener('visibilitychange', function (event) {
 						print "</br>$nameA1 et $nameA2</p>";
 					}
 					
-					print "<h3>Récupérez les étuis:</br>";
-					print liste_etuis( $firstdonne, $paquet );
-					print "</h3>";
+					print "<h3>Récupérez les étuis:</br>$etuis</h3>";
 
 					if ( $withback == $paire ) {
 						print '<p><button class="myButton" onclick="goto63()">Continuez à jouer</button></p><p>&nbsp;</p>';
@@ -187,6 +184,7 @@ document.addEventListener('visibilitychange', function (event) {
 				print "<h3>Au prochain tour, vous irez table</h2><h2><span class='numtable'>$table</span></h3>";
 				if ( $p['NS'] == 1 ) print "<h3>en Nord-Sud.</h3>";
 				else print "<h3>en Est-Ouest.</h3>";
+				print "<h3>Les prochains étuis:</br>$etuis</h3>";
 			}
 			
 			//
