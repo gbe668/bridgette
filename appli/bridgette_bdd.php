@@ -254,28 +254,29 @@ function setIdent( $userid ) {
 function getIdent() {
 	global $parametres, $prefix, $maxdureesession;
 	global $ID_NOIDENT, $ID_INCORRECT, $ID_CORRECT;
-	if ( $parametres['checkuser'] > 0 ) {
-		if ( !isset($_COOKIE['bridgette_user']) ) {
-			$result = array( 'status' => $ID_INCORRECT, 'userid' => 0 );
+	if ( isset($_COOKIE['bridgette_user']) ) {
+		$cookieUser = $_COOKIE['bridgette_user'];
+		$jsonIdent  = base64_decode( $cookieUser );
+		$ident = json_decode( $jsonIdent, true );
+		if ( $ident['ttt'] == $prefix ) {
+			// même club
+			$result = array( 'status' => $ID_CORRECT, 'userid' => $ident['userid'] );
+			// actualise le cookie, nouvelle date d'expiration
+			setcookie('bridgette_user', $cookieUser, time()+$maxdureesession);
 		}
 		else {
-			$cookieUser = $_COOKIE['bridgette_user'];
-			$jsonIdent  = base64_decode( $cookieUser );
-			$ident = json_decode( $jsonIdent, true );
-			if ( $ident['ttt'] == $prefix ) {
-				// même club
-				$result = array( 'status' => $ID_CORRECT, 'userid' => $ident['userid'] );
-				// actualise le cookie, nouvelle date d'expiration
-				setcookie('bridgette_user', $cookieUser, time()+$maxdureesession);
-			}
-			else {
+			if ( $parametres['checkuser'] > 0 )
 				// club différent, redemande login
 				$result = array( 'status' => $ID_INCORRECT, 'userid' => 0 );
-			}
+			else
+				$result = array( 'status' => $ID_NOIDENT, 'userid' => 0 );
 		}
 	}
 	else {
-		$result = array( 'status' => $ID_NOIDENT, 'userid' => 0 );
+		if ( $parametres['checkuser'] > 0 )
+			$result = array( 'status' => $ID_INCORRECT, 'userid' => 0 );
+		else
+			$result = array( 'status' => $ID_NOIDENT, 'userid' => 0 );
 	}
 	return $result;
 }
@@ -1720,40 +1721,49 @@ function start_howell( $idt, $paquet ) {	// phase jeu
 	$dbh = null;
 };
 function _readTournoi( $dbh, $idt ) {
-	global $tab_tournois, $type_mitchell, $type_howell;
+	global $tab_tournois, $type_mitchell, $type_howell, $st_notfound, $t_mitchell;
 	$sql = "SELECT * FROM $tab_tournois where id = '$idt';";
 	$sth = $dbh->query( $sql );
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
-	$datet = $row[ 'tournoi' ];
-	$datef = strdatet( $datet );
-	$tt = gettypetournoi( $row[ 'idtype' ] );
-	$genre = $tt['genre'];
-	//$sequence = explode("_", $row[ 'endofseq' ]);
-	//if ( count($sequence) < 2 ) $sequence = [ 0, 0 ];
-	
-	$dt = array(
-		'id' 		=> $row[ 'id' ],			// id tournoi
-		'tournoi' 	=> $datet,		// date tournoi
-		'datef'		=> $datef,		// date formattée
-		'code'		=> $row[ 'code' ],
-		'pairesNS'	=> $row[ 'pairesNS' ],
-		'pairesEO' 	=> $row[ 'pairesEO' ],
-		'idtype' 	=> $row[ 'idtype' ],
-		'ntables' 	=> $row[ 'ntables' ],
-		'paquet' 	=> $row[ 'paquet' ],
-		'ndonnes' 	=> $row[ 'ndonnes' ],		// max donnes en circulation
-		'npositions'=> $row[ 'npositions' ],
-		'njouees' 	=> $row[ 'njouees' ],		// max donnes jouées
-		'saut' 		=> $row[ 'saut' ],
-		'relais' 	=> $row[ 'relais' ],
-		'gueridon'	=> $row[ 'gueridon' ],
-		'etat' 		=> $row[ 'etat' ],
-		'notour'	=> $row[ 'notour' ],		// tour en cours
-		'startseq' 	=> $row[ 'startseq' ],		// timestamp démarrage tournoi
-		'endofseq' 	=> $row[ 'endofseq' ],		// timestamp fin du tour en cours
-		'genre'		=> $genre,					// howell / mitchell
-		'obs'	 	=> $row[ 'obs' ],		// entré par le directeur de tournoi
-		);
+	if ( $row ) {
+		$datet = $row[ 'tournoi' ];
+		$datef = strdatet( $datet );
+		$tt = gettypetournoi( $row[ 'idtype' ] );
+		$genre = $tt['genre'];
+		//$sequence = explode("_", $row[ 'endofseq' ]);
+		//if ( count($sequence) < 2 ) $sequence = [ 0, 0 ];
+		
+		$dt = array(
+			'id' 		=> $row[ 'id' ],			// id tournoi
+			'tournoi' 	=> $datet,		// date tournoi
+			'datef'		=> $datef,		// date formattée
+			'code'		=> $row[ 'code' ],
+			'pairesNS'	=> $row[ 'pairesNS' ],
+			'pairesEO' 	=> $row[ 'pairesEO' ],
+			'idtype' 	=> $row[ 'idtype' ],
+			'ntables' 	=> $row[ 'ntables' ],
+			'paquet' 	=> $row[ 'paquet' ],
+			'ndonnes' 	=> $row[ 'ndonnes' ],		// max donnes en circulation
+			'npositions'=> $row[ 'npositions' ],
+			'njouees' 	=> $row[ 'njouees' ],		// max donnes jouées
+			'saut' 		=> $row[ 'saut' ],
+			'relais' 	=> $row[ 'relais' ],
+			'gueridon'	=> $row[ 'gueridon' ],
+			'etat' 		=> $row[ 'etat' ],
+			'notour'	=> $row[ 'notour' ],		// tour en cours
+			'startseq' 	=> $row[ 'startseq' ],		// timestamp démarrage tournoi
+			'endofseq' 	=> $row[ 'endofseq' ],		// timestamp fin du tour en cours
+			'genre'		=> $genre,					// howell / mitchell
+			'obs'	 	=> $row[ 'obs' ],		// entré par le directeur de tournoi
+			);
+	}
+	else {
+		$dt = array(
+			'id' 		=> $idt,			// id tournoi
+			'etat' 		=> $st_notfound,
+			'genre'		=> $t_mitchell,	
+			);
+	}
 	return $dt;
 };
 function readTournoi( $idt ) {
@@ -2735,9 +2745,9 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	//$str = "<p>$sql</p>";
 	$str = '<table border="1" style="margin:auto;"><tbody>';
 	$str .= "<tr>";
-	$str .= "<td class='xTxt1 selordre' id='ordre_nom'>Joueur</td>";
-	$str .= "<td class='xTxt1 selordre' id='ordre_tournoi'>dernier</br>tournoi</td>";
-	$str .= "<td class='xTxt1 selordre' id='ordre_nbfois'>N</td>";
+	$str .= "<th class='xTxt1 selordre' id='ordre_nom'>Joueur</th>";
+	$str .= "<th class='xTxt1 selordre' id='ordre_tournoi'>dernier</br>tournoi</th>";
+	$str .= "<th class='xTxt1 selordre' id='ordre_nbfois'>N</th>";
 	$str .= "</tr>";
 	foreach  ($dbh->query($sql) as $row) {
 		$nr = "nr_" . $row['id'];
@@ -2764,11 +2774,12 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 };
 function htmlAnnuaire() {
 	global $tab_joueurs, $min_noclub;
+	$groupe = "and datesupp = 0";	// uniquement les actifs
 	$dbh = connectBDD();
 	
 	$sql = "SELECT id, prenom, nom, telephone
 			FROM $tab_joueurs
-			WHERE numero >= $min_noclub ORDER BY nom;";
+			WHERE numero >= $min_noclub $groupe ORDER BY nom;";
 	
 	$str = "<table border='1' style='margin:auto;'><tbody>";
 	$str .= "<tr>";

@@ -68,8 +68,8 @@ function gotoindex() {
 	var nextstring = "bridgette.php";
 	location.replace( nextstring );
 };
-function goto67() {
-	var nextstring = "bridge67.php?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
+function goto66() {
+	var nextstring = "bridge66.php?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
 	location.replace( nextstring );
 };
 function erasecode() {
@@ -181,7 +181,7 @@ document.addEventListener('visibilitychange', function (event) {
 			print '</div>';
 			print '<p><button onclick="toggleAffichagePaires()">Affiche / masque les paires</button></p>';
 			if ( $parametres['affprov'] > 0 ) {
-				print '<p><button class="mySmallButton" onclick="goto67()">Résultats provisoires ...</button></p><p>&nbsp;</p>';
+				print '<p><button class="mySmallButton" onclick="goto66()">Résultats provisoires ...</button></p><p>&nbsp;</p>';
 			}
 		}
 	}

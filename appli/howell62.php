@@ -115,11 +115,11 @@ document.addEventListener('visibilitychange', function (event) {
 		$res = getParmTable( $paire );
 		$donne = $res['numdonne'];		// dernière donne jouée
 		$cpt   = $res['cpt'];			// compteur de donnes déjà jouées
+		$notour = $res['pos'];			// compteur de tours
+		$mintour = getMinTour( $ntables );
 		
 		// test reconnexion alors que la table a fini de jouer
 		if ( $cpt < $njouees ) {
-			$notour = $res['pos'];			// compteur de tours
-			$mintour = getMinTour( $ntables );
 			$p = getposhowell( $idtype, $paire, $notour, $paquet );	
 			$table   = $p['table'];
 			$firstdonne = $p['last'] + 1;	// 1ère donne du paquet
@@ -182,6 +182,17 @@ document.addEventListener('visibilitychange', function (event) {
 				print "<h3>Au prochain tour, vous irez table</h2><h2><span class='numtable'>$table</span></h3>";
 				if ( $p['NS'] == 1 ) print "<h3>en Nord-Sud.</h3>";
 				else print "<h3>en Est-Ouest.</h3>";
+				
+				if ( $adversaire == 0 ) {	// en relais
+					print "Vous serez en relais";
+				}
+				else {
+					$ligneA = getligneNS( $idtournoi, $adversaire );
+					$nameA1 = $ligneA['N']['nomcomplet'];
+					$nameA2 = $ligneA['S']['nomcomplet'];
+					print "<h3>Vos prochains adversaires:</h3>";
+					print "<p>$nameA1 et $nameA2</p>";
+				}
 				print "<h3>Les prochains étuis:</br>$etuis</h3>";
 
 				if ( !$withback ) {

@@ -80,9 +80,6 @@ function goto66() {
 	location.replace( nextstring );
 };
 function waitPhaseJeu() {
-	// update heure
-	var d = new Date();
-	$("#dsptime").text( d.toLocaleTimeString() );
 	$.get( "getetattournoi.php", {idtournoi:idtournoi}, function( strjson ) {
 		etat = strjson.etat;
 		if ( etat == st_phase_init ) {
@@ -96,7 +93,7 @@ function waitPhaseJeu() {
 };
 function cdeplus() {
 	if ( $("#afficheplus").hasClass( "section_invisible" ) ) {
-		$.get( "getpositionsjoueurs.php", {idtournoi:idtournoi}, function( json ) {
+		$.get( "getpositionsjoueurs.php", {idtournoi:idtournoi, w:window.innerWidth }, function( json ) {
 			if ( json.etat == st_phase_jeu ) {
 				$("#afficheplus").removeClass( "section_invisible" );
 				$("#realtour").html( json.positions );
@@ -108,6 +105,31 @@ function cdeplus() {
 }
 function cdemoins() {
 	$("#afficheplus").addClass( "section_invisible" );
+}
+
+var maxaffprov = 10;
+var affprovTO;
+function decompte( n ) {
+	if ( n > 0 ) {
+		$(nsec).text(n);
+		affprovTO = setTimeout(function() { decompte( n-1 ); }, 1000);
+	}
+	else $(idposprov).hide();
+}
+function affposprov() {
+	if ( $(idposprov).is(":hidden") ) {
+		$.get( "getpositionsprovisoires.php", {idtournoi:idtournoi, w:0 }, function( json ) {
+			if ( json.etat == st_phase_init ) {
+				$(posprov).html( json.positions );
+				decompte( maxaffprov );
+				$(idposprov).show();
+			}
+		},"json");
+	}
+	else {
+		$(idposprov).hide();
+		clearTimeout( affprovTO );
+	}
 }
 </script>
 
@@ -127,11 +149,15 @@ function cdemoins() {
 		if ( $etat == $st_phase_init ) {
 			// définition des paires en cours
 			print '<h2>Tableau des participants</br>en cours de définition.</h2>';
-			print '<p class="xDigit" id="dsptime">Heure</p>';
 			print '<p id="imwaiting">Attendez le démarrage du tournoi.</p>';
+
+			print "<p><button class='myBigButton' onclick='affposprov()'>Affiche / masque</br>les positions provisoires</button></p>";
+			print "<div id='idposprov' hidden>";
+			print "<div style='text-align:center; margin:auto; max-width:350px;' id='posprov'>&nbsp;</div>";
+			print "fermeture automatique dans <span id='nsec'>10</span> s";
+			print "</div>";
 			?>
 			<script type="text/javascript"> 
-			$("#imwaiting").text("Attendez le démarrage du tournoi.");
 			idtournoi = parseInt( "<?php echo $idtournoi; ?>" );
 			waitPhaseJeu();
 			</script>
@@ -154,7 +180,7 @@ function cdemoins() {
 				print "<button class='myBigButton' onclick='goto61h()'>Rejoindre le tournoi</button>";
 				
 			}
-			print "<p><button onclick='cdeplus()'>Affiche/masque positions</button></p>";
+			print "<p><button onclick='cdeplus()'>Affiche / masque positions</button></p>";
 			
 			print "<div id='afficheplus' class='section_invisible'>";
 			print "<div style='text-align:center; margin:auto; max-width:350px;' id='realtour'>&nbsp;</div>";
@@ -189,8 +215,7 @@ function cdemoins() {
 	?>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto20()">Affichage derniers résultats</button></p>
-	<p>&nbsp;</p>
-	<p><button class="mySmallButton" onclick="goto25()">Recherche partenaire</button></p>
+	<p><button class="mySmallButton" onclick="goto25()">Annuaire / Recherche partenaire</button></p>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto59()">Calcul de la marque</button></p>
 	<p>&nbsp;</p>

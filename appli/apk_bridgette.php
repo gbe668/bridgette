@@ -36,8 +36,8 @@ function htmlPositionsHowell($idtype, $pns, $npos, $paquet) {
 	<title>Apk Bridg'ette</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
+	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 </head>
 
 <script>
@@ -48,6 +48,7 @@ var etat, genre;
 var t_unknown = 0;
 var t_mitchell = 1;
 var t_howell = 2;
+var st_phase_init = "<?php echo $st_phase_init; ?>";
 var st_phase_jeu = "<?php echo $st_phase_jeu; ?>";
 
 function gotoindex() {
@@ -100,6 +101,31 @@ function cdemoins() {
 	$("#afficheplus").addClass( "section_invisible" );
 }
 
+var maxaffprov = 10;
+var affprovTO;
+function decompte( n ) {
+	if ( n > 0 ) {
+		$(nsec).text(n);
+		affprovTO = setTimeout(function() { decompte( n-1 ); }, 1000);
+	}
+	else $(idposprov).hide();
+}
+function affposprov() {
+	if ( $(idposprov).is(":hidden") ) {
+		$.get( "<?php echo $relpgm.'getpositionsprovisoires.php' ?>", {idtournoi:idtournoi, w:0}, function( json ) {
+			if ( json.etat == st_phase_init ) {
+				$(posprov).html( json.positions );
+				decompte( maxaffprov );
+				$(idposprov).show();
+			}
+		},"json");
+	}
+	else {
+		$(idposprov).hide();
+		clearTimeout( affprovTO );
+	}
+}
+
 function passAndroid( parms ) {
 	strjson = JSON.stringify(parms);
 	console.log( "strjson", strjson );
@@ -109,7 +135,7 @@ function showAndroidToast(toast) {
 	Android.showToast(toast);
 }
 function pulltournoi() {
-	$.get( '/jsonexistetournoinonclos.php', {idtournoi:idtournoi, token:token}, function( strjson ) {
+	$.get( "<?php echo $relpgm.'jsonexistetournoinonclos.php' ?>", {idtournoi:idtournoi, token:token}, function( strjson ) {
 		if ( strjson.id > 0 ) {
 			if ( etat != strjson.etat ) {
 				gotoindex();
@@ -149,6 +175,12 @@ function gotodownloadapk() {
 			// définition des paires en cours
 			print '<h2>Tableau des participants</br>en cours de définition.</h2>';
 			print '<p id="imwaiting">Attendez le démarrage du tournoi.</p>';
+
+			print "<p><button class='myBigButton' onclick='affposprov()'>Affiche / masque</br>les positions provisoires</button></p>";
+			print "<div id='idposprov' hidden>";
+			print "<div style='text-align:center; margin:auto; max-width:350px;' id='posprov'>&nbsp;</div>";
+			print "fermeture automatique dans <span id='nsec'>10</span> s";
+			print "</div>";
 		};
 		
 		if ( $etat == $st_phase_jeu ) {
@@ -208,13 +240,11 @@ function gotodownloadapk() {
 	paire = "<?php echo $paire; ?>";
 	ligne = "<?php echo $ligne; ?>";
 
-	//setTimeout(function() { pulltournoi(); }, 5000);
 	pulltournoi();
 	</script>
 	
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto20()">Affichage derniers résultats</button></p>
-	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto25()">Annuaire / Recherche partenaire</button></p>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto59()">Calcul de la marque</button></p>

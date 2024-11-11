@@ -61,12 +61,11 @@ document.addEventListener('visibilitychange', function (event) {
 	</script>
 	
 	<div style="text-align: center">
-	<h2 style="text-align: center; color:red">Résultats provisoires</h2>
+	<h2 style="color:red">Résultats provisoires</h2>
 	<?php
 	displayResultatsTournoi( $idtournoi, $screenw );
 	?>
-	
-	<p style="text-align: center"><button class="mySmallButton" onclick="gotoindex()">Retour page d'accueil</button></p>
+	<p><button class="mySmallButton" onclick="gotoindex()">Retour page d'accueil</button></p>
 	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="gotoindex()"/>
 	</div>	
 	</div>

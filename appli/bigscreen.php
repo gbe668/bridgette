@@ -1,8 +1,6 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
-
-$screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
 ?>
 
 <!DOCTYPE HTML>
@@ -38,131 +36,147 @@ $screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
 </head>
 
 <script>
-screenw  = parseInt( "<?php echo $screenw; ?>" );
-if ( isNaN( screenw ) ) {
-	location.replace( "bigscreen.php?w=" + window.innerWidth );
-};
-	
 function gotoindex() {
 	var nextstring = "bridgette.php";
 	location.replace( nextstring );
 };
 
-var st_notfound   = parseInt( "<?php echo $st_notfound; ?>" );
-var st_phase_init = parseInt( "<?php echo $st_phase_init; ?>" );
-var st_phase_jeu  = parseInt( "<?php echo $st_phase_jeu; ?>" );
-var st_phase_fini = parseInt( "<?php echo $st_phase_fini; ?>" );
-var st_closed = parseInt( "<?php echo $st_closed; ?>" );
+var st_notfound		= parseInt( "<?php echo $st_notfound; ?>" );
+var st_phase_init	= parseInt( "<?php echo $st_phase_init; ?>" );
+var st_phase_jeu	= parseInt( "<?php echo $st_phase_jeu; ?>" );
+var st_phase_fini	= parseInt( "<?php echo $st_phase_fini; ?>" );
+var st_closed 		= parseInt( "<?php echo $st_closed; ?>" );
 
 var audiofindonne = 0;
 var audiofinposition = 0;
 var declic = 10;			// x secondes avant la fin du délai
 
-function Timer_notfound() {		// attente création tournoi
-	$.get( "existeTournoiNonClos.php", {}, function( id ) {
-		if ( id > 0 ) {
-			clearInterval( myTimer );
-			location.replace( "bigscreen.php?w=" + window.innerWidth );
-		}
-	},"text");
-}
 function Timer_phase_init() {	// attente démarrage tournoi
-	$.get( "getetattournoi.php", {idtournoi:idtournoi}, function( strjson ) {
-		if ( strjson.etat != st_phase_init ) {
-			clearInterval( myTimer );
-			location.replace( "bigscreen.php?w=" + window.innerWidth );
+	$.get( "getpositionsprovisoires.php", {idtournoi:idtournoi, w:window.innerWidth}, function( json ) {
+		if ( json.etat != st_phase_init ) {
+			//location.replace( "bigscreen.php?w=" + window.innerWidth );
+			dispatch( json.etat );
+		}
+		else {
+			$(affichage).html( json.positions );
+			setTimeout(function() { Timer_phase_init(); }, 5000);
 		}
 	},"json");
 }
 function Timer_phase_jeu() {	// pendant le tournoi
-	$.get( "getpositionsjoueurs.php", {idtournoi:idtournoi}, function( json ) {
-		console.log( "hello", json.etat );
-		switch (json.etat) {
-			case st_notfound: {
-				console.log( "st_notfound" );
-				myTimer = setInterval(Timer_notfound, 10000);
-				break;
-			}
-			case st_phase_jeu: {
-				$("#realtour").html( "<h2>Tournoi en cours</h2>"
-					+ "<div style='text-align:center; margin:auto; max-width:700px; font-size:1.25em;'>"
-					+ json.positions
-					+ "</div>" );
-				// décompte
-				var now = new Date().getTime()/1000;	// en secondes
-				var diff = Math.trunc( json.endofseq - now );
-				var neg = ( diff < 0 ) ? true : false;
-				
-				var next = diff%json.tempo;
-				// test fin position théorique
-				if ( diff > declic ) {		// reste plus de declic secondes
-					audiofinposition = 0;
-					// test fin donne
-					if ( next > declic ) audiofindonne = 0;
-					else {
-						if ( audiofindonne == 0 ) {
-							console.log( "nouvelleDonne" );
-							audiofindonne = 1;
-							var audio1 = document.getElementById("nouvelleDonne");
-							//audio1.play();				
-							pop.style.display = "inline-block";
-							setTimeout(function() { pop.style.display = "none"; }, 3000);
-						}
+	$.get( "getpositionsjoueurs.php", {idtournoi:idtournoi, w:window.innerWidth}, function( json ) {
+		if ( json.etat != st_phase_jeu ) {
+			//location.replace( "bigscreen.php?w=" + window.innerWidth );
+			dispatch( json.etat );
+		}
+		else {
+			$(affichage).html( "<div style='text-align:center; margin:auto; font-size:1.25em;'>" + json.positions + "</div>" );
+			// décompte
+			var now = new Date().getTime()/1000;	// en secondes
+			var diff = Math.trunc( json.endofseq - now );
+			var neg = ( diff < 0 ) ? true : false;
+			
+			var next = diff%json.tempo;
+			// test fin position théorique
+			if ( diff > declic ) {		// reste plus de declic secondes
+				audiofinposition = 0;
+				// test fin donne
+				if ( next > declic ) audiofindonne = 0;
+				else {
+					if ( audiofindonne == 0 ) {
+						console.log( "nouvelleDonne" );
+						audiofindonne = 1;
+						var audio1 = document.getElementById("nouvelleDonne");
+						//audio1.play();				
+						pop.style.display = "inline-block";
+						setTimeout(function() { pop.style.display = "none"; }, 3000);
 					}
 				}
-				else {		// reste moins de declic secondes
-					if ( (diff > 0)&&(audiofinposition == 0) ) {
-						console.log( "changePosition" );
-						audiofinposition = 1;
-						var audio2 = document.getElementById("changePosition");
-						audio2.play();
-					}
+			}
+			else {		// reste moins de declic secondes
+				if ( (diff > 0)&&(audiofinposition == 0) ) {
+					console.log( "changePosition" );
+					audiofinposition = 1;
+					var audio2 = document.getElementById("changePosition");
+					audio2.play();
 				}
-				diff = Math.abs( diff );
-				var reste = new Date(diff * 1000).toISOString().slice(14, 19);
-				if ( neg ) $("#dsprest").html( "&nbsp;<span style='color:red;'>" + reste + "</span>&nbsp;" );
-				else $("#dsprest").html( "&nbsp;" + reste + "&nbsp;" );
-				$("#dsprest").show();
-				break;
 			}
-			case st_phase_fini: {
-				console.log( "st_phase_fini" );
-				$("#realtour").html( "<h2 style='text-align: center; color:red'>Résultats provisoires</h2>"
-					+ "<div style='text-align:center; margin:auto; max-width:700px;'>"
-					+ json.positions
-					+ "</div>" );
-				$("#dsprest").hide();
-				clearInterval( myTimer );
-				myTimer = setInterval(Timer_phase_fini, 5000);
-				//location.replace( "bigscreen.php?w=" + window.innerWidth );
-				break;
-			}
+			diff = Math.abs( diff );
+			var reste = new Date(diff * 1000).toISOString().slice(14, 19);
+			if ( neg ) $("#dsprest").html( "&nbsp;<span style='color:red;'>" + reste + "</span>&nbsp;" );
+			else $("#dsprest").html( "&nbsp;" + reste + "&nbsp;" );
+		
+			setTimeout(function() { Timer_phase_jeu(); }, 3000);
 		}
 	},"json");
 }
 function Timer_phase_fini() {	// en phase de clôture
 	// affichage des résultats provisoires
-	$.get( "getpositionsjoueurs.php", {idtournoi:idtournoi}, function( json ) {
-		if ( json.etat == st_phase_fini ) {
-			$("#realtour").html( "<h2 style='text-align: center; color:red'>Résultats provisoires</h2>"
-				+ "<div style='text-align:center; margin:auto; max-width:700px;'>"
-				+ json.positions
-				+ "</div>" );
+	$.get( "getresultatstournoi.php", {idtournoi:idtournoi, w:window.innerWidth}, function( json ) {
+		if ( json.etat != st_phase_fini ) {
+			//location.replace( "bigscreen.php?w=" + window.innerWidth );
+			dispatch( json.etat );
 		}
 		else {
-			clearInterval( myTimer );
-			location.replace( "bigscreen.php?w=" + window.innerWidth );
+			$(affichage).html( "<div style='text-align:center; margin:auto;'>"
+				+ json.resultats
+				+ "</div>" );
+			setTimeout(function() { Timer_phase_fini(); }, 5000);
 		}
 	},"json");
 }
-function Timer_phase_closed() {	// clôture
-	// affichage des résultats provisoires
-	$.get( "getetattournoi.php", {idtournoi:idtournoi}, function( strjson ) {
-		if ( strjson.etat != st_phase_fini ) {
-			clearInterval( myTimer );
+function Timer_closed() {	// tournoi cloturé
+	// affichage des résultats définitifs
+	$.get( "getresultatstournoi.php", {idtournoi:idtournoi, w:window.innerWidth}, function( json ) {
+		$(affichage).html( "<div style='text-align:center; margin:auto;'>"
+			+ json.resultats
+			+ "</div>" );
+		Timer_wait();
+	},"json");
+}
+function Timer_wait() {
+	$.get( "existeTournoiNonClos.php", {}, function( id ) {
+		if ( id > 0 ) {
 			location.replace( "bigscreen.php?w=" + window.innerWidth );
 		}
-	},"json");
+		setTimeout(function() { Timer_wait(); }, 10000);
+	},"text");
+}
+
+function dispatch( etat ) {
+	switch (etat) {
+		case st_notfound: {	// attente création 1er tournoi
+			$(titre).html( "<h2>Pas de tournoi en cours ou en préparation</h2>" );
+			$(affichage).html( "<p>Pas de tournoi enregistré.</p>" );
+			Timer_wait();
+			break;
+		}
+		case st_phase_init: {
+			$(titre).html( "<h2>Tournoi en préparation, attendez</h2>" );
+			$("#dsprest").hide();
+			Timer_phase_init();
+			break;
+		}
+		case st_phase_jeu: {
+			$(titre).html( "<h2>Tournoi en cours</h2>" );
+			$("#dsprest").show();
+			Timer_phase_jeu();
+			break;
+		}
+		case st_phase_fini: {
+			$(titre).html( "<h2 style='text-align: center; color:red'>Résultats provisoires</h2>" );
+			$("#dsprest").hide();
+			Timer_phase_fini();
+			break;
+		}
+		case st_closed: {
+			$(titre).html( "<h2 style='text-align: center;'>Résultats définitifs</h2>" );
+			Timer_closed();
+			break;
+		}
+		
+		default:
+	}
 }
 
 // A helper to add sources to video
@@ -211,51 +225,10 @@ var base64 = function(mimeType, base64) {
 		$t = readTournoi( $idtournoi );
 		$etat = $t['etat'];
 	}
-	
-	switch( $etat ) {
-		case $st_notfound: {
-			$aff = "<h2>Pas de tournoi en cours ou en préparation </h2>";
-			$aff .= "<p>Pas de tournoi enregistré.</p>";
-			break;
-		}
-		case $st_phase_init: {
-			$aff = "<h2>Tournoi en préparation</h2>";
-			$aff .= "<p>attendez le démarrage ...</p>";
-			break;
-		}
-		case $st_phase_jeu: {
-			$aff = "<h2>Tournoi en cours</h2>";
-			$aff .= "<p style='color:red;font-size: 1.2em;'>tableau des positions en cours de chargement ...</p>";
-			break;
-		}
-		case $st_phase_fini: {
-			$aff = "<h2 style='text-align: center; color:red'>Résultats provisoires</h2>";
-			if ( ($t['idtype'] <= $min_type_affimp)&&($parametres['affimp']==1) ) {
-				setTournoiIMP( $idtournoi );
-				$aff .= htmlDisplayTournoiIMP( $idtournoi );
-			}
-			else {
-				setTournoi($idtournoi);
-				$aff .= htmlDisplayTournoi( $idtournoi, $screenw );
-			}
-			break;
-		}
-		case $st_closed: {
-			// Affichage des résultats du dernier tournoi enregistré.
-			if ( ($t['idtype'] <= $min_type_affimp)&&($parametres['affimp']==1) ) {
-				setTournoiIMP( $idtournoi );
-				$aff = htmlDisplayTournoiIMP( $idtournoi );
-			}
-			else {
-				setTournoi( $idtournoi );
-				$aff = htmlDisplayTournoi($idtournoi, $screenw);
-			}
-			break;
-		}
-	}
 	?>
-	<p id='realtour'></p>	<!-- tableau -->
-	<p id='dsprest'></p>	<!-- décompte -->
+	<div id='titre'></div>
+	<div id='affichage'></div>	<!-- tableau -->
+	<p id='dsprest' class="bigDigit" hidden></p>	<!-- décompte -->
 	<p id='salon'></p>		<!-- vidéo mise en veille -->
 	<p><button onclick='video.play()'>Cliquez ici pour ne pas avoir de mise en veille</button></p>
 	<button id='sos' onClick='gotoindex()'>Retour page d'accueil</button>
@@ -264,48 +237,8 @@ var base64 = function(mimeType, base64) {
 <script>
 var idtournoi = parseInt( "<?php echo $idtournoi; ?>" );
 var etat = parseInt( "<?php echo $etat; ?>" );
-
-var myTimer;	// timer
-switch (etat) {
-	case st_notfound: {
-		console.log( "st_notfound" );
-		$("#realtour").html( "<?php echo $aff; ?>" );
-		myTimer = setInterval(Timer_notfound, 10000);
-		break;
-	}
-	
-	case st_phase_init: {
-		console.log( "st_phase_init" );
-		$("#realtour").html( "<?php echo $aff; ?>" );
-		myTimer = setInterval(Timer_phase_init, 5000);
-		break;
-	}
-	
-	case st_phase_jeu: {
-		console.log( "st_phase_jeu" );
-		$("#realtour").html( "<?php echo $aff; ?>" );
-		$("#dsprest").html( "&nbsp;??:??&nbsp;" )
-		.addClass( "bigDigit" );
-		myTimer = setInterval(Timer_phase_jeu, 3000);
-		break;
-	}
-	
-	case st_phase_fini: {
-		console.log( "st_phase_fini" );
-		$("#realtour").html( "<?php echo $aff; ?>" );
-		myTimer = setInterval(Timer_phase_fini, 5000);
-		break;
-	}
-	
-	case st_closed: {
-		console.log( "st_closed" );
-		$("#realtour").html( "<?php echo $aff; ?>" );
-		//myTimer = setInterval(Timer_phase_closed, 5000);
-		break;
-	}
-	
-	default:
-}
+console.log( "idtournoi=", idtournoi, "etat=", etat );
+dispatch( etat );
 
 // Create the root video element
 var video = document.createElement('video');

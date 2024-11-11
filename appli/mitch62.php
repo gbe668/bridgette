@@ -122,6 +122,8 @@ document.addEventListener('visibilitychange', function (event) {
 			$numEO = $table - $position; 
 			if ( ( $position >= $saut )&&( $saut > 0) ) 	$numEO --;
 			if ( $numEO < 1 ) $numEO += max( $pairesNS, $pairesEO );
+			$notour = $position+1;		// compteur de tours
+			$mintour = getMinTour( $pairesNS );
 			
 			print "<h2>Table</h2><h2><span class='numtable'>$numNS</span></h2>";
 			$ligneNS = getligneNS( $idtournoi, $numNS );
@@ -131,8 +133,6 @@ document.addEventListener('visibilitychange', function (event) {
 			
 			// test reconnexion alors que la table a fini de jouer
 			if ( $cpt < $njouees ) {
-				$notour = $position+1;		// compteur de tours
-				$mintour = getMinTour( $pairesNS );
 				//print "<h2>Position n°<span class='notour'>$notour</span></h2>";
 				
 				$donne = $res['numdonne'];	// dernière donne jouée
