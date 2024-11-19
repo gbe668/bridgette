@@ -143,7 +143,8 @@ if ( $withtoken = isset($_GET['token']) ){
 }
 else { 	// pas de token, test si cookie existe
 	if ( isset($_COOKIE['bridgette']) ) {	// cookie existe
-		$json = base64_decode($_COOKIE['bridgette']);
+		$token = $_COOKIE['bridgette'];
+		$json = base64_decode($token);
 		$club = json_decode($json, true);
 		// décodage réussi avec cookie, initialise paramètres session
 		$_SESSION['prefix'] = $club['prefix'];
@@ -173,9 +174,9 @@ $maxjours = 30;	// max xx jours inactivité pour la durée de vie
 $maxjoursgarbage = 100;	// max xx jours inactivité pour la conservation dans la table sessions
 $maxdureesession = 3600*24*$maxjours;
 // mise à jour du cookie
-$json = json_encode($club);
-$encryption = base64_encode( $json );
-setcookie('bridgette', $encryption, time()+$maxdureesession);
+$json = json_encode(array( 'prefix'=>$club['prefix'], 'timex'=>$club['timex'] ));
+$token = base64_encode( $json );
+setcookie('bridgette', $token, time()+$maxdureesession);
 
 //
 // lecture du fichier de configuration du club

@@ -25,7 +25,7 @@ function send_mailpwd( $sujet, $dests, $body ) {
 	// défini dans fichier de configuration
 	$mail->Host       = $config['mail_Host'];  
 	$mail->Username   = $config['mail_Username'];
-	$mail->Password   = $config['mail_Password'];      // identique bridghome
+	$mail->Password   = $config['mail_Password'];
 	$mail->Port       = $config['mail_Port'];
 	//$mail->SMTPOptions = array('ssl' => array('verify_peer' => false,'verify_peer_name' => false,'allow_self_signed' => true)); // ignorer l'erreur de certificat.
 	

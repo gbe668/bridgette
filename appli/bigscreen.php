@@ -127,6 +127,7 @@ function Timer_phase_fini() {	// en phase de clôture
 }
 function Timer_closed() {	// tournoi cloturé
 	// affichage des résultats définitifs
+	$(affichage).html( "<p>En attente chargement ...</p>" );
 	$.get( "getresultatstournoi.php", {idtournoi:idtournoi, w:window.innerWidth}, function( json ) {
 		$(affichage).html( "<div style='text-align:center; margin:auto;'>"
 			+ json.resultats

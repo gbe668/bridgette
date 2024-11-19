@@ -1,42 +1,11 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+require("libmailpwd.php");
 
-$hexkey = "b1208554230fa605d3aaf1611f1093024394b5d97a4f4628ed46c25736048f39";
-$key = hex2bin( $hexkey );
-/**
-* Decrypt a message
-*
-* @param string $encrypted - message encrypted with safeEncrypt()
-* @param string $key - encryption key
-* @return string
-*/
-function safeDecrypt( $encrypted, $key ) {  
-    $decoded = base64_decode($encrypted);
-    if ($decoded === false) {
-        //throw new Exception('Scream bloody murder, the encoding failed');
-        return 'Scream bloody murder, the encoding failed';
-    }
-    if (mb_strlen($decoded, '8bit') < (SODIUM_CRYPTO_SECRETBOX_NONCEBYTES + SODIUM_CRYPTO_SECRETBOX_MACBYTES)) {
-        //throw new Exception('Scream bloody murder, the message was truncated');
-        return 'Scream bloody murder, the message was truncated';
-    }
-    $nonce = mb_substr($decoded, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES, '8bit');
-    $ciphertext = mb_substr($decoded, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES, null, '8bit');
-
-    $plain = sodium_crypto_secretbox_open( $ciphertext, $nonce, $key );
-    if ($plain === false) {
-		//throw new Exception('the message was tampered with in transit');
-		return 'The message was tampered with in transit';
-		}
-    sodium_memzero($ciphertext);
-    sodium_memzero($key);
-    return $plain;
-};
+$phrase1 = $_GET['phrase']; // phrase constituée du seul email
 
 if ( isset($_POST['phrase3']) ) {
-	//$phrase = stripslashes($_REQUEST['phrase3']);
-	//$phrase = htmlspecialchars($phrase);
 	// phrase constituée du seul email
 	$phrase3 = $_REQUEST['phrase3'];
 	$phrase4 = hex2bin( $phrase3 );
@@ -57,7 +26,13 @@ if ( isset($_POST['phrase3']) ) {
 			if($res) {
 				$message =  "Mot de passe changé avec succès.";
 				// Redirection vers la page de connexion
-				header("Location: bridgette.php");
+
+				// ajout le 14/11/2024 pour ceux qui n'acceptent pas les cookies ?
+				//$tt = time();
+				//$json = json_encode( array( 'prefix'=>$prefix, 'timex'=>$tt ) );
+				//$token = base64_encode( $json );
+
+				header("Location: bridgette.php?token=".$token);
 			}
 			else $message =  "Erreur inconnue.";
 		}
@@ -95,12 +70,6 @@ function gotoindex() {
 	<div style="text-align: center">
 	<p><img src="images/bridgette.png" alt="bridge" style="width:90%; max-width:350px;" /></p>
 	<h2><?php echo $titre; ?></h2>
-	<?php
-	$phrase1 = $_GET['phrase'];
-	$phrase2 = hex2bin( $phrase1 );
-	// phrase constituée du seul email
-	//$email = safeDecrypt( $phrase2, $key );
-	?>
 	<h1>Mot de passe oublié</h1>
 
 	<form action="" method="post" name="login">

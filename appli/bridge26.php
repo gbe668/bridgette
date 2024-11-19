@@ -14,6 +14,52 @@ if ( $resultIdent['status'] == $ID_INCORRECT ) {
 }
 else $userid = $resultIdent['userid'];
 
+function getMyClassement($userid) {
+	global $tab_tournois, $tab_pairesNS, $tab_pairesEO, $maxjoueurs;
+	global $parametres;
+	$nbm = $parametres['nbmperf'];	// $nbm nombre de mois précédent la date du jour
+	$min = $parametres['minperf'];	// $min nombre minimum de tournois joués
+	$nbj = $parametres['nbjperf'];	// taille du tableau
+	$dbh = connectBDD();
+	
+	// recherche du 1er tournoi avec une date >= date du jour - $nbm mois
+	$sql = "SELECT count(*) FROM $tab_tournois WHERE tournoi >=(DATE_SUB(curdate(), INTERVAL $nbm MONTH)) order by id asc;";
+	$res = $dbh->query($sql);
+	$nbl = $res->fetchColumn();
+	//print "<p>$sql $nbl</p>";
+	if ( $nbl > 0 ) {
+		$sth = $dbh->query( "SELECT * FROM $tab_tournois WHERE tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) order by id asc;" );
+		$row = $sth->fetch(PDO::FETCH_ASSOC);
+		$minidt = $row['id'];
+		$since  = $row['tournoi'];
+		$datef = strdatet( $since );
+
+		$sql = "SELECT idj, COUNT(*) AS nbfois, AVG(noteg) AS perf FROM (
+			(SELECT idj1 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= $minidt AND idj1 = $userid) UNION 
+			(SELECT idj2 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= $minidt AND idj2 = $userid) UNION 
+			(SELECT idj3 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= $minidt AND idj3 = $userid) UNION
+			(SELECT idj4 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= $minidt AND idj4 = $userid) 
+			) T1 group by idj;";
+		//print "<p>$sql</p>";
+				
+		$res = $dbh->query( $sql );
+		if ( $row = $res->fetch(PDO::FETCH_ASSOC) ) {
+			$score = sprintf( "%.1f", $row["perf"] );
+			$nbfois = $row["nbfois"];
+			
+			$str = "<p>Performance moyenne sur les $nbm derniers mois (du $datef à ce jour):</p>";
+			$str .= "<p>$score % sur $nbfois tournois joués</p>";
+		}
+		else {
+			$str = "Vous n'avez pas joué ces derniers mois !";
+		}
+	}
+	else {
+		$str = "Pas de tournoi enregistré ces derniers mois !";
+	}
+	$dbh = null;
+	return $str;
+};
 ?>
 
 <!DOCTYPE HTML>
@@ -75,9 +121,17 @@ function masquerecherche() {
  <body>
 	<div style="text-align:center; max-width:350px; margin:auto;" id='topwindow'>
 	<?php
+	/*
+	if ( $parametres['checkuser'] > 0 ) {
+		$joueur = getJoueur( $userid );
+		print "<p><b>Hello ".$joueur['nomcomplet']."</b></p>";
+	}
+	*/
 	if ( $resultIdent['status'] == $ID_CORRECT ) {
 		$joueur = getJoueur( $userid );
 		print "<p><b>Hello ".$joueur['nomcomplet']."</b></p>";
+		print getMyClassement($userid);
+		print '<p>Tél <input type="text" id="phone" name="phone" value="'.$joueur['phone'].'" size="12">&nbsp;<button class="mButton" onclick="oktel('.$userid.')">Ok</button></p>';
 
 		print '<h2>Annuaire des joueurs actifs</h2>';
 		print '<p><button class="myButton" onclick="cdeplus()">Affiche/masque annuaire</button></p>';
