@@ -81,7 +81,7 @@ function gotodownloadapk() {
 	<button id="section_apk" class='mButton' onclick="gotodownloadapk()">Appli android</button>
 	</p>
 	<p><button class="mySmallButton" onclick="goto20()">Affichage derniers résultats</button></p>
-	<p><button class="mySmallButton" onclick="goto25()">Annuaire / Recherche partenaire</button></p>
+	<p><button class="mySmallButton" onclick="goto25()">Pré-inscription tournoi</br>Recherche partenaire</button></p>
 	<p>&nbsp;</p>
 	<p><button class="myBigButton" onclick="goto40()">Organisation du tournoi<br>réservé directeur tournoi</button></p>
 	<p><button class="mySmallButton" onclick='gotoformation()'>Espace formation</button></p>

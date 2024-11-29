@@ -2,12 +2,12 @@
 require("configuration.php");
 require("bridgette_bdd.php");
 
-// Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
+/* Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
 if( !isDirecteur() ){
 	header("Location: logdirecteur.php");
 	exit(); 
 }
-
+*/
 // Fetching Values From URL
 //	var dataString = 'strname=' + strname;
 $strname = htmlspecialchars( $_GET['strname'] );

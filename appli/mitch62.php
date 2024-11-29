@@ -101,6 +101,7 @@ document.addEventListener('visibilitychange', function (event) {
 		$paquet		= $t['paquet'];
 		$saut 		= $t['saut'];
 		$gueridon	= $t['gueridon'];
+		$npositions	= $t['npositions'];
 		
 		// Relais NS
 		$relais  = $t['relais'];
@@ -156,8 +157,7 @@ document.addEventListener('visibilitychange', function (event) {
 						$nameOuest = $ligneEO['O']['nomcomplet'];
 						print "<p>En Est Ouest: $nameEst et $nameOuest</p>";
 					}
-					
-					print "<h3>Récupérez les étuis:</br>";
+					print "<h3>Tour n°<span class='notour'>$notour</span>/$npositions, récupérez les étuis:</br>";
 					print liste_etuis( $firstdonne, $paquet );
 					if ( ($gueridon > 0)&&($pairesNS == $pairesEO)&&( ($numNS==1)||($numNS==$pairesNS) ) ) {
 						print "à partager avec la table ".( ($numNS==1) ? $pairesNS : 1 );

@@ -81,6 +81,12 @@ function createtournoi() {
 		}
 	},"json");
 };
+function startInscriptionTournoi() {
+	console.log( "startInscriptionTournoi" );
+	$.get("startinscriptiontournoi.php", { idtournoi:idtournoi }, function(strjson) {
+		goto41();
+	},"json");
+};
 function effacetournoi() {
 	console.log("effacetournoi");
 	$.get( "erasetournoi.php?", {idtournoi:idtournoi}, function(json) {
@@ -115,8 +121,10 @@ function goto44mails() {
 		var nextstring = "bridge44mails.php?idtournoi=" + idlastclosed + "&w=" +  window.innerWidth;
 		location.replace( nextstring );
 	}
-	$("#msg").text( "Il n'existe pas de tournoi précédent !" );
-	setTimeout(function() { $("#msg").html( "&nbsp;" ); }, 1000);
+	else {
+		$("#msg").text( "Il n'existe pas de tournoi précédent !" );
+		setTimeout(function() { $("#msg").html( "&nbsp;" ); }, 1000);
+	}
 };
 function cdeplus() {
 	$("#afficheplus").addClass( "section_invisible" );
@@ -176,9 +184,20 @@ function clickAnnulSuppTournoi() {
 		};
 	}
 	else {
-		print "<h2>Aujourd'hui " . strtoday() . "</h2>";
-		print '<h3>Pas de tournoi en préparation,</br>en cours ou en clôture</h2>';
-		print "<p><button class='myBigButton' onclick='createtournoi()'>Création nouveau tournoi</button></p>";
+		$today = date('Y-m-d');
+		$idtournoi = existeTournoiPreinscription($today);
+		if ( $idtournoi > 0 ) {
+			$t = readTournoi( $idtournoi );
+			$datef = $t['datef'];
+			print "<h2>Tournoi du $datef </h2>";
+			print '<h3>... avec des joueurs pré-inscrits</h3>';
+			print "<p><button class='myBigButton' onclick='startInscriptionTournoi()'>Définition des tables</button></p>";
+		}
+		else {
+			print "<h2>Aujourd'hui " . strtoday() . "</h2>";
+			print '<h3>Pas de tournoi en préparation,</br>en cours ou en clôture</h2>';
+			print "<p><button class='myBigButton' onclick='createtournoi()'>Création nouveau tournoi</button></p>";
+		}
 		$genre = $t_unknown;
 	};
 	$idlastclosed = getlastclosedtournoi();

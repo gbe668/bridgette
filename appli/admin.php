@@ -352,7 +352,7 @@ function importbdd() {
 	<p>Diagrammes enregistrés: <?php echo $nbdiagrammes; ?></p>
 	<p>Version base de données: <?php echo getversionsql(); ?></p>
 	<p>Taille base de données: <?php echo compute_sizedb(); ?> kiloOctets</p>
-	<p>Si la taille de la base de données dépasse 90% de <?php echo $maxSizeBDD; ?> kiloOctets,</br>il est peut-être temps de supprimer les anciens tournois.</p>
+	<p>La durée de calcul du tableau des résultats pour un tournoi augmente en fonction du nombre de donnes jouées</br>Si ce nombre de donnes est supérieur à 100000 ou si la taille de la base de données dépasse 90% de <?php echo $maxSizeBDD; ?> kiloOctets,</br>il est peut-être temps de supprimer les anciens tournois.</p>
 	<?php
 	$n = getDateFirstTournoi();
 	if ( $n > 0 ) {
@@ -378,6 +378,7 @@ function importbdd() {
 	<p>Le fichier d'importation de la base de données doit s'appeler <b><?php echo $prefix.'importbdd.sql' ?></b>. </br>Concrètement, vous devez recopier le fichier <b><?php echo $prefix.'yyyy_mm_jj.sql' ?></b> provenant d'un export réalisé sur l'ancien serveur dans ce fichier <b><?php echo $prefix.'importbdd.sql' ?></b>, 'copier' et non 'renommer' pour conserver une sauvegarde.</p>
 	<p>Assurez-vous que ce fichier <b><?php echo $prefix.'importbdd.sql' ?></b> existe dans le répertoire <b><?php echo $dir_configs ?></b> de l'application Bridgette sur le nouveau serveur.</p>
 	<p><em>En cas d'erreur, vérifier l'encodage du fichier .sql qui doit être en UTF8</em></p>
+	<p><em>L'importation du fichier .sql peut prendre plusieurs minutes !!!</em></p>
 	<p>Puis confirmez !</p>
 	<p><button class="myButton oktogoon" onClick="confirmationImportBDD()">Je confirme</button></p>
 	<p><button class="myButton kotogoon" onClick="annulationImportBDD()">Oups ! J'annule</button></p>

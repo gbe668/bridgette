@@ -21,7 +21,7 @@ if ( $nbl > 0 ) {
 	$nbl = min( $nbl, $oldtournois );
 	for ( $i = 0; $i < $nbl; $i++ ) {
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
-		del_Tournoi( $row[ 'id' ] );		
+		eraseTournoi( $row[ 'id' ] );		
 	}
 	// purge des tournois
 	for ( $i = 0; $i < $nbl; $i++ ) {

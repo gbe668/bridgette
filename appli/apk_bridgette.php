@@ -9,7 +9,8 @@ if ( file_exists( $file_version ) ) {
 }
 else $version = "inconnue";
 
-$apk_code_request = 8;	// numéro dernière version générée le 14 août 2024
+//$apk_code_request = 8;	// version générée le 14 août 2024
+$apk_code_request = 9;		// numéro dernière version générée le 20 novembre 2024
 
 $_SESSION['apk_code'] = htmlspecialchars( $_GET['apk_code'] );
 $apk_name = htmlspecialchars( $_GET['apk_name'] );
@@ -245,7 +246,7 @@ function gotodownloadapk() {
 	
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto20()">Affichage derniers résultats</button></p>
-	<p><button class="mySmallButton" onclick="goto25()">Annuaire / Recherche partenaire</button></p>
+	<p><button class="mySmallButton" onclick="goto25()">Pré-inscription tournoi</br>Recherche partenaire</button></p>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto59()">Calcul de la marque</button></p>
 	<!--

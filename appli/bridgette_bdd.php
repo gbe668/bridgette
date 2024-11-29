@@ -59,7 +59,8 @@ $debinvites = 4;
 
 $st_notfound = 0;		# tournoi non trouvé
 $st_mail = 1;			# résultats provenant d'un dépouillement externe
-$st_appli = 2;			# résultats calculés par mon appli
+//Tournoi ouvert à la pré-inscription
+$st_preinscription = 2;	# préinscription des joueurs en ligne
 //Tournoi en cours
 $st_phase_init = 31;	# saisie des données avant le début du tournoi
 //$st_phase_init2 = 32;	# inutilisé
@@ -73,7 +74,7 @@ $st_err_requete = -1;
 $st_text = [
 	$st_notfound => "tournoi non trouvé",
 	$st_mail => "résultats provenant d'un dépouillement externe",
-	$st_appli => "résultats calculés par mon appli",
+	$st_preinscription => "préinscription des joueurs en ligne",
 	$st_phase_init => "phase initialisation",
 	$st_phase_jeu => " phase jeu",
 	$st_phase_fini => "phase clôture",
@@ -721,7 +722,7 @@ function insertDonne( $idt, $dd, $ns, $eo, $contrat, $jouepar, $entame, $resulta
 			$result[ 'display' ] = "Enregistrement terminé.";
 			
 			// calcul du rang
-			_setRang( $idt, $dd, $dbh, $hweo );
+			_setRang( $idt, $dd, $dbh, $hweo, $tab_donnes );
 		
 			// Incrémentation du compteur de donnes jouées/enregistrées par la paire ns
 			$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$ns'" );
@@ -748,7 +749,7 @@ function insertDonne( $idt, $dd, $ns, $eo, $contrat, $jouepar, $entame, $resulta
 				$result[ 'display' ] = "Enregistrements terminés.";
 			
 				// calcul du rang
-				_setRang( $idt, $dd, $dbh, $hweo );
+				_setRang( $idt, $dd, $dbh, $hweo, $tab_donnes );
 				
 				// Incrémentation du compteur de donnes jouées/enregistrées par la paire eo
 				$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$eo'" );
@@ -852,7 +853,7 @@ function updateDonne( $idt, $dd, $ns, $eo, $contrat, $jouepar, $entame, $resulta
 	if ( $res->fetchColumn() == 1 ) {
 		$sql = "UPDATE $tab_donnes SET contrat = '$contrat', jouepar = '$jouepar', entame = '$entame', resultat = '$resultat', points = '$points' where idtournoi='$idt' and etui='$dd' and ns='$ns' and eo='$eo' and hweo=0;";
 		$sth = $dbh->query( $sql );
-		_setRang( $idt, $dd, $dbh, 0 );
+		_setRang( $idt, $dd, $dbh, 0, $tab_donnes );
 		
 		// test si donne symétrique howell
 		$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd' and ns='$eo' and eo='$ns' and hweo=1;";
@@ -861,7 +862,7 @@ function updateDonne( $idt, $dd, $ns, $eo, $contrat, $jouepar, $entame, $resulta
 			$points = -$points;
 			$sql = "UPDATE $tab_donnes SET contrat = '$contrat', jouepar = '$jouepar', entame = '$entame', resultat = '$resultat', points = '$points' where idtournoi='$idt' and etui='$dd' and ns='$eo' and eo='$ns' and hweo=1;";
 			$sth = $dbh->query( $sql );
-			_setRang( $idt, $dd, $dbh, 1 );
+			_setRang( $idt, $dd, $dbh, 1, $tab_donnes );
 			$display_string = "Deux enregistrements mis à jour.";
 		}
 		else {
@@ -904,15 +905,16 @@ function testnotplayed( $idt, $ns, $eo, $dd ) {
 	if ( $nb > 0 ) return false;
 	else return true;
 }
-function _setRang( $idt, $dd, $dbh, $hweo ) {
+function _setRang( $idt, $dd, $dbh, $hweo, $x_donnes ) {
+	// 28/11/2024: optimisation durée exécution
 	global $tab_donnes, $contratNJ;
-	
+	/*
 	$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = '$idt' and etui = '$dd' and hweo = '$hweo' and contrat !='$contratNJ';";
 	$res = $dbh->query($sql);
 	$nbl = $res->fetchColumn();
-	if ( $nbl < 1 ) return;
-	
-	$sql = "SELECT id, ns, eo, points FROM $tab_donnes where idtournoi = '$idt' and etui = '$dd' and hweo = '$hweo' and contrat !='$contratNJ';";
+	if ( $nbl < 1 ) return;			// *************** manque la raz du rang et de la note
+	*/
+	$sql = "SELECT id, ns, eo, points FROM $x_donnes where idtournoi = '$idt' and etui = '$dd' and hweo = '$hweo' and contrat !='$contratNJ';";
 	$tabid = array();
 	$pns = array();
 	$peo = array();
@@ -926,7 +928,9 @@ function _setRang( $idt, $dd, $dbh, $hweo ) {
 		$peo[$j] = $row['eo'];
 		$pps[$j] = $row['points'];
 		$j++;
-		}
+	}
+	if ( $j < 1 ) return;
+	
 	$top = $j-1; // nb de fois où la donne a été jouée - 1
 	// Si donne jouée une seule fois pour l'instant
 	if ( $top == 0 ) {
@@ -1140,6 +1144,7 @@ function htmlResultatPaquet($idt, $ns, $eo) {
 // fonctions utilisant la table "tournois"
 function setTournoi($idt) {
 	global $tab_tournois, $tab_donnes, $tab_pairesNS, $tab_pairesEO, $contratNJ;
+	global $prefix;
 	$dbh = connectBDD();
 	
 	$sql = "SELECT * FROM $tab_tournois where id = '$idt';";
@@ -1149,17 +1154,33 @@ function setTournoi($idt) {
 	$pairesEO = $row['pairesEO'];
 	$ndonnes = $row['ndonnes'];
 
+	// 28/11/2024	Optimisation durée d'exécution
+	// Création table temporaire regroupant les résultats des donnes jouées pendant le tournoi
+	$x_donnes = $prefix."TMP".sprintf( "%06d", rand( 1, 999999) );
+	$sql = "CREATE TABLE $x_donnes AS SELECT * FROM $tab_donnes where idtournoi = '$idt';";
+	//print "<p>sql: $sql</p>";
+	$sth = $dbh->query( $sql );
+
 	// calcul des rangs
 	for ( $i = 1; $i <= $ndonnes; $i++) {
-		_setRang( $idt, $i, $dbh, 0 );
-		_setRang( $idt, $i, $dbh, 1 );
-		};
+		//$t0 = microtime(true);
+		_setRang( $idt, $i, $dbh, 0, $x_donnes );
+		//$t1 = microtime(true);
+		_setRang( $idt, $i, $dbh, 1, $x_donnes );
+		//$t2 = microtime(true);
+		//$exec1 = intval( ($t1 - $t0)*1000 );	// en millisecondes
+		//$exec2 = intval( ($t2 - $t1)*1000 );	// en millisecondes
+		//print "Durée exécution:".$exec1."   ".$exec2." ms</br>";
+	};
+	// Suppression table temporaire
+	$sql = "DROP TABLE $x_donnes;";
+	$sth = $dbh->query( $sql );
 
 	// Calcul des notes globales NS
 	$pns = array();
 	$notegns = array();
 	for ( $i = 0; $i < $pairesNS; $i++) {
-		$pns[$i] = 0;
+		$pns[$i] = $i+1;
 		$notegns[$i] = 0;
 	}
 	$i = 0;
@@ -1171,7 +1192,6 @@ function setTournoi($idt) {
 	};
 	for ( $i = 0; $i < $pairesNS; $i++) {
 		$sql = "UPDATE $tab_pairesNS SET noteg = '$notegns[$i]' where idtournoi = '$idt' and num = '$pns[$i]';";
-		//print "<p>$sql</p>";
 		$dbh->query($sql);
 	};
 
@@ -1179,7 +1199,7 @@ function setTournoi($idt) {
 	$peo = array();
 	$notegeo = array();
 	for ( $i = 0; $i < $pairesEO; $i++) {
-		$peo[$i] = 0;
+		$peo[$i] = $i+1;
 		$notegeo[$i] = 0;
 	}
 	$i = 0;
@@ -1307,7 +1327,26 @@ function setTournoiIMP($idt) {	// tournoi type howell de 4 paires, chaque donne 
 	$dbh = null;
 };
 
-function existeTournoiVivant() {		// return idtournoi si existe, 0 si non trouvé
+function existeTournoiPreinscription($datetournoi) {	// return idtournoi si existe, 0 si non trouvé
+	global $tab_tournois, $st_preinscription;
+	$dbh = connectBDD();
+	
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_preinscription' and tournoi='$datetournoi';";
+	if ( $res = $dbh->query($sql)) {
+		$nbl = $res->fetchColumn();
+		if ( $nbl == 1 ) {
+			$sth = $dbh->query( "SELECT id FROM $tab_tournois where etat = '$st_preinscription' and tournoi='$datetournoi';" );
+			$row = $sth->fetch(PDO::FETCH_ASSOC);
+			$idt = $row['id'];
+		}
+		else $idt = 0;
+	}
+	else $idt = 0;
+	
+	$dbh = null;
+	return $idt;
+};
+function existeTournoiVivant() {			// return idtournoi si existe, 0 si non trouvé
 	global $tab_tournois;
 	global $st_phase_init, $st_phase_jeu;
 	$dbh = connectBDD();
@@ -1327,7 +1366,7 @@ function existeTournoiVivant() {		// return idtournoi si existe, 0 si non trouv�
 	$dbh = null;
 	return $idt;
 };
-function existeTournoiNonClos() {		// return idtournoi si existe, 0 si non trouvé
+function existeTournoiNonClos() {			// return idtournoi si existe, 0 si non trouvé
 	global $tab_tournois;
 	global $st_phase_init, $st_phase_jeu, $st_phase_fini;
 	$dbh = connectBDD();
@@ -1373,7 +1412,7 @@ function jsonexisteTournoiNonClos() {		// return idtournoi si existe, 0 si non t
 	$dbh = null;
 	return json_encode( array( 'id'=>$idt, 'etat'=>$etat ) );
 };
-function existeTournoiClos( $datetournoi ) {		// return tableau des idtournoi qui existent à la date précisée, 0 si non trouvé
+function existeTournoiClos( $datetournoi ) {// return tableau des idtournoi qui existent à la date
 	global $tab_tournois, $st_closed;
 	$ids = array();
 
@@ -1392,7 +1431,7 @@ function existeTournoiClos( $datetournoi ) {		// return tableau des idtournoi qu
 	$dbh = null;
 	return json_encode( array( 'nbl'=>$nbl, 'ids'=>$ids ) );
 };
-function getlastclosedtournois() {		// return idtournoi si existe, 0 si non trouvé
+function getlastclosedtournois() {			// return idtournoi si existe, 0 si non trouvé
 	global $tab_tournois, $st_closed;
 	$dbh = connectBDD();
 	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed';";
@@ -1407,6 +1446,7 @@ function getlastclosedtournois() {		// return idtournoi si existe, 0 si non trou
 	$dbh = null;
 	return $id;
 };
+
 function createTournoi() {			// return idtournoi, 0 si erreur
 	global $tab_tournois;
 	global $def_genre, $def_type_howell, $def_type_mitchell, $t_howell;
@@ -1443,25 +1483,78 @@ function createTournoi() {			// return idtournoi, 0 si erreur
 	else $id = 0;
 	$dbh->query("UNLOCK TABLES;");
 
-	if ( $id > 0 ) {
-		// raz table connexions
-		_razCnxTables( $dbh );
-	}
+	$dbh = null;
+	return json_encode( array( 'idtournoi'=> $id ) );
+};
+function startInscriptionTournoi( $id ) { // Démarrage tournoi pré-inscription
+	global $tab_tournois, $st_phase_init;
+	$dbh = connectBDD();
+	
+	// changement d'état du tournoi
+	$sql = "UPDATE $tab_tournois SET etat = '$st_phase_init' where id = '$id';";
+	$res = $dbh->query($sql);
+
 	$dbh = null;
 	return $id;
-};
-/*
-function set_genretournoi( $idt, $genre ) {
-	global $tab_tournois;
-	global $def_type_howell, $def_type_mitchell, $t_howell;
-	$type = ( $genre == $t_howell ) ? $def_type_howell : $def_type_mitchell;
+}
+function createInscriptionTournoi( $datetournoi ) { // Création tournoi pré-inscription si n'existe pas
+	// Si un tournoi est en cours, on crée un nouveau tournoi de préinscription
+	// 	cas d'un marathon où les joueurs peuvent s'inscrire pour le tournoi suivant le même jour
+	// 	alors que le tournoi en cours n'est pas terminé
+	global $tab_tournois, $def_type_howell;
+	global $st_preinscription, $st_phase_init, $st_phase_jeu, $st_phase_fini, $max_tables;
+
 	$dbh = connectBDD();
-	$sql = "UPDATE $tab_tournois SET idtype = '$type' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$dbh->query("LOCK TABLES $tab_tournois WRITE;");
+	
+	// vérification d'absence de tournoi non clos avant création effective
+	$sql = "SELECT count(*) FROM $tab_tournois where tournoi='$datetournoi' and (etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini');";
+	$nbl = $dbh->query($sql)->fetchColumn();
+	if ( $nbl > 0 ) {	// il existe un tounoi non clos en cours
+		$idt = 0;
+		$lignes = [];
+		$ret = "<p><span style='color:red'>Attention, il existe un tounoi en cours !</br>La pré-inscription est possible pour un nouveau tournoi qui ne pourra commencer qu'après la clôture du tournoi en cours !</span></p>";
+	}
+	// test existence d'un tournoi de préinscription existant
+	$sql = "SELECT count(*) FROM $tab_tournois where tournoi='$datetournoi' AND etat = '$st_preinscription';";
+	$nbl = $dbh->query( $sql )->fetchColumn();
+	switch( $nbl ) {
+		case 0: { // Pas de tournoi, création d'un tournoi en préparation de type howell
+			$n = rand( 1, 9999);
+			$code = sprintf( "%04d", $n );
+			$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat )
+				VALUES ( '$datetournoi', '$code', 0, 0, $def_type_howell, $st_preinscription );";
+			$dbh->query( $sql );
+			$idt = $dbh->lastInsertId();
+			$ret = "";
+			break;
+		}
+		case 1: {	// déjà créé
+			$sql = "SELECT id FROM $tab_tournois where tournoi='$datetournoi' AND etat = '$st_preinscription';";
+			$row = $dbh->query( $sql )->fetch(PDO::FETCH_ASSOC);
+			$idt = $row['id'];
+			$ret = "";
+			break;
+		}
+		default: {	// Erreur
+			$idt = 0;
+			$ret = "<p>Erreur, $nbl tournois pré-inscription</p>";
+			break;
+		}
+	}
+	$dbh->query("UNLOCK TABLES;");
+
+	// Tableau des paires pré-inscrites (paires complètes ou à compléter)
+	$lignes = [];
+	if ( $idt > 0 ) {
+		for  ($i = 1; $i < $max_tables+1; $i++) {
+			$ligne = _getligneNS( $dbh, $idt, $i );
+			array_push( $lignes, $ligne );
+		}
+	}
 	$dbh = null;
-	return $genre;
-};
-*/
+	return json_encode( array( 'idtournoi'=> $idt, 'ret'=>$ret, 'lignes'=>$lignes ) );
+}
 function initTournoi( $idt, $pns, $peo ) {
 	// Initialisation faite à la fin de la définition des paires
 	global $tab_tournois;
@@ -1928,8 +2021,6 @@ function htmlDisplayTournoi($idt, $screenw) {
 		$str .= '</td></tr></tbody></table>';
 	}
 
-	$pts = getPointsHonneursMoyens($idt);
-	$str .= "<p>Points Honneurs moyens:<br>Nord-Sud: ".$pts['ns']."    Est-Ouest: ".$pts['eo']."</p>";
 	return $str;
 };
 function buildDestinatairesResultats($idt) {
@@ -2067,6 +2158,7 @@ function displayTournoiIMP($idt) {
 };
 function htmlDisplayResultatsTournoi($idt, $screenw) {
 	global $parametres, $min_type_affimp;
+	$t0 = microtime(true);
 	$t = readTournoi( $idt );
 	if ( ($t['idtype'] <= $min_type_affimp)&&($parametres['affimp']==1) ) {
 		setTournoiIMP( $idt );
@@ -2076,11 +2168,17 @@ function htmlDisplayResultatsTournoi($idt, $screenw) {
 		setTournoi($idt);
 		$str = htmlDisplayTournoi( $idt, $screenw );
 	}
+	$t1 = microtime(true);
+	$exec = intval( ($t1 - $t0)*1000 );	// en millisecondes
+	$pts = getPointsHonneursMoyens($idt);
+	$str .= "<p>Points Honneurs moyens:<br>Nord-Sud: ".$pts['ns']." Est-Ouest: ".$pts['eo'];
+	$str .= "</br>Durée exécution:".$exec." ms</p>";
 	return $str;
 };
 function displayResultatsTournoi($idt, $screenw) {
 	print htmlDisplayResultatsTournoi($idt, $screenw);
 }
+
 // fonctions utilisant la table des diagrammes
 function existeDiagramme($idt,$n) {		// return diagramme, null si non trouvé
 	global $tab_diagrammes;
@@ -2230,6 +2328,7 @@ function maxNumPaireEO( $idt ) {
 	$dbh = null;
 	return $nb;
 };
+
 function _getligneNS( $dbh, $idt, $numpaire ) {
 	global $tab_pairesNS;
 	$libre = array( 'id'=>0, 'numero'=>0, 'joueur'=>" ", 'nomcomplet'=>" ");
@@ -2326,6 +2425,7 @@ function setligneEO( $idt, $numpaire, $id1, $id2 ) {
 	if( $id2 > 0 ) set_joueurOuest( $idt, $numpaire, $id2 );
 	return;
 };
+
 function testlignescompletesNS( $idt ) { 
 	global $tab_pairesNS;
 	$dbh = connectBDD();
@@ -2381,9 +2481,9 @@ function testlignescompletes2( $idt ) {
 	$eo = testlignescompletesEO( $idt );
 	return ($ns * $eo);
 };	
-function set_joueurNord( $idt, $paire, $idj ) {
+
+function _set_joueurNord( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesNS;
-	$dbh = connectBDD();
 	// recherche si ligne NS déjà utilisé
 	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and num = '$paire';";
 	$res = $dbh->query($sql);
@@ -2402,12 +2502,16 @@ function set_joueurNord( $idt, $paire, $idj ) {
 		};
 		$res = $dbh->query($sql);
 	};
+	return $idj;
+};
+function set_joueurNord( $idt, $paire, $idj ) {
+	$dbh = connectBDD();
+	$idj = _set_joueurNord( $dbh, $idt, $paire, $idj );
 	$dbh = null;
 	return $idj;
 };
-function set_joueurSud( $idt, $paire, $idj ) {
+function _set_joueurSud( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesNS;
-	$dbh = connectBDD();
 	// recherche si ligne NS déjà utilisé
 	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and num = '$paire';";
 	$res = $dbh->query($sql);
@@ -2426,6 +2530,12 @@ function set_joueurSud( $idt, $paire, $idj ) {
 		};
 		$res = $dbh->query($sql);
 	};
+	return $idj;
+};
+function set_joueurSud( $idt, $paire, $idj ) {
+	global $tab_pairesNS;
+	$dbh = connectBDD();
+	$idj = _set_joueurSud( $dbh, $idt, $paire, $idj );
 	$dbh = null;
 	return $idj;
 };
@@ -2477,6 +2587,7 @@ function set_joueurOuest( $idt, $paire, $idj ) {
 	$dbh = null;
 	return $idj;
 };
+
 function efface_joueur( $idt, $idj ) {	// id tournoi, id joueur
 	global $tab_pairesNS, $tab_pairesEO;
 	$dbh1 = connectBDD();
@@ -2657,7 +2768,7 @@ function getJoueur( $idj ) {
 	return $joueur;
 };
 function getClassement() {
-	global $tab_tournois, $tab_pairesNS, $tab_pairesEO, $maxjoueurs;
+	global $tab_tournois, $tab_pairesNS, $tab_pairesEO, $st_closed;
 	global $parametres;
 	$nbm = $parametres['nbmperf'];	// $nbm nombre de mois précédent la date du jour
 	$min = $parametres['minperf'];	// $min nombre minimum de tournois joués
@@ -2670,25 +2781,34 @@ function getClassement() {
 	$nbl = $res->fetchColumn();
 	//print "<p>$sql $nbl</p>";
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois WHERE tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) order by id asc;" );
-		$row = $sth->fetch(PDO::FETCH_ASSOC);
-		$minidt = $row['id'];
-		$since  = $row['tournoi'];
-		$datef = strdatet( $since );
-		//print "<p>$sql $minidt</p>";
-
 		$i=0;
-		$sql = "SELECT idj, nbfois, perf FROM (
-			SELECT idj, COUNT(*) AS nbfois, AVG(noteg) AS perf FROM (
-				(SELECT idj1 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= $minidt) UNION 
-				(SELECT idj2 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= $minidt) UNION 
-				(SELECT idj4 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= $minidt) UNION 
-				(SELECT idj3 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= $minidt)
-				) T1 group by idj
-			) T2 where nbfois > '$min' order by perf desc;";
+		$sql = "SELECT idj, nbfois, perf, depuis FROM (
+		SELECT idj, COUNT(*) AS nbfois, AVG(noteg) AS perf, MIN(tournoi) AS depuis FROM (
+			(SELECT idj1 AS idj, tournoi, noteg FROM $tab_pairesNS
+			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesNS.idtournoi 
+			WHERE etat = $st_closed 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) ) UNION 
+			
+			(SELECT idj2 AS idj, tournoi, noteg FROM $tab_pairesEO
+			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesEO.idtournoi 
+			WHERE etat = $st_closed 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) ) UNION 
+			
+			(SELECT idj3 AS idj, tournoi, noteg FROM $tab_pairesNS
+			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesNS.idtournoi 
+			WHERE etat = $st_closed 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) ) UNION 
+			
+			(SELECT idj4 AS idj, tournoi, noteg FROM $tab_pairesEO
+			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesEO.idtournoi 
+			WHERE etat = $st_closed 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) )
+			
+			) T1 group by idj
+		) T2 where nbfois > '$min' order by perf desc;";
 		//print "<p>$sql</p>";
 
-		print "<p>Performance moyenne des joueurs sur les $nbm derniers mois (du $datef à ce jour) avec au moins $min tournois joués</p>";
+		print "<p>Performance moyenne des joueurs sur les $nbm derniers mois avec au moins $min tournois joués</p>";
 		print '<table border="0" style="width:100%; max-width: 350px; margin:auto;"><tbody>';
 		print "<tr><td class='xNum3' style='width:10%;'>Rg</td>";
 		print "<td class='xNum3'>Joueur</td>";

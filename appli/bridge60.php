@@ -215,7 +215,7 @@ function affposprov() {
 	?>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto20()">Affichage derniers résultats</button></p>
-	<p><button class="mySmallButton" onclick="goto25()">Annuaire / Recherche partenaire</button></p>
+	<p><button class="mySmallButton" onclick="goto25()">Pré-inscription tournoi</br>Recherche partenaire</button></p>
 	<p>&nbsp;</p>
 	<p><button class="mySmallButton" onclick="goto59()">Calcul de la marque</button></p>
 	<p>&nbsp;</p>
