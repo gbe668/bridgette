@@ -565,10 +565,13 @@ class Donnejouee {
 		if ( ok ) {
 			let html = "<span class='xDigit'><b>";
 			if ( this.contrat == "N J" ) {
-				this.points = 0;
+				this.points = 0;			// pour meubler, ne doit pas être pris en compte
 				html += "Donne non jouée</b></span>";
 			}
-			else if ( this.contrat == "P G" ) html += "Passe général</b></span>";
+			else if ( this.contrat == "P G" ) {
+				this.points = 0;
+				html += "Passe général</b></span>";
+			}
 			else {
 				this.calculpoints();
 				html += imgPos(this.pos)+": "+this.shortContrat()+" "+this.shortResultat()+"<br/>";
