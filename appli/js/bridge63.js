@@ -225,6 +225,29 @@ class Donnejouee {
 				.css('border-left-color', coloreo )
 				.css('border-right-color', coloreo )
 				.css('border-bottom-color', colorns );
+			
+			$("#etui").css('border-style', 'solid' );
+			$("#etui").css('border-width', '4px' );
+			let donneurstyle = 'double'
+			let donneurwidth = '8px';
+			switch( this.donneur ) {
+				case 1:
+				$("#etui").css('border-top-style', donneurstyle );
+				$("#etui").css('border-top-width', donneurwidth );
+				break;
+				case 2:
+				$("#etui").css('border-right-style', donneurstyle );
+				$("#etui").css('border-right-width', donneurwidth );
+				break;
+				case 3:
+				$("#etui").css('border-bottom-style', donneurstyle );
+				$("#etui").css('border-bottom-width', donneurwidth );
+				break;
+				case 4:
+				$("#etui").css('border-left-style', donneurstyle );
+				$("#etui").css('border-left-width', donneurwidth );
+				break;
+			}
 		}
 	}
 	clearniv() {

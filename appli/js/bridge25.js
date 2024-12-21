@@ -11,7 +11,7 @@ const listeJours = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi
 const listeMois = [ "zéro", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre" ];
 function strdatet( d ) {	// d au format aaaa-mm-jj
 	let j = d.slice( 8, 10 );
-	let m = d.slice( 5, 7 );
+	let m = parseInt(d.slice( 5, 7 ));
 	let a = d.slice( 0, 4 );
 	let mm = listeMois[m];
 	return( j+" "+mm+" "+a );
@@ -78,7 +78,7 @@ var userinscrit;
 function affiche_inscription() {
 	$("#section_inscription").toggle();
 }
-function updateTabInscrits(lignes) {
+function updateTabInscrits( lignes ) {
 	tableauInscrits = lignes;
 	
 	let n = lignes.length;
@@ -89,20 +89,20 @@ function updateTabInscrits(lignes) {
 		let ligne = lignes[i];
 		let rowi = "ligne_"+i;
 		
-		if ( ligne.N.id > 0 ) {
-			if ( (ligne.S.id > 0)||(ligne.N.id == userid) ) {
+		if ( ligne.A.id > 0 ) {
+			if ( (ligne.B.id > 0)||(ligne.A.id == userid) ) {
 				str += '<tr id="' + rowi + '" >';
 			}
 			else {
 				str += '<tr id="' + rowi + '" style="background-color:lightblue;" >';
 			}
-			if (ligne.S.id > 0) {
+			if (ligne.B.id > 0) {
 				str += '<td class="xNom">';
-				str += ligne.N.nomcomplet + '</br>' + ligne.S.nomcomplet +'</td>';
+				str += ligne.A.nomcomplet + '</br>' + ligne.B.nomcomplet +'</td>';
 			}
 			else {
 				str += '<td class="xNom clknom">';
-				str += ligne.N.nomcomplet + '</br><em>cherche partenaire</em></td>';
+				str += ligne.A.nomcomplet + '</br><em>cherche partenaire</em></td>';
 			}
 			str += '</tr>';
 		}
@@ -120,13 +120,13 @@ function updateTabInscrits(lignes) {
 	// test si les joueurs figurent déjà dans une paire inscrite
 	for  ( let i = 0; i < n; i++) {
 		let ligne = tableauInscrits[i];
-		if ( ligne.N.id == userid ) {
+		if ( ligne.A.id == userid ) {
 			$("#menu_noninscrit").hide();
 			$("#menu_inscrit").show();
 			userinscrit = true;
 			break;
 		}
-		if ( ligne.S.id == userid ) {
+		if ( ligne.B.id == userid ) {
 			$("#menu_noninscrit").hide();
 			$("#menu_inscrit").show();
 			break;
@@ -152,7 +152,8 @@ function avec_partenaire() {
 }
 function selPartenaire(idPart) {
 	let cmd = ( userinscrit ) ? "mod" : "add";
-	$.get( relpgm+"f26setpaire.php", { idtournoi:idtournoi, cmd:cmd, idnord:userid, idsud:idPart }, function(strjson) {
+	$.get( relpgm+"f25setpaire.php", { idtournoi:idtournoi, cmd:cmd, ida:userid, idb:idPart }, function(strjson) {
+		console.log( strjson.ret );
 		if ( strjson.ret == "ok" ) {
 			// mise à jour tableau des inscrits
 			updateTabInscrits( strjson.lignes );
@@ -167,7 +168,8 @@ function selPartenaire(idPart) {
 	} );
 };
 function annule_inscription() {
-	$.get( relpgm+"f26setpaire.php", { idtournoi:idtournoi, cmd:"del", idnord:userid, idsud:0 }, function(strjson) {
+	$.get( relpgm+"f25setpaire.php", { idtournoi:idtournoi, cmd:"del", ida:userid, idb:0 }, function(strjson) {
+		console.log( strjson.ret );
 		if ( strjson.ret == "ok" ) {
 			// mise à jour tableau des inscrits
 			updateTabInscrits( strjson.lignes );
@@ -184,10 +186,12 @@ function annule_inscription() {
 }
 function contactInscrit(k) {
 	let ligne = tableauInscrits[k];
-	let contact = ligne.N.nomcomplet;
+	let contact = ligne.A.nomcomplet;
 	console.log( contact );
 	if ( userid > 0 ) {
-		$.get( relpgm+"getfiche.php", { idj:ligne.N.id }, function(fiche) {
+		$("#msgtabinscrits").html( "Contactez "+contact+" au "+ligne.A.telephone+"</br>ou par mail: "+ligne.A.email );
+		/*
+		$.get( relpgm+"getfiche.php", { idj:ligne.A.id }, function(fiche) {
 			console.log(fiche);
 			$("#msgtabinscrits").html( "Contactez "+contact+" au "+fiche.telephone+"</br>ou par mail: "+fiche.email );
 		},"json")
@@ -195,6 +199,7 @@ function contactInscrit(k) {
 			$("#msgtabinscrits").html('Erreur: '+ ex );
 			console.log( "getfiche fail" );
 		} );
+		*/
 	}
 	else {
 		$("#msgtabinscrits").html( "Connectez vous pour voir les moyens de contacter "+contact );
