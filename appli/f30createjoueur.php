@@ -13,16 +13,26 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 	global $min_noclub, $max_noclub, $del_noclub;
 	$result = array( "ok" => 0, "noclub" => 0, "msg" => "message" );	// Ok/Ko, noclub, message
 	$joueur = $gender . " " . strtoupper( $lname );
-	// test joueur déjà connu
+
 	$dbh = connectBDD();
+	// test adresse mail déjà utilisée
+	if ( $email !== "" ) { 
+		$sql = "SELECT count(*) from $tab_joueurs where email='$email';";
+		$nbl = $dbh->query($sql)->fetchColumn();
+		if ( $nbl > 0 ) {
+			$result["msg"] = "Email $email déjà utilisé.";
+			$dbh = null;
+			return $result;
+		}
+	}
+	
+	// test joueur déjà connu
 	$sql = "SELECT count(*) from $tab_joueurs where genre='$gender' and prenom='$fname' and nom='$lname';";
-	$res = $dbh->query($sql);
-	$nbl = $res->fetchColumn();
+	$nbl = $dbh->query($sql)->fetchColumn();
 	if ( $nbl == 0 ) {
 		// rechercher un numéro club disponible
 		$sql = "SELECT count(*) FROM $tab_joueurs where numero >= '$min_noclub' and numero < '$max_noclub' order by numero;";
-		$res = $dbh->query($sql);
-		$nbl = $res->fetchColumn();
+		$nbl = $dbh->query($sql)->fetchColumn();
 		if ( $nbl == 0 ) {
 			// le 1er joueur à s'enregistrer
 			$prevnum = $min_noclub;
@@ -54,6 +64,7 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 				}
 			}
 		}
+		
 		if ( $result["ok"] == 1 ) {
 			// enregistrer le joueur
 			$sql = "INSERT into $tab_joueurs ( numero, joueur, genre, prenom, nom, telephone,email, password ) values ( '$prevnum', '$joueur', '$gender', '$fname', '$lname', '$phone', '$email', '$password' );";
@@ -68,8 +79,7 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 			$dureemin = 86400*30*$del_noclub;	// $del_noclub exprimé en mois
 			$datesupp = $datesupp - $dureemin;
 			$sql = "SELECT count(*) FROM $tab_joueurs where datesupp < '$datesupp' and datesupp > 0 order by numero;";
-			$res = $dbh->query($sql);
-			$nbl = $res->fetchColumn();
+			$nbl = $dbh->query($sql)->fetchColumn();
 			if ( $nbl > 0 ) {
 				$sql = "SELECT id, numero FROM $tab_joueurs where datesupp < '$datesupp' and datesupp > 0 order by numero;";
 				$sth = $dbh->query( $sql );

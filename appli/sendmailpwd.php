@@ -9,8 +9,11 @@ if ( isset($_POST['usermail']) ){
 	
 	$dbh = connectBDD();
 	$sql = "SELECT count(*) FROM `$tab_joueurs` WHERE email='$usermail';";
-	$res = $dbh->query($sql);
-	if($res->fetchColumn() == 1){
+	$n = $dbh->query($sql)->fetchColumn();
+	if ( $n == 0 ){
+		$message = "Adresse mail inconnue !!!";
+	}
+	if ( $n == 1){
 		//Envoi du mail de réinitialisation
 		$ok = send_mailpwd( $usermail );
 		if ( $ok ) {
@@ -23,8 +26,8 @@ if ( isset($_POST['usermail']) ){
 			$message = "Erreur: le mail n'est pas parti !!!";
 		}
 	}
-	else {
-		$message = "L'adresse mail est inconnue !!!";
+	if ( $n > 1 ){
+		$message = "Adresse mail identique pour 2 joueurs !!!";
 	}
 	$dbh = null;
 }

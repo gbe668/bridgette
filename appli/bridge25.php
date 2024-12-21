@@ -87,6 +87,19 @@ function getMyClassement($userid) {
 	<link rel="icon" type="image/x-icon" href="<?php echo $relpgm; ?>images/favicon.ico">
 </head>
 
+<style>
+#datepicker-container{
+  text-align:center;
+}
+#datepicker-center{
+  display:inline-block;
+  margin:0 auto;
+}
+.cross:hover {
+	cursor: pointer;
+}
+</style>
+
 <script>
 var relpgm = "<?php echo $relpgm; ?>";
 var parametres = <?php echo json_encode($parametres); ?>;	// jours d'ouverture
@@ -147,16 +160,25 @@ document.addEventListener('visibilitychange', function (event) {
 	?>
 	<h2>Pré-inscription à un tournoi</h2>
 	<div id="section_seltournoi">
-	<h3>Sélectionnez la date du tournoi:</h3>
 	<p>La pré-inscription est possible pour les tournois des 4 prochaines semaines</p>
-	<div id="datetournoi"></div>
+	<h3>Sélectionnez la date du tournoi:</h3>
+	<div id="datepicker-container">
+		<div id="datepicker-center">
+			<div id="datetournoi"></div>
+		</div>
 	</div>
+	</div>
+	
 	<div id="msgdatetournoi"></div>
 	
 	<div id="section_inscription" hidden>
-	
+	<table style="width:100%;max-width:350px;margin:auto;background-color:#E2EFDA"><tbody>
+	<tr><td>
 	<div id="section_tableau" hidden>
-	<h3>Tournoi du <span id="tabdujour">???</span></h3>
+	<table style="width:100%;margin:auto;"><tbody><tr>
+		<td style="width:90%"><h3>Tournoi du <span id="tabdujour">???</span></h3></td>
+		<td><span class="cross" onclick="affiche_inscription()" style="border:.5pt solid">&#x274C;</span></td>
+	</tr></tbody></table>
 	<div id="tabinscrits">&nbsp;</div>
 	<p id="msgtabinscrits">&nbsp;</p>
 	</div>
@@ -181,8 +203,16 @@ document.addEventListener('visibilitychange', function (event) {
 		<div id="clavier">clavier</div>
 		</div>
 	
+		<!--
 		<p><button class="mButton" onclick="affiche_inscription()">Referme inscription</button></p>
-		</div>
+		-->
+	<?php } ?>
+	</td></tr></tbody></table>
+	</div>
+	
+	<div>
+	<?php
+	if ( $userid > 0 ) { ?>
 	
 		<h2>Annuaire des joueurs actifs</h2>
 		<p><button class="myButton" onclick="affiche_annuaire()">Affiche/masque annuaire</button></p>
@@ -201,16 +231,15 @@ document.addEventListener('visibilitychange', function (event) {
 		<p><button class="mButton" onclick="loguserout()">Se déconnecter</button></p>
 
 	<?php } else { ?>
-		</div>
 		
 		<p>L'accès aux informations de contact des joueurs pré-inscrits est réservé aux joueurs identifiés.</p>
 		<p>Connectez-vous pour vous identifier,</br>vous pourrez ainsi vous pré-inscrire, rechercher un partenaire, consulter l'annuaire du club ...</p>
 		<p><button class="myButton" onclick="loguserin()">Se connecter</button></p>
-	<?php
-	}
-	
-	print "<p id='msgerr'>&nbsp;</p>";
+	<?php } ?>
+	</div>
+	<p id='msgerr'>&nbsp;</p>
 
+	<?php
 	if ( isset($_GET['noreturn']) ) {
 		// depuis le site internet du club
 		print '<p><button class="mySmallButton" onclick="window.close();">Fermer cette fenêtre</button></p>';

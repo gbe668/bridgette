@@ -63,13 +63,6 @@ function goto66() {
 	retparms = { next:"bridge66" };
 	passAndroid( retparms );
 };
-function relaisgueridon() {
-	// incrementCompteurEO( $eo, $paquet )
-	$.get( "/relaisgueridon.php", {eo:paire, paquet:paquet, token:token}, function(eocpt) {
-		console.log( "eocpt:", eocpt );
-		goto62();
-	},"text");
-};
 
 function passAndroid( parms ) {
 	strjson = JSON.stringify(parms);
@@ -143,14 +136,16 @@ document.addEventListener('visibilitychange', function (event) {
 			if ( ( $position >= $saut )&&( $saut > 0) ) 	$numEO --;
 			if ( $numEO < 1 ) $numEO += max( $pairesNS, $pairesEO );
 				
-			print "<h2>Table</h2><h2><span class='numtable'>$numNS</span></h2>";
 			$ligneNS = getligneNS( $idtournoi, $numNS );
 			$nameNord = $ligneNS['N']['nomcomplet'];
 			$nameSud  = $ligneNS['S']['nomcomplet'];
-			print "<p>En Nord Sud: $nameNord et $nameSud</p>";
+			print "<h2><span class='numpaire'>Paire n°$paire NS</span></h2>";
+			print "<p>$nameNord et $nameSud</p>";
 			
 			// test reconnexion alors que la table a fini de jouer
 			if ( $cpt < $njouees ) {
+				print "<h2>Table</h2><h2><span class='numtable'>$numNS</span></h2>";
+				
 				$notour = $position+1;		// compteur de tours
 				$mintour = getMinTour( $pairesNS );
 				//print "<h2>Position n°<span class='notour'>$notour</span></h2>";
@@ -232,6 +227,8 @@ document.addEventListener('visibilitychange', function (event) {
 			
 			// test reconnexion alors que la table a fini de jouer
 			if ( $cpt < $njouees ) {
+				print "<h2>Table</h2><h2><span class='numtable'>$numNS</span></h2>";
+				
 				$notour = $position+1;		// compteur de tours
 				$mintour = getMinTour( $pairesNS );
 				//print "<h2>Position n°<span class='notour'>$notour</span></h2>";
@@ -244,11 +241,14 @@ document.addEventListener('visibilitychange', function (event) {
 				if ( $firstdonne > $ndonnes ) $firstdonne = 1;
 				
 				if ( ($notour <= $mintour)||($parametres['avancem'] == 0) ) {
-					print "<h2>Table</h2><h2><span class='numtable'>$numNS</span></h2>";
+					if ( $notour > $mintour ) {
+						print "<h3>Attention<br/>le tour précédent n'est pas terminé.</h3>";
+					}
 					// test relais EO
 					if ( $relaisEO == $numNS ) {
 						// paire en relais
 						print "<h2>Vous êtes en relais Est Ouest</h2>";
+						print "<h3>Tour n°<span class='notour'>$notour</span>/$npositions</h3>";
 						if ( ($notour == 1 )&&($gueridon == 0) ) {
 							print "<p>Dans la première position, la paire<br/><b>Est Ouest en relais</b> prépare les donnes<br/>et peut entrer les diagrammes.</p>";
 							print "<h3>Récupérez les étuis:</br>";
@@ -259,9 +259,8 @@ document.addEventListener('visibilitychange', function (event) {
 						if ($gueridon > 0) {
 							print "<p>Il n'y a pas de donnes au relais<br/>avec un guéridon.</p>";
 						}
-						else {
-							print "<h3>Patientez en attendant<br/>la fin du tour en cours</h3>";
-						}
+						//incrementCompteurEO( $numEO, $paquet );
+						print "<h3>Patientez en attendant<br/>la fin du tour en cours</h3>";
 					}
 					else {
 						print "<h3>Vérifiez vos adversaires:</h3>";
@@ -270,7 +269,7 @@ document.addEventListener('visibilitychange', function (event) {
 						$nameSud  = $ligneNS['S']['nomcomplet'];
 						print "<p> En Nord Sud: $nameNord et $nameSud</p>";
 					
-						print "<h3>Récupérez les étuis:</br>";
+						print "<h3>Tour n°<span class='notour'>$notour</span>/$npositions, récupérez les étuis:</br>";
 						print liste_etuis( $firstdonne, $paquet );
 						if ( ($gueridon > 0)&&($pairesNS == $pairesEO)&&( ($numNS==1)||($numNS==$pairesNS) ) ) {
 							print "à partager avec la table ".( ($numNS==1) ? $pairesNS : 1 );

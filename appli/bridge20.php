@@ -16,7 +16,7 @@ function getclosedtournois() {
 	$res = $dbh->query($sql);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat = '$st_closed' order by id desc;" );
+		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat = '$st_closed' order by tournoi desc, id;" );
 		$nbl = min( $nbl, $parametres['maxt'] );
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
@@ -71,6 +71,16 @@ function displayLignesTournois() {
 	<link rel="stylesheet" href="css/jquery-ui.css">
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
 </head>
+
+<style>
+#datepicker-container{
+  text-align:center;
+}
+#datepicker-center{
+  display:inline-block;
+  margin:0 auto;
+}
+</style>
 
 <script>
 function gotoindex() {
@@ -194,7 +204,11 @@ function exportypes() {
 	displayLignesTournois();
 	?>
 	<h3>Rechercher les résultats d'un tournoi</h3>
-	<div id="datetournoi"></div>
+	<div id="datepicker-container">
+		<div id="datepicker-center">
+		<div id="datetournoi"></div>
+		</div>
+	</div>
 	<script>
 	// valeurs par défaut
 	$('#datetournoi').datepicker();	// initialisation

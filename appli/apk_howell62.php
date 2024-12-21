@@ -131,6 +131,9 @@ document.addEventListener('visibilitychange', function (event) {
 			$adversaire = $p['adversaire'];
 
 			if ( ($notour <= $mintour)||($parametres['avanceh'] == 0) ) {
+				if ( $notour > $mintour ) {
+					print "<h3>Attention<br/>le tour précédent n'est pas terminé.</h3>";
+				}
 				if ( $adversaire == 0 ) {	// en relais
 					// paire en relais
 					print "<h2>Tour n°$notour, vous êtes en relais</h2>";

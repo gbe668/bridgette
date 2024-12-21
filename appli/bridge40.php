@@ -82,7 +82,7 @@ function createtournoi() {
 	},"json");
 };
 function startInscriptionTournoi() {
-	console.log( "startInscriptionTournoi" );
+	console.log( "startInscriptionTournoi", idtournoi );
 	$.get("startinscriptiontournoi.php", { idtournoi:idtournoi }, function(strjson) {
 		goto41();
 	},"json");

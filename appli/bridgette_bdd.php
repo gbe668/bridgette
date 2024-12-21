@@ -1468,12 +1468,8 @@ function createTournoi() {			// return idtournoi, 0 si erreur
 			// pas de tournoi non clos, création tournoi avec le code associé
 			$n = rand( 1, 9999);
 			$code = sprintf( "%04d", $n );
-			if ( $def_genre == $t_howell ) {
-				$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat ) VALUES ( '$tt', '$code', 0, 0, $def_type_howell, $st_phase_init );";
-			}
-			else {
-				$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat ) VALUES ( '$tt', '$code', 0, 0, $def_type_mitchell, $st_phase_init );";
-			}
+			$idtype = ( $def_genre == $t_howell ) ? $def_type_howell : $def_type_mitchell;
+			$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat ) VALUES ( '$tt', '$code', 0, 0, '$idtype', '$st_phase_init' );";
 			if ( $dbh->query( $sql ) ) {
 				$id = $dbh->lastInsertId();
 			}
@@ -1495,13 +1491,13 @@ function startInscriptionTournoi( $id ) { // Démarrage tournoi pré-inscription
 	$res = $dbh->query($sql);
 
 	$dbh = null;
-	return $id;
+	return json_encode( array( 'idtournoi'=> $id ) );
 }
 function createInscriptionTournoi( $datetournoi ) { // Création tournoi pré-inscription si n'existe pas
-	// Si un tournoi est en cours, on crée un nouveau tournoi de préinscription
+	// Si un tournoi est en cours pour le même jour, on crée un nouveau tournoi de préinscription
 	// 	cas d'un marathon où les joueurs peuvent s'inscrire pour le tournoi suivant le même jour
 	// 	alors que le tournoi en cours n'est pas terminé
-	global $tab_tournois, $def_type_howell;
+	global $tab_tournois, $def_type_mitchell;
 	global $st_preinscription, $st_phase_init, $st_phase_jeu, $st_phase_fini, $max_tables;
 
 	$dbh = connectBDD();
@@ -1515,45 +1511,122 @@ function createInscriptionTournoi( $datetournoi ) { // Création tournoi pré-in
 		$lignes = [];
 		$ret = "<p><span style='color:red'>Attention, il existe un tounoi en cours !</br>La pré-inscription est possible pour un nouveau tournoi qui ne pourra commencer qu'après la clôture du tournoi en cours !</span></p>";
 	}
+	else $ret = "";
 	// test existence d'un tournoi de préinscription existant
 	$sql = "SELECT count(*) FROM $tab_tournois where tournoi='$datetournoi' AND etat = '$st_preinscription';";
 	$nbl = $dbh->query( $sql )->fetchColumn();
 	switch( $nbl ) {
-		case 0: { // Pas de tournoi, création d'un tournoi en préparation de type howell
+		case 0: { // Pas de tournoi, création d'un tournoi en préparation de type mitchell
 			$n = rand( 1, 9999);
 			$code = sprintf( "%04d", $n );
 			$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat )
-				VALUES ( '$datetournoi', '$code', 0, 0, $def_type_howell, $st_preinscription );";
+				VALUES ( '$datetournoi', '$code', 0, 0, $def_type_mitchell, $st_preinscription );";
 			$dbh->query( $sql );
 			$idt = $dbh->lastInsertId();
-			$ret = "";
 			break;
 		}
 		case 1: {	// déjà créé
 			$sql = "SELECT id FROM $tab_tournois where tournoi='$datetournoi' AND etat = '$st_preinscription';";
 			$row = $dbh->query( $sql )->fetch(PDO::FETCH_ASSOC);
 			$idt = $row['id'];
-			$ret = "";
 			break;
 		}
 		default: {	// Erreur
 			$idt = 0;
-			$ret = "<p>Erreur, $nbl tournois pré-inscription</p>";
+			$ret .= "<p>Erreur, $nbl tournois pré-inscription</p>";
 			break;
 		}
 	}
 	$dbh->query("UNLOCK TABLES;");
 
 	// Tableau des paires pré-inscrites (paires complètes ou à compléter)
+	$lignes = _getlignes($dbh, $idt);
+	$dbh = null;
+	return json_encode( array( 'idtournoi'=> $idt, 'ret'=>$ret, 'lignes'=>$lignes ) );
+}
+function _getlignes($dbh, $idt) {
+	global $max_tables, $tab_pairesNS, $tab_pairesEO, $tab_joueurs;
 	$lignes = [];
 	if ( $idt > 0 ) {
+		$libre = array( 'id'=>0, 'nomcomplet'=>" ");
+		
+		$sqlns = "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = '$idt' and num = :indice;";
+		$sqleo = "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = '$idt' and num = :indice;";
+		$sthns = $dbh->prepare( $sqlns );
+		$stheo = $dbh->prepare( $sqleo );
+		
+		$sqlj = "SELECT * FROM $tab_joueurs where id = :id;";
+		$sthj = $dbh->prepare( $sqlj );
+		
 		for  ($i = 1; $i < $max_tables+1; $i++) {
-			$ligne = _getligneNS( $dbh, $idt, $i );
+			// paire NS
+			$resns = $sthns->execute(array(':indice' => $i));
+			if ( $sthns->rowCount() > 0 ) {		// ************* be careful with rowCount
+				$row = $sthns->fetch(PDO::FETCH_ASSOC);
+				if ( $row['idj1'] != null ) {
+					$idj = $row['idj1'];
+					$resj = $sthj->execute( array(':id'=>$idj) );
+					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
+					$ligne['A'] = array( 'id'=>$idj,
+						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
+						'telephone' => $joueur[ 'telephone' ],
+						'email' => $joueur[ 'email' ] );
+					//$ligne['A'] = _getJoueur( $dbh, $row[ 'idj1' ] );
+				}
+				else $ligne['A'] = $libre;
+				if ( $row[ 'idj3' ] != null ) {
+					$idj = $row['idj3'];
+					$resj = $sthj->execute( array(':id'=>$idj) );
+					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
+					$ligne['B'] = array( 'id'=>$idj,
+						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
+						'telephone' => $joueur[ 'telephone' ],
+						'email' => $joueur[ 'email' ] );
+					//$ligne['B'] = _getJoueur( $dbh, $row[ 'idj3' ] );
+				}
+				else $ligne['B'] = $libre;
+			}
+			else {
+				$ligne['A'] = $libre;
+				$ligne['B'] = $libre;
+			}
+			array_push( $lignes, $ligne );
+			
+			// paire EO
+			$reseo = $stheo->execute(array(':indice' => $i));
+			if ( $stheo->rowCount() > 0 ) {
+				$row = $stheo->fetch(PDO::FETCH_ASSOC);
+				if ( $row[ 'idj2' ] != null ) {
+					$idj = $row['idj2'];
+					$resj = $sthj->execute( array(':id'=>$idj) );
+					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
+					$ligne['A'] = array( 'id'=>$idj,
+						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
+						'telephone' => $joueur[ 'telephone' ],
+						'email' => $joueur[ 'email' ] );
+					//$ligne['A'] = _getJoueur( $dbh, $row[ 'idj2' ] );
+				}
+				else $ligne['A'] = $libre;
+				if ( $row[ 'idj4' ] != null ) {
+					$idj = $row['idj4'];
+					$resj = $sthj->execute( array(':id'=>$idj) );
+					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
+					$ligne['B'] = array( 'id'=>$idj,
+						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
+						'telephone' => $joueur[ 'telephone' ],
+						'email' => $joueur[ 'email' ] );
+					//$ligne['B'] = _getJoueur( $dbh, $row[ 'idj4' ] );
+				}
+				else $ligne['B'] = $libre;
+			}
+			else {
+				$ligne['A'] = $libre;
+				$ligne['B'] = $libre;
+			}
 			array_push( $lignes, $ligne );
 		}
 	}
-	$dbh = null;
-	return json_encode( array( 'idtournoi'=> $idt, 'ret'=>$ret, 'lignes'=>$lignes ) );
+	return $lignes;
 }
 function initTournoi( $idt, $pns, $peo ) {
 	// Initialisation faite à la fin de la définition des paires
@@ -2504,12 +2577,6 @@ function _set_joueurNord( $dbh, $idt, $paire, $idj ) {
 	};
 	return $idj;
 };
-function set_joueurNord( $idt, $paire, $idj ) {
-	$dbh = connectBDD();
-	$idj = _set_joueurNord( $dbh, $idt, $paire, $idj );
-	$dbh = null;
-	return $idj;
-};
 function _set_joueurSud( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesNS;
 	// recherche si ligne NS déjà utilisé
@@ -2532,16 +2599,8 @@ function _set_joueurSud( $dbh, $idt, $paire, $idj ) {
 	};
 	return $idj;
 };
-function set_joueurSud( $idt, $paire, $idj ) {
-	global $tab_pairesNS;
-	$dbh = connectBDD();
-	$idj = _set_joueurSud( $dbh, $idt, $paire, $idj );
-	$dbh = null;
-	return $idj;
-};
-function set_joueurEst( $idt, $paire, $idj ) {
+function _set_joueurEst( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesEO;
-	$dbh = connectBDD();
 	// recherche si ligne EO déjà utilisé
 	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and num = '$paire';";
 	$res = $dbh->query($sql);
@@ -2560,12 +2619,10 @@ function set_joueurEst( $idt, $paire, $idj ) {
 		};
 		$res = $dbh->query($sql);
 	};
-	$dbh = null;
 	return $idj;
 };
-function set_joueurOuest( $idt, $paire, $idj ) {
+function _set_joueurOuest( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesEO;
-	$dbh = connectBDD();
 	// recherche si ligne EO déjà utilisé
 	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and num = '$paire';";
 	$res = $dbh->query($sql);
@@ -2584,87 +2641,110 @@ function set_joueurOuest( $idt, $paire, $idj ) {
 		};
 		$res = $dbh->query($sql);
 	};
+	return $idj;
+};
+function set_joueurNord( $idt, $paire, $idj ) {
+	$dbh = connectBDD();
+	$idj = _set_joueurNord( $dbh, $idt, $paire, $idj );
+	$dbh = null;
+	return $idj;
+};
+function set_joueurSud( $idt, $paire, $idj ) {
+	$dbh = connectBDD();
+	$idj = _set_joueurSud( $dbh, $idt, $paire, $idj );
+	$dbh = null;
+	return $idj;
+};
+function set_joueurEst( $idt, $paire, $idj ) {
+	$dbh = connectBDD();
+	$idj =_set_joueurEst( $dbh, $idt, $paire, $idj );
+	$dbh = null;
+	return $idj;
+};
+function set_joueurOuest( $idt, $paire, $idj ) {
+	$dbh = connectBDD();
+	$idj =_set_joueurOuest( $dbh, $idt, $paire, $idj );
 	$dbh = null;
 	return $idj;
 };
 
 function efface_joueur( $idt, $idj ) {	// id tournoi, id joueur
 	global $tab_pairesNS, $tab_pairesEO;
-	$dbh1 = connectBDD();
-	$dbh2 = connectBDD();
-
-	// recherche si joueur déjà placé
-	$nn = 0; //compteur de position trouvée
 	$oldposition = array( 'paire'=> 0, 'position'=> 0 ); 	// ( numéro paire, position )
-	for ( $i = 1; $i < 5; $i++ ) {
-		if ( $i == 1 ) { // Nord
-			$sql1 = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";
-			$sql2 = "SELECT id, num, idj3 FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";				
-		} elseif ( $i == 2 ) {// Est
-			$sql1 = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
-			$sql2 = "SELECT id, num, idj4 FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
-		} elseif ( $i == 3 ) { // Sud
-			$sql1 = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
-			$sql2 = "SELECT id, num, idj1 FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
-		} elseif ( $i == 4 ) { // Ouest
-			$sql1 = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
-			$sql2 = "SELECT id, num, idj2 FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
-		};
-		$res = $dbh1->query($sql1);
-		$nbl = $res->fetchColumn();
-		if ( $nbl > 1 ) {
-			// bug: le même joueur référencé plusieurs fois dans une même position
-			echo 'Erreur : joueur référencé plusieurs fois';
-			die();
-		};
-		if ( $nbl == 1 ) {
-			$nn++;
-			
-			// effacement joueur sur l'emplacement trouvé
-			$sth = $dbh1->query( $sql2 );
-			$row = $sth->fetch(PDO::FETCH_ASSOC);
-			$idpaire = $row['id'];
-			
-			// mémorise ancienne position
-			$oldposition[ 'paire' ] = $row['num'];
-			$oldposition[ 'position' ] = $i;
-			
-			$idpartenaire = 0;
-			
+	if ( $idj > 0 ) {
+		$dbh1 = connectBDD();
+		$dbh2 = connectBDD();
+
+		// recherche si joueur déjà placé
+		$nn = 0; //compteur de position trouvée
+		for ( $i = 1; $i < 5; $i++ ) {
 			if ( $i == 1 ) { // Nord
-				$idpartenaire = $row['idj3'];
-				$sql3 = "DELETE FROM $tab_pairesNS where idtournoi = '$idt' and id = '$idpaire';";
-				$sql4 = "UPDATE $tab_pairesNS SET idj1 = null where idtournoi = '$idt' and id = '$idpaire';";
+				$sql1 = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";
+				$sql2 = "SELECT id, num, idj3 FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";				
 			} elseif ( $i == 2 ) {// Est
-					$idpartenaire = $row['idj4'];
-					$sql3 = "DELETE FROM $tab_pairesEO where idtournoi = '$idt' and id = '$idpaire';";
-					$sql4 = "UPDATE $tab_pairesEO SET idj2 = null where idtournoi = '$idt' and id = '$idpaire';";
+				$sql1 = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
+				$sql2 = "SELECT id, num, idj4 FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
 			} elseif ( $i == 3 ) { // Sud
-					$idpartenaire = $row['idj1'];
-					$sql3 = "DELETE FROM $tab_pairesNS where idtournoi = '$idt' and id = '$idpaire';";
-					$sql4 = "UPDATE $tab_pairesNS SET idj3 = null where idtournoi = '$idt' and id = '$idpaire';";
+				$sql1 = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
+				$sql2 = "SELECT id, num, idj1 FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
 			} elseif ( $i == 4 ) { // Ouest
-					$idpartenaire = $row['idj2'];
-					$sql3 = "DELETE FROM $tab_pairesEO where idtournoi = '$idt' and id = '$idpaire';";
-					$sql4 = "UPDATE $tab_pairesEO SET idj4 = null where idtournoi = '$idt' and id = '$idpaire';";
+				$sql1 = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
+				$sql2 = "SELECT id, num, idj2 FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
 			};
+			$res = $dbh1->query($sql1);
+			$nbl = $res->fetchColumn();
+			if ( $nbl > 1 ) {	// bug: le même joueur référencé plusieurs fois dans une même position
+				echo 'Erreur : joueur référencé plusieurs fois';
+				die();
+			};
+			if ( $nbl == 1 ) {
+				$nn++;
 				
-			if ( $idpartenaire > 0 ) {
-				// effacement joueur dans la paire
-				$res3 = $dbh2->query($sql4);
-			} else {
-				// suppression paire
-				$res3 = $dbh2->query($sql3);
+				// effacement joueur sur l'emplacement trouvé
+				$sth = $dbh1->query( $sql2 );
+				$row = $sth->fetch(PDO::FETCH_ASSOC);
+				$idpaire = $row['id'];
+				
+				// mémorise ancienne position
+				$oldposition[ 'paire' ] = $row['num'];
+				$oldposition[ 'position' ] = $i;
+				
+				$idpartenaire = 0;
+				
+				if ( $i == 1 ) { // Nord
+					$idpartenaire = $row['idj3'];
+					$sql3 = "DELETE FROM $tab_pairesNS where idtournoi = '$idt' and id = '$idpaire';";
+					$sql4 = "UPDATE $tab_pairesNS SET idj1 = null where idtournoi = '$idt' and id = '$idpaire';";
+				} elseif ( $i == 2 ) {// Est
+						$idpartenaire = $row['idj4'];
+						$sql3 = "DELETE FROM $tab_pairesEO where idtournoi = '$idt' and id = '$idpaire';";
+						$sql4 = "UPDATE $tab_pairesEO SET idj2 = null where idtournoi = '$idt' and id = '$idpaire';";
+				} elseif ( $i == 3 ) { // Sud
+						$idpartenaire = $row['idj1'];
+						$sql3 = "DELETE FROM $tab_pairesNS where idtournoi = '$idt' and id = '$idpaire';";
+						$sql4 = "UPDATE $tab_pairesNS SET idj3 = null where idtournoi = '$idt' and id = '$idpaire';";
+				} elseif ( $i == 4 ) { // Ouest
+						$idpartenaire = $row['idj2'];
+						$sql3 = "DELETE FROM $tab_pairesEO where idtournoi = '$idt' and id = '$idpaire';";
+						$sql4 = "UPDATE $tab_pairesEO SET idj4 = null where idtournoi = '$idt' and id = '$idpaire';";
+				};
+					
+				if ( $idpartenaire > 0 ) {
+					// effacement joueur dans la paire
+					$res3 = $dbh2->query($sql4);
+				} else {
+					// suppression paire
+					$res3 = $dbh2->query($sql3);
+				};
 			};
 		};
-	};
-	if ( $nn > 1 ) {
-		// bug: le même joueur référencé plusieurs fois dans différentes positions
-		echo 'Erreur : joueur référencé plusieurs fois';
-		die();
-	};
-	$dbh1 = null;
-	$dbh2 = null;
+		if ( $nn > 1 ) {	// bug non critique: le même joueur référencé plusieurs fois dans différentes positions
+			echo 'Erreur : joueur référencé plusieurs fois';
+			//die();
+		};
+		$dbh1 = null;
+		$dbh2 = null;
+	}
 	return $oldposition;
 };
 function recherche_joueur( $idt, $idj ) {
