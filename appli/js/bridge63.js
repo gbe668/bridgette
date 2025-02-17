@@ -508,6 +508,21 @@ class Donnejouee {
 				this.niv = parseInt( figs[1] );
 				this.col = parseInt( figs[2] );
 				this.contrat = this.niv + " " + txtCol(this.col) + " " + txtDbl(this.dbl);
+				
+				// 04/02/2025: vérification du résultat pour éviter les incohérences
+				if ( this.resok ) {
+					let nplusr = this.niv + this.res;
+					if ( this.res < 0 ) {
+						// chute
+						if ( nplusr < -6 ) this.res = -6 - this.niv;
+						this.selAction("res_m_"+(-this.res));
+					}
+					else {
+						if ( nplusr > 7 ) this.res = 7 - this.niv;
+						this.selAction("res_p_"+this.res);
+					}
+				}
+				
 				// affichage
 				$(pid).addClass( "bonnumero" );
 				$("#contrat1").html( this.imgContrat() );

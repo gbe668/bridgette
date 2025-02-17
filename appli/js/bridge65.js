@@ -42,6 +42,11 @@ function displaydeal( deal, etui ) {
 	couleur = 0;
 	joueur = 1;
 	enmain = "";
+	// raz des champs
+	for ( let i = 1; i < 17; i++ ) {
+		ligne = "#ligne_"+i;
+		$(ligne).text( "" );
+	}
 	for ( let i = 2; i < n; i++ ) {
 		let car = deal.charAt( i );
 		if ( car == "." ) {
@@ -93,13 +98,18 @@ function displaydeal( deal, etui ) {
 	
 	return true;
 }
+var edition = false;
 function initcanselect() {
 	var ligne;
 	for ( let i = 1; i <= 12; i++ ) {
 		ligne = "#ligne_" + i;
 		$(ligne).addClass( "canselect" );
 	}
+	edition = true;
+	$("#points_honneurs").hide();
+	testtermine();
 }
+var leftwidth = '2.5pt';
 function setfocus( n ) {
 	if ( n > 12) return;
 	var ligne, key;
@@ -112,7 +122,7 @@ function setfocus( n ) {
 		$(ligne).removeClass( "smallDigitfocus" );
 	}
 	ligne = "#ligne_" + n;
-	$(ligne).addClass( "smallDigitfocus" );
+	$(ligne).addClass( "smallDigitfocus" ).css('border-left-width', leftwidth );
 	// sélection des cartes en main
 	for ( let i = 0; i < 13; i++ ) {
 		key = "#n_" + i;
@@ -147,7 +157,13 @@ function downfocus() {
 }
 function testtermine() {
 	// test nb cartes pour les 3 joueurs N, E, S
-	if ( (calculnbcartes(1) == 13) && (calculnbcartes(2) == 13) && (calculnbcartes(3) == 13 ) ) {
+	let nb1 = calculnbcartes(1);
+	let nb2 = calculnbcartes(2);
+	let nb3 = calculnbcartes(3);
+	setleftcolor(1, nb1);
+	setleftcolor(2, nb2);
+	setleftcolor(3, nb3);
+	if ( (nb1 == 13) && (nb2 == 13) && (nb3 == 13 ) ) {
 		// Définition de la main d'ouest
 		buildouest();
 		buildDealField();
@@ -163,18 +179,22 @@ function testtermine() {
 		return false;
 	}
 }
+function setleftcolor(jj, nb) {
+	let leftcolor = (nb == 13) ? "green" : "red";
+	let j = jj*4-3;
+	for ( let i = 0; i < 4; i++ ) {
+		let ligne = "#ligne_"+j;
+		$(ligne).css('border-left-color', leftcolor )
+		.css('border-left-width', leftwidth );
+		j++;
+	}
+}
 function testnbcartes( jj ) {
 	var nb = calculnbcartes( jj );
-	if ( nb < 13 ) {
-		$("#msg").text( nb + "/13, manque des cartes" );
-		return false;
-	}
-	if ( nb > 13 ) {
-		$("#msg").text( "trop de cartes" );
-		return false;
-	}
-	$("#msg").text( "ok" );
-	return true;
+	if ( nb < 13 ) $("#msg").text( nb + "/13, manque des cartes" );
+	if ( nb > 13 ) $("#msg").text( "trop de cartes" );
+	if ( nb == 13 )$("#msg").text( "ok" );
+	return nb;
 }
 function calculnbcartes( joueur ) {
 	var nb = 0;
@@ -247,13 +267,15 @@ function buildDealField() {
 $(document).ready(function() {
 	// click ligne
 	$('td.xsmallDigit').click(function(event) {
-		var id = event.target.id;
-		//console.log( "id", id );
-		const figs = id.split('_');
-		switch ( figs[0] ) {
-			case "ligne": {
-				setfocus(figs[1]);
-				break;
+		if ( edition ) {
+			var id = event.target.id;
+			//console.log( "id", id );
+			const figs = id.split('_');
+			switch ( figs[0] ) {
+				case "ligne": {
+					setfocus(figs[1]);
+					break;
+				}
 			}
 		}
 	});

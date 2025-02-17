@@ -31,36 +31,15 @@ $.datepicker.regional['fr'] = {
 	weekHeader: 'Sm',
 	firstDay: 1,
 	minDate: new Date(),
-	maxDate: '+4W',	//new Date(),	//'+12M +0D',
+	//maxDate: '+4W',	//new Date(),	//'+12M +0D',
 	//showButtonPanel: true,
 	isRTL: false
 };
 $.datepicker.setDefaults( $.datepicker.regional['fr'] );
-$(document).ready(function() {		// sélection date tournoi
-	datetournoi = $( "#datetournoi" ).datepicker({	// initialisation
-		//var dateFormat = "mm/dd/yy",
-		//defaultDate: +1,
-		//numberOfMonths: 1
-	})
-	.datepicker('setDate', 'today')
-	.datepicker( "option", "maxDate", '+4w' )
-	.datepicker( "option", "beforeShowDay", function (date){
-		let dd = date.getDay();		// de 0 (dimanche) à 6 (samedi)
-		let jour = listeJours[dd];
-		if ( parametres.opendays[jour] == '1' )
-			return [ true, "", "" ]
-		else
-			return [ false, "closed", "Pas de tournoi ce jour" ]
-	})
-	.on( "change", function() {
-		console.log( "change", $("#datetournoi").val() );
-		selectTournoi( $("#datetournoi").val() );
-	});
-});
 function selectTournoi( tournoi ) {
 	tournoi = $("#datetournoi").val();
 	$.get( relpgm+"inscriptiontournoi.php", { datetournoi:tournoi }, function(strjson) {
-		//console.log( "id", strjson.idtournoi, "ret", strjson.ret, "lignes", strjson.lignes );
+		console.log( "id", strjson.idtournoi, "ret", strjson.ret, "lignes", strjson.lignes );
 		idtournoi = strjson.idtournoi;
 		$("#tabdujour").text( strdatet(tournoi) );
 		$("#msgdatetournoi").html( strjson.ret );
@@ -69,14 +48,21 @@ function selectTournoi( tournoi ) {
 			$("#section_tableau").show();
 			$("#section_inscription").show();
 		}
-	},"json");
+	},"json")
+	.fail( function( jqxhr,settings,ex ) {
+		$("#msgtabinscrits").html('Erreur: '+ ex );
+		console.log( "inscriptiontournoi.php fail", tournoi );
+	} );
 }
 //
 // affichage tableau des inscrits pour le tournoi sélectionné
 //
 var userinscrit;
-function affiche_inscription() {
-	$("#section_inscription").toggle();
+var noligne, aoub;
+var selectid;
+function close_inscription() {
+	$("#section_inscription").hide();
+	$("#section_clavier").hide();
 }
 function updateTabInscrits( lignes ) {
 	tableauInscrits = lignes;
@@ -84,11 +70,35 @@ function updateTabInscrits( lignes ) {
 	let n = lignes.length;
 	let str = '<table border="1" style="width:95%; max-width: 350px; margin:auto;">';
 	str += '<tbody>';
-	str += "<tr><td class='xTitre'>Joueurs pré-inscrits</td></tr>";
+	str += "<tr><td colspan='2' class='xTitre'>Joueurs pré-inscrits</td></tr>";
 	for  ( i = 0; i < n; i++) {
 		let ligne = lignes[i];
 		let rowi = "ligne_"+i;
+		if ( (ligne.A.id > 0)||(ligne.B.id > 0) ) {
+			str += '<tr id="' + rowi + '" >';
+			str += '<td rowspan="2" class="xPaire">'+ (i+1) +'</td>';
+			str += '<td id="' + rowi + '_a" class="xNom clknom">';
+			if ( ligne.A.id > 0 ) {
+				str += ligne.A.nomcomplet;
+			}
+			else {
+				str += '<em>cherche partenaire</em>'
+			}
+			str += '</td></tr>';
+			
+			str += '<tr><td id="' + rowi + '_b" class="xNom clknom">';
+			if ( ligne.B.id > 0 ) {
+				str += ligne.B.nomcomplet;
+			}
+			else {
+				str += '<em>cherche partenaire</em>'
+			}
+			str += '</td></tr>';
+		}
+		else {
+		}
 		
+		/*
 		if ( ligne.A.id > 0 ) {
 			if ( (ligne.B.id > 0)||(ligne.A.id == userid) ) {
 				str += '<tr id="' + rowi + '" >';
@@ -96,24 +106,37 @@ function updateTabInscrits( lignes ) {
 			else {
 				str += '<tr id="' + rowi + '" style="background-color:lightblue;" >';
 			}
+			str += '<td class="xNom clknom">';
 			if (ligne.B.id > 0) {
-				str += '<td class="xNom">';
 				str += ligne.A.nomcomplet + '</br>' + ligne.B.nomcomplet +'</td>';
 			}
 			else {
-				str += '<td class="xNom clknom">';
 				str += ligne.A.nomcomplet + '</br><em>cherche partenaire</em></td>';
 			}
 			str += '</tr>';
 		}
 		else {
-			str += '<tr id="' + rowi + '" hidden >';
+			if ( ligne.B.id > 0 ) {
+				str += '<tr id="' + rowi + '" >';
+				str += '<td class="xNom clknom">';
+				str += '<em>cherche partenaire</em></br>' + ligne.B.nomcomplet + '</td>';
+				str += '</tr>';
+			}
+			else {
+				str += '<tr id="' + rowi + '" hidden >';
+			}
 		}
+		*/
 	};
+	if ( userid < 0 ) {
+		str += '<tr><td colspan="2" class="xNumero clkpaire">Inscription nouvelle paire</td></tr>';
+	}
+
 	str += "</tbody></table>";
 	$("#tabinscrits").html( str );
 	$("#msgtabinscrits").text( "" );
 	
+	$("#menu_action").hide();
 	$("#menu_noninscrit").show();
 	$("#menu_inscrit").hide();
 	userinscrit = false;
@@ -134,12 +157,85 @@ function updateTabInscrits( lignes ) {
 	}
 	
 }
-$(document).on( "click", "td.clknom", function(event) {
-	let id = $(this).parent().attr("id");
-	console.log( "td.clknom parent", id );
-	const figs = id.split('_');
-	contactInscrit( figs[1] );
+var prevselected = null;
+$(document).on( "click", "td.clknom", function(ev) {		// tableau des pré-inscrits
+	//let id = $(this).parent().attr("id");
+	$(prevselected).removeClass("oklight");
+	prevselected = "#" + ev.currentTarget.id;
+	$(prevselected).addClass("oklight");
+	const figs = ev.currentTarget.id.split('_');
+	console.log("figs", figs);
+	noligne = parseInt( figs[1] );
+	aoub = figs[2];
+	process_touche('cl');
+	let ligne = tableauInscrits[noligne];
+	let joueur = ( figs[2] == 'a' ) ? ligne.A : ligne.B;
+	
+	console.log( "td.clknom", joueur );
+	if ( userconnected ) {
+		// test click sur recherche partenaire
+		if ( joueur.id < 1 ) {
+			joueur = ( figs[2] == 'a' ) ? ligne.B : ligne.A;	// inversion
+		}
+		if ( userid > 0 ) {
+			$("#msgtabinscrits").html( "Contactez "+joueur.prenom+" au "+joueur.telephone+"</br>ou par mail: "+joueur.email );
+			/*
+			$.get( relpgm+"getfiche.php", { idj:ligne.A.id }, function(fiche) {
+				$("#msgtabinscrits").html( "Contactez "+contact+" au "+fiche.telephone+"</br>ou par mail: "+fiche.email );
+			},"json")
+			.fail( function( jqxhr,settings,ex ) {
+				$("#msgtabinscrits").html('Erreur: '+ ex );
+				console.log( "getfiche fail" );
+			} );
+			*/
+		}
+		else {
+			$("#msgtabinscrits").html( "Connectez vous pour voir les moyens de contacter "+joueur.prenom );
+		}
+	}
+	else {	// directeur
+		$("#section_calendrier").hide();
+		selectid = joueur.id;
+		if ( selectid > 0 ) {		// click sur joueur
+			$("#menu_action").html("<p><button class='myButton' onclick='efface1()'>Effacer</button> <span id='firstplayer'>???</span></p><p>Ou remplacer par un autre joueur:</p>");
+			$("#firstplayer").html(joueur.nomcomplet);
+			elmnt = document.getElementById("section_tableau");
+			elmnt.scrollIntoView();
+			$("#menu_action").show();
+			//$("#menu_inscrit").show();
+			//$("#menu_noninscrit").hide();
+			$("#section_clavier").show();
+		}
+		else {			// click sur recherche partenaire
+			$("#firstplayer").html("Paire n°"+figs[1]);
+			elmnt = document.getElementById("section_tableau");
+			elmnt.scrollIntoView();
+			$("#menu_action").html("<p>Choisir le partenaire</p>");
+			$("#menu_action").show();
+			//$("#menu_inscrit").hide();
+			//$("#menu_noninscrit").show();
+			$("#msgclavier").text( txt1 );
+			$("#section_clavier").show();
+		}
+	}
 });
+$(document).on( "click", "td.clkpaire", function(ev) {		// tableau des pré-inscrits
+	console.log( "td.clkpaire" );
+	$("#section_calendrier").hide();
+	noligne = -1;
+	aoub = 'a';
+	
+	$("#menu_action").html("<p>Nouvelle paire: Choisir le 1er joueur</p>");
+	$("#menu_action").show();
+	
+	process_touche('cl');
+	$("#msgclavier").text( txt1 );
+	$("#section_clavier").show();
+	elmnt = document.getElementById("section_tableau");
+	elmnt.scrollIntoView();
+});
+//
+// joueur connecté
 function sans_partenaire() {
 	$("#section_clavier").hide();
 	selPartenaire( 0 );
@@ -184,31 +280,30 @@ function annule_inscription() {
 	} );
 	$("#section_clavier").hide();
 }
-function contactInscrit(k) {
-	let ligne = tableauInscrits[k];
-	let contact = ligne.A.nomcomplet;
-	console.log( contact );
-	if ( userid > 0 ) {
-		$("#msgtabinscrits").html( "Contactez "+contact+" au "+ligne.A.telephone+"</br>ou par mail: "+ligne.A.email );
-		/*
-		$.get( relpgm+"getfiche.php", { idj:ligne.A.id }, function(fiche) {
-			console.log(fiche);
-			$("#msgtabinscrits").html( "Contactez "+contact+" au "+fiche.telephone+"</br>ou par mail: "+fiche.email );
-		},"json")
-		.fail( function( jqxhr,settings,ex ) {
-			$("#msgtabinscrits").html('Erreur: '+ ex );
-			console.log( "getfiche fail" );
-		} );
-		*/
-	}
-	else {
-		$("#msgtabinscrits").html( "Connectez vous pour voir les moyens de contacter "+contact );
-	}
+//
+// directeur connecté
+var userid_A, userid_B;
+function efface1() {
+	$("#section_clavier").hide();
+	let parms = { idtournoi:idtournoi, cmd:"eff1", idj:selectid, k:noligne, pos:aoub };
+	console.log( "efface1, parms", parms );
+	$.get( relpgm+"f25setjoueur.php", parms, function(strjson) {
+		console.log( strjson.ret );
+		// mise à jour tableau des inscrits
+		updateTabInscrits( strjson.lignes );
+	},"json")
+	.fail( function( jqxhr,settings,ex ) {
+		$("#msgtabinscrits").html('Erreur: '+ ex );
+		console.log( "efface1 fail" );
+	} );
+	//$("#section_clavier").hide();
 }
+
 //
 // saisie nom du joueur
 //
-var txt1 = "Nom de votre partenaire ?";
+var txt1 = "Entrez les premières lettres du nom du joueur";
+var txt2 = "Nom de votre partenaire ?";
 var strname ="";
 var tabidj = [];			// tableau des id joueurs
 function masqueUsers() {
@@ -387,7 +482,7 @@ $(document).keydown(function(event) {
 //
 // formulation utilisée pour le chargement de données statiques
 $(document).ready(function() {
-	$('td.clkrow').click(function(event) {
+	$('td.clkrow').click(function(event) {			// choix joueur dans la liste des joueurs
 		var e = event.target.id;
 		var figs = e.split('_');
 		var nbr = parseInt( figs[1] );
@@ -399,7 +494,38 @@ $(document).ready(function() {
 		}
 		else {
 			$("#section_clavier").hide();
-			selPartenaire( tabidj[nbr] );
+			// test inscription / user ou directeur
+			if ( userconnected ) {
+				selPartenaire( tabidj[nbr] );
+			}
+			else { 	// directeur
+				let parms;
+				if ( noligne < 0 ) {	// nouvelle paire
+					let idj = tabidj[nbr];
+					parms = { idtournoi:idtournoi, cmd:"add1", idj:idj, k:noligne, pos:aoub };
+					//selPartenaire( 0 );
+				}
+				else {			// click sur un joueur en position aoub
+					let idj = tabidj[nbr];
+					parms = { idtournoi:idtournoi, cmd:"mod1", idj:idj, k:noligne, pos:aoub };
+				}
+				console.log( "parms", parms );
+
+				$.get( relpgm+"f25setjoueur.php", parms, function(strjson) {
+					console.log( strjson.ret );
+					if ( strjson.ret == "ok" ) {
+						// mise à jour tableau des inscrits
+						updateTabInscrits( strjson.lignes );
+					}
+					else {
+						$("#msgtabinscrits").text("La pré-inscription n'est plus possible !");
+					}
+				},"json")
+				.fail( function( jqxhr,settings,ex ) {
+					$("#msgtabinscrits").html('Erreur: '+ ex );
+					console.log( parms + " fail" );
+				} );
+			}
 		}
 	});
 	
@@ -422,26 +548,4 @@ function affiche_annuaire() {
 }
 function masque_annuaire() {
 	$("#section_annuaire").hide();
-}
-//
-// routines mise à jour téléphone
-//
-function isNumeric(str) {
-  return /^(\s*[0-9-]+\s*)+$/.test(str);
-}
-function oktel() {
-	let phone = $("#phone").val();
-	phone = phone.replaceAll( '-', ' ');
-	phone = phone.trim();
-	$("#phone").val( phone );
-	if ( (phone.length > 0)&&(!isNumeric( phone)) ) {
-		$("#msgperso").text( "Téléphone: caractères non numériques" );
-	}
-	else {
-		$.get( relpgm+"f30updatetel.php", { idjoueur:userid, phone:phone },
-		function(strjson) {
-			$("#msgperso").text( strjson.msg );
-		}, "json");
-	}
-	setTimeout(function() { $("#msgperso").text( " " ); }, 2000);
 }
