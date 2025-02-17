@@ -165,7 +165,7 @@ document.addEventListener('visibilitychange', function (event) {
 		}
 		
 		$donne = ( $etui > 0 ) ? $etui : $res['numdonne'];	// numéro dernière donne enregistrée
-		print htmlResultatDonne($idtournoi, $donne, $numNS, "points" );
+		print htmlResultatDonne($idtournoi, $donne, $numNS, $oldEO, "points" );
 		
 		//Entrée diagramme
 		$diagramme = existeDiagramme( $idtournoi, $donne );
@@ -195,13 +195,11 @@ document.addEventListener('visibilitychange', function (event) {
 				// ajout le 12/07/2024
 				$_SESSION['withback'] = $numtable;	// retour possible
 				//
-				if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto63test, 1000 );</script>";
 			}
 			else {
 				print "<p><button class='myStartButton' onclick='goto63()'>Passez à la</br>donne suivante</button></p>";
-				if ( $teston > 0 ) print "TEST remplissage auto TEST<script>setTimeout( goto63, 1000 );</script>";
 			}
-		
+			if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto63, 1000 );</script>";
 		}
 		else {
 			print htmlResultatPaquet($idtournoi, $numNS, $oldEO );

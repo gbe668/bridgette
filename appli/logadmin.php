@@ -1,6 +1,7 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+require("libevents.php");
 
 	if ( isset($_POST['pseudo']) ){
 		$pseudo = stripslashes($_REQUEST['pseudo']);
@@ -16,6 +17,7 @@ require("bridgette_bdd.php");
 		if($res->fetchColumn() == 1){
 			$_SESSION['pseudo'] = $pseudo;
 			$_SESSION['fonction'] = "admin";
+			logevent("logadmin");
 			header("Location: admin.php");
 			$message = "OK.";
 		}

@@ -31,6 +31,8 @@ function passAndroid( parms ) {
 function showAndroidToast(toast) {
 	Android.showToast(toast);
 }
+var actuel = 1;	// étui sélectionné
+var selns = seleo = 0;
 function key_select( nbr ) {
 	actuel = parseInt( $("#etui").text() );
 	actuel += parseInt( nbr );
@@ -38,7 +40,7 @@ function key_select( nbr ) {
 	if ( actuel > ndonnes ) actuel = ndonnes;
 	$("#etui").text( actuel );
 	
-	$.get('/f21getresultatdonne.php', {idtournoi:idtournoi, etui:actuel, token:token}, function(html) {
+	$.get('/f21getresultatdonne.php', {idtournoi:idtournoi, etui:actuel, ns:selns, eo:seleo, token:token}, function(html) {
 		$("#section_resultat").html(html);
 		ndiag = "#ndiag_0";
 		//console.log("ndiag", ndiag, $(ndiag).text());
@@ -67,6 +69,17 @@ $(document).ready(function() {
 		var id = event.target.id;
 		const figs = id.split('_');
 		console.log( "Id ", id, " Paire ", figs[0], " n° ", figs[1] );
+		if ( figs[0] == "ns" ){
+			selns = figs[1];
+			seleo = 0;
+		}
+		if ( figs[0] == "eo" ){
+			selns = 0;
+			seleo = figs[1];
+		}
+		$.get("/f21getresultatdonne.php?", {idtournoi:idtournoi, etui:actuel, ns:selns, eo:seleo}, function(html) {
+			$("#section_resultat").html(html);
+		}, "html");
 		var axe = (figs[0]=="ns") ? "NS" : "EO";
 		$.get("/f21getroadmap.php?", {idtournoi:idtournoi, axe:figs[0], num:figs[1], token:token}, function(strjson) {
 			$("#team").html("Feuille de route de la paire "+strjson.ref+"</br>"+strjson.team);
@@ -117,9 +130,8 @@ $(document).on( "click", "td.xres", function(event) {
 	else {
 		$ordre = "points";
 	}
-	//displayResultatsDonnes( $idtournoi, $ordre );
 	print '<div id="section_resultat">';
-	print htmlResultatDonne($idtournoi, 1, 0, $ordre);
+	print htmlResultatDonne($idtournoi, 1, 0, 0, $ordre);
 	print '</div>';
 	print_section_diagramme();
 	?>

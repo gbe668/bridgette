@@ -75,7 +75,7 @@ function gotorelaisns() {
 	// incrementCompteurRelaisNS( $donne, $ns, $eo, $paquet );
 	var first = Math.floor((donne-1)/paquet)*paquet +1;	// 1ère donne du paquet
 	console.log( "donne ", donne, " first ", first );
-	$.get( "relaismitchell.php", {donne:donne, ns:numNS, eo:0, inc:1, paquet:paquet}, function() {
+	$.get( "relaismitchell.php", {donne:donne, ns:numNS, eo:0, paquet:paquet}, function() {
 		goto64();
 	},"text");
 };
@@ -173,7 +173,7 @@ document.addEventListener('visibilitychange', function (event) {
 				$donne = $firstdonne + $cpt%$paquet;
 				
 				print liste_etuis( $donne, $paquet );
-				print "<h2><span class='numetui'>$donne</span></h2>";
+				print "<h2><span class='numetui' id='etui'>$donne</span></h2>";
 				if ( first2play( $idtournoi, $firstdonne ) == 0 ) {
 					if ( existeDiagramme( $idtournoi, $donne ) == null ) {
 						print $strFirst2play;
@@ -183,10 +183,9 @@ document.addEventListener('visibilitychange', function (event) {
 				print "<p>&nbsp;</p>";
 				print '<p><button class="myStartButton" onclick="gotorelaisns()">Cliquez ICI</br>pour continuer</button></p>';
 				print "<p>Après avoir cliqué sur le bouton ci-dessus,</br>le score provisoire sur la donne s'affichera,</br>vous pourrez entrer les diagrammes</br>et passer à la donne suivante.</p>";
-			
-				if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( gotorelaisns, $testdelai_1);</script>";
 			}
 			else {
+				// Donne suivante
 				$cpt ++;
 				
 				$ligneEO	= getligneEO( $idtournoi, $numEO );
@@ -227,11 +226,9 @@ document.addEventListener('visibilitychange', function (event) {
 				print "<div id='section_suivante' class='section_invisible'>";
 				print "<p id='validok'>Enregistrement en cours ...</p>";
 				print "</div>";
-			
-				print "<span id='currpos'>&nbsp;</span>";
-				if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( autoValidation, $testdelai_1);</script>";
-				if ( $teston == 2 ) print "<p><button onClick='autoValidation()'>auto</button></p>";
 			}
+			if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( autoValidation, $testdelai_1);</script>";
+			if ( $teston == 2 ) print "<p><button onClick='autoValidation()'>auto</button></p>";
 		}
 		else {
 			setCnxFin( $numtable );

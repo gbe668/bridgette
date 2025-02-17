@@ -165,7 +165,7 @@ document.addEventListener('visibilitychange', function (event) {
 			print "<p>Nord Sud: $nameNord et $nameSud</br>Est Ouest: $nameEst et $nameOuest</p>";
 
 			$donne = ( $etui > 0 ) ? $etui : $res['numdonne'];	// numéro dernière donne enregistrée
-			print htmlResultatDonne($idtournoi, $donne, $numNS, "points" );
+			print htmlResultatDonne($idtournoi, $donne, $numNS, 0, "points" );
 		
 			//Entrée diagramme
 			$diagramme = existeDiagramme( $idtournoi, $donne );

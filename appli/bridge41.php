@@ -177,6 +177,7 @@ function cdemoins() {
 	</script>
 	
 	<p><button class="mySmallButton" onclick="goto40()">Retour page direction de tournoi</button></p>
+	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="goto40()"/>
 	</div>
 
 	<?php

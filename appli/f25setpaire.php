@@ -21,7 +21,7 @@ if ( $etat == $st_preinscription ) {
 	// vérification que l'inscription est toujours valide,
 	//	ie les 2 joueurs n'ont pas été inscrits d'autres personnes ( cas d'une page html ouverte trop longtemps )
 
-	$k = -1;		// recherche première paire vide
+	$k = -1;	// recherche première paire vide
 	$ija = -1;	// joueur en nord/est
 	$ijb = -1;	// joueur en sud/ouest
 	for ($i = 0; $i < count($lignes); $i++) {

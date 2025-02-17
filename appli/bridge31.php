@@ -56,6 +56,7 @@ function goto40() {
 	<p><button class="mySmallButton" onclick="goto40()">Retour page création d'un tournoi</button></p>
 	
 	<p><button class="mySmallButton" onclick="goto30()">Retour page gestion des joueurs</button></p>
+	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="goto40()"/>
 	</div>
 </body>
 </html>

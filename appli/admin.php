@@ -1,6 +1,7 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+require("libevents.php");
 
 // Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
 if( !isAdmin() ){
@@ -133,6 +134,9 @@ function getNbThisYear( $datet ) {
 
 // import / export BDD
 $backup_file = $dir_configs.$prefix.'importbdd.sql';
+
+// liste événements
+$maxevents = 10;
 ?>
 
 <!DOCTYPE HTML>
@@ -277,6 +281,12 @@ function toggleAffichagePseudos() {
 	else
 		$('#section_pseudos').addClass( 'section_invisible' );
 }
+function toggleAffichageEvents() {
+	if ( $("#section_events").hasClass( 'section_invisible' ) )
+		$('#section_events').removeClass( 'section_invisible' );
+	else
+		$('#section_events').addClass( 'section_invisible' );
+}
 function toggleAffichageBDD() {
 	if ( $("#section_bdd").hasClass( 'section_invisible' ) )
 		$('#section_bdd').removeClass( 'section_invisible' );
@@ -366,6 +376,13 @@ function importbdd() {
 		print "<p id='msgvieuxtournois'>&nbsp;</p>";
 		print "</div>";
 	}
+	?>
+	</div>
+	
+	<p><button class="myButton" onclick="toggleAffichageEvents()">Evénements</button></p>
+	<div id="section_events" class="section_invisible">
+	<?php
+	print htmlevents( $maxevents );
 	?>
 	</div>
 	<p>&nbsp;</p>

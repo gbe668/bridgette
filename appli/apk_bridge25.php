@@ -2,6 +2,11 @@
 require("configuration.php");
 require("bridgette_bdd.php");
 
+if ( file_exists( $file_calendar ) ) {
+	$calendrier = json_decode( file_get_contents( $file_calendar ), true );
+}
+else $calendrier = array();
+
 $userid = htmlspecialchars( $_GET['userid'] );
 $joueur = getJoueur( $userid );
 
@@ -70,12 +75,12 @@ function getMyClassement($userid) {
 	<title>Apk Bridg'ette</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<script src="/js/jquery-3.6.0.min.js"></script>
-	<script src="/js/jquery-ui-1.13.2.min.js"></script>
-	<script src="/js/bridge25.js"></script>
-	<link rel="stylesheet" href="/css/bridgestylesheet.css" />
-	<link rel="stylesheet" href="/css/jquery-ui.css">
-	<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+	<script src="<?php echo $relpgm; ?>js/jquery-3.6.0.min.js"></script>
+	<script src="<?php echo $relpgm; ?>js/jquery-ui-1.13.2.min.js"></script>
+	<script src="<?php echo $relpgm; ?>js/bridge25.js"></script>
+	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/bridgestylesheet.css" />
+	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/jquery-ui.css">
+	<link rel="icon" type="image/x-icon" href="<?php echo $relpgm; ?>images/favicon.ico">
 </head>
 
 <style>
@@ -89,12 +94,24 @@ function getMyClassement($userid) {
 .cross:hover {
 	cursor: pointer;
 }
+td.dayclose a {
+    background: none !important;
+	background-color:#FFC0CB !important;
+    color: #006633;
+}
+td.dayopen a {
+    background: none !important;
+	background-color: lightgreen !important;
+    color: #006633;
+}
 </style>
 
 <script>
 var relpgm = "<?php echo $relpgm; ?>";
-var parametres = <?php echo json_encode($parametres); ?>;
+var parametres = <?php echo json_encode($parametres); ?>;	// jours d'ouverture
+var calendrier = <?php echo json_encode($calendrier); ?>;
 var userid = <?php echo $userid; ?>;
+var userconnected = true;
 
 function gotoindex() {
 	retparms = { next:"bridge60" };
@@ -114,6 +131,97 @@ function passAndroid( parms ) {
 function showAndroidToast(toast) {
 	Android.showToast(toast);
 }
+
+//
+// routines mise à jour téléphone
+//
+function isNumeric(str) {
+  return /^(\s*[0-9-]+\s*)+$/.test(str);
+}
+function isEmail(email) {
+  const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(email);
+}
+function oktel() {
+	let phone = $("#phone").val();
+	phone = phone.replaceAll( '-', ' ');
+	phone = phone.trim();
+	$("#phone").val( phone );
+	if ( (phone.length > 0)&&(!isNumeric( phone)) ) {
+		$("#telperso").text( "Téléphone: caractères non numériques" );
+	}
+	else {
+		$.get( relpgm+"f25updatefield.php", { idjoueur:userid, command:'phone', phone:phone },
+		function(strjson) {
+			$("#telperso").text( strjson.msg );
+		}, "json");
+	}
+	setTimeout(function() { $("#telperso").text( "" ); }, 2000);
+}
+function okmail() {
+	// mise en forme de l'email
+	email = $("#email1").val();
+	email = email.trim( email );
+	email = email.toLowerCase();
+	$("#email1").val( email );
+	if ( !isEmail( email) ) {
+		$("#mailperso").text( "email incorrect" );
+	}
+	else {
+		console.log("okmail ok", userid, email);
+		$.get( relpgm+"f25updatefield.php", { idjoueur:userid, command:'email', email:email },
+		function(strjson) {
+			$("#mailperso").text( strjson.msg );
+		}, "json");
+	}
+	setTimeout(function() { $("#mailperso").text( "" ); }, 2000);
+}
+
+//
+// paramètres de sélection date tournoi spécifique joueur: datepicker, ...
+//
+var strmaxdate = '+'+ parametres.maxweeks +'w';	// en semaines
+$(document).ready(function() {		// sélection date tournoi
+	datetournoi = $( "#datetournoi" ).datepicker({	// initialisation
+		//var dateFormat = "mm/dd/yy",
+		//defaultDate: +1,
+		//numberOfMonths: 1
+	})
+	.datepicker('setDate', 'today')
+	.datepicker( "option", "maxDate", strmaxdate )
+	.datepicker( "option", "beforeShowDay", function (date){
+		let datjour = date.getFullYear() + '-' + String((date.getMonth() + 1)).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+		if ( datjour in calendrier ) {
+			let special = calendrier[datjour];
+			if (special.etat > 0)
+				return [ true, "dayopen", special.obs ];
+			else
+				return [ true, "dayclose", special.obs ];
+		}
+
+		let dd = date.getDay();		// de 0 (dimanche) à 6 (samedi)
+		let jour = listeJours[dd];
+		if ( parametres.opendays[jour] == '1' )
+			return [ true, "", "Le club est ouvert" ]
+		else
+			return [ false, "", "Pas de tournoi ce jour" ]
+	})
+	.on( "change", function() {
+		$("#errdatetournoi").html( "&nbsp;" );
+		let seldate = $("#datetournoi").val();
+		console.log( "change", seldate );
+		// test club ouvert
+		if ( seldate in calendrier ) {
+			let special = calendrier[seldate];
+			$("#errdatetournoi").html( special.obs );
+			if (special.etat == 0) {
+				$("#section_inscription").hide();
+				return;
+			}
+		}
+		selectTournoi( seldate );
+	});
+});
 
 // mécanisme détectant une page expirée
 var agepagemax = "<?php echo $agepagemax; ?>";
@@ -143,7 +251,7 @@ document.addEventListener('visibilitychange', function (event) {
 	<?php print "<p>Hello ".$joueur['nomcomplet']."</p>"; ?>
 	<h2>Pré-inscription à un tournoi</h2>
 	<div id="section_seltournoi">
-	<p>La pré-inscription est possible pour les tournois des 4 prochaines semaines</p>
+	<p>La pré-inscription est possible pour les tournois des <script>document.write(parametres.maxweeks)</script> prochaines semaines</p>
 	<h3>Sélectionnez la date du tournoi:</h3>
 	<div id="datepicker-container">
 		<div id="datepicker-center">
@@ -151,7 +259,7 @@ document.addEventListener('visibilitychange', function (event) {
 		</div>
 	</div>
 	</div>
-
+	<div id="errdatetournoi"></div>
 	<div id="msgdatetournoi"></div>
 	
 	<div id="section_inscription" hidden>
@@ -160,7 +268,7 @@ document.addEventListener('visibilitychange', function (event) {
 	<div id="section_tableau" hidden>
 	<table style="width:100%;margin:auto;"><tbody><tr>
 		<td style="width:90%"><h3>Tournoi du <span id="tabdujour">???</span></h3></td>
-		<td><span class="cross" onclick="affiche_inscription()" style="border:.5pt solid">&#x274C;</span></td>
+		<td><span class="cross" onclick="close_inscription()" style="border:.5pt solid">&#x274C;</span></td>
 	</tr></tbody></table>
 	<div id="tabinscrits">&nbsp;</div>
 	<p id="msgtabinscrits">&nbsp;</p>
@@ -168,39 +276,59 @@ document.addEventListener('visibilitychange', function (event) {
 	
 	<div id="menu_noninscrit" hidden>
 	<p>Vous n'êtes pas inscrit à ce tournoi !</p>
-	<p>Contacter un joueur en recherche de partenaire en cliquant sur son som dans le tableau</p>
-	<p><button class="myButton" onclick="sans_partenaire()">Inscription sans partenaire</button></p>
-	<p><button class="myButton" onclick="avec_partenaire()">Inscription avec partenaire</button></p>
+	<p>Vous pouvez contacter un joueur en recherche de partenaire en cliquant sur son nom</p>
+	<p>ou vous inscrire <button class="myButton" onclick="sans_partenaire()">sans partenaire</button></p>
+	<p>ou vous inscrire <button class="myButton" onclick="avec_partenaire()">avec un partenaire</button></p>
 	</div>
 	
 	<div id="menu_inscrit" hidden>
 	<p>Vous êtes inscrit à ce tournoi !</p>
-	<p><button class="myButton" onclick="annule_inscription()">Désinscription</button></p>
-	<p><button class="myButton" onclick="sans_partenaire()">Reherche nouveau partenaire</button></p>
-	<p><button class="myButton" onclick="avec_partenaire()">Changement de partenaire</button></p>
+	<p>Vous pouvez vous <button class="myButton" onclick="annule_inscription()">désinscrire</button></p>
+	<p>ou <button class="myButton" onclick="sans_partenaire()">chercher</button> un partenaire</p>
+	<p>ou <button class="myButton" onclick="avec_partenaire()">changer</button> de partenaire</p>
 	</div>
 	
 	<div id="section_clavier" hidden>
 	<div id="clavier">clavier</div>
 	</div>
-	</td></tr></tbody></table>					   
+	</td></tr></tbody></table>
 	</div>
 	
+	<p>&nbsp;</p>
+	
+	<div>
 	<h2>Annuaire des joueurs actifs</h2>
-	<p><button class="myButton" onclick="affiche_annuaire()">Affiche/masque annuaire</button></p>
 	<div id="section_annuaire" hidden>
+	<p><button class="myButton" onclick="$('#section_annuaire').toggle();">Masque annuaire</button></p>
 	<?php	print htmlAnnuaire();	?>
-	<p><button class="myButton" onclick="masque_annuaire()">Masque annuaire</button></p>
 	</div>
+	<p><button class="myButton" onclick="$('#section_annuaire').toggle(); elmnt = document.getElementById('section_annuaire'); elmnt.scrollIntoView();">Affiche/Masque annuaire</button></p>
 
 	<h2>Mes données personnelles</h2>
-	<p>Tél <input type="text" id="phone" name="phone" value="<?php echo $joueur['phone']; ?>" size="12">&nbsp;<button class="mButton" onclick="oktel()">Ok</button></p>
-	<p id="msgperso">&nbsp;</p>
+	<div id="section_perso" hidden>
+	<div style="background-color:#E2EFDA">
+	<h3>Mes coordonnées</h3>
+	<p>Au sein du club, vous avez le n°<b><?php echo $joueur['numero'] ?></b></p>
+	<p>Monsieur <input type="radio" id="male" name="gender" <?php echo ($joueur['genre']=='Mr')?'checked':'' ?> value="Mr"> Madame <input type="radio" id="female" name="gender" <?php echo ($joueur['genre']=='Me')?'checked':'' ?>  value="Me"></p>
 	
-	<h2>Mes performances passées</h2>
+	<p>Prénom:<input type="text" id="fname" value="<?php echo $joueur['prenom'] ?>" size="20"></p>
+	<p>Nom:<input type="text" id="lname" value="<?php echo $joueur['nom'] ?>" size="20"></p>
+	
+	<p>Téléphone:<input type="text" id="phone" name="phone" value="<?php echo $joueur['phone'] ?>" size="12"> <button class="mButton" id="valid1" onClick="oktel()"><img src="<?php echo $relimg.'save.png' ?>" style="width:16px;" /></button></p>
+	<p id="telperso"></p>
+	
+	<p><input type="text" id="email1" value="<?php echo $joueur['email']; ?>" size="30"> <button class="mButton" id="valid2" onClick="okmail()"><img src="<?php echo $relimg.'save.png' ?>" style="width:16px;" /></button></br>Si vous modifiez votre adresse mail,</br>vous devrez vous reconnecter</p>
+	<p id="mailperso"></p>
+	
+	<h3>Mes performances passées</h3>
 	<?php	print getMyClassement($userid);	?>
 
-	<div class="top"><img src="/images/upwindow.png" style="width:40px;" onclick="topwindow()"/></div>
+	</div>
+	</div>
+	<p><button class="myButton" onclick="$('#section_perso').toggle(); elmnt = document.getElementById('section_perso'); elmnt.scrollIntoView();">Affiche/Masque mes données</button></p>
+	
+	<p>&nbsp;</p>
+	<div class="top"><img src="<?php echo $relimg.'upwindow.png' ?>" style="width:40px;" onclick="topwindow()"/></div>
 	</div>
 	
 	<script>

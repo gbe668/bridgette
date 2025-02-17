@@ -185,6 +185,7 @@ $prefix = $_SESSION['prefix'];
 $dir_clubs = "clubs/";
 $file_config = $dir_clubs.$prefix."configuration.php";
 $file_params = $dir_clubs.$prefix."parametres.json";
+$file_calendar = $dir_clubs.$prefix."calendrier.json";
 
 if ( file_exists( $file_config ) ) {
 	require( $file_config );
@@ -259,11 +260,11 @@ if ( isset($_GET['cmd'])&&$withtoken ) {
 			break;
 		}
 		default: {
-			session_unset();
-			session_destroy(); 
 			$errmsg = "<b>Erreur 07: Commande inconnue !</b> $titre";
 			//header( "Location: erreurbridgette.php?errmsg=".$errmsg );
 			writelogerrors( $errmsg );
+			session_unset();
+			session_destroy(); 
 			die( $errmsg );
 		}
 	}

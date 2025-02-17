@@ -210,7 +210,7 @@ document.addEventListener('visibilitychange', function (event) {
 		else {	// EO
 			// récupération des dernières valeurs jouées par la paire EO en cas de reprise
 			$res = getParmTableEO( $paire );
-			$cpt = $res['cpt'];		// donnes jouées (ou non, cas relais/guéridon)
+			$cpt = $res['cpt'];
 			$position = intval( $cpt / $paquet );
 				
 			// numéro des équipes
@@ -241,9 +241,6 @@ document.addEventListener('visibilitychange', function (event) {
 				if ( $firstdonne > $ndonnes ) $firstdonne = 1;
 				
 				if ( ($notour <= $mintour)||($parametres['avancem'] == 0) ) {
-					if ( $notour > $mintour ) {
-						print "<h3>Attention<br/>le tour précédent n'est pas terminé.</h3>";
-					}
 					// test relais EO
 					if ( $relaisEO == $numNS ) {
 						// paire en relais
@@ -259,8 +256,6 @@ document.addEventListener('visibilitychange', function (event) {
 						if ($gueridon > 0) {
 							print "<p>Il n'y a pas de donnes au relais<br/>avec un guéridon.</p>";
 						}
-						//incrementCompteurEO( $numEO, $paquet );
-						print "<h3>Patientez en attendant<br/>la fin du tour en cours</h3>";
 					}
 					else {
 						print "<h3>Vérifiez vos adversaires:</h3>";
@@ -268,20 +263,20 @@ document.addEventListener('visibilitychange', function (event) {
 						$nameNord = $ligneNS['N']['nomcomplet'];
 						$nameSud  = $ligneNS['S']['nomcomplet'];
 						print "<p> En Nord Sud: $nameNord et $nameSud</p>";
+					}
 					
-						print "<h3>Tour n°<span class='notour'>$notour</span>/$npositions, récupérez les étuis:</br>";
-						print liste_etuis( $firstdonne, $paquet );
-						if ( ($gueridon > 0)&&($pairesNS == $pairesEO)&&( ($numNS==1)||($numNS==$pairesNS) ) ) {
-							print "à partager avec la table ".( ($numNS==1) ? $pairesNS : 1 );
-						}
-						print "</h3>";
-						
-						if ( $withback == $paire ) {
-							print '<p><button class="myButton" onclick="goto63()">Continuez à jouer</button></p><p>&nbsp;</p>';
-						}
-						else {
-							print '<p><button class="myButton" onclick="goto63()">Si numéro table OK</br>commencez à jouer</button></p>';
-						}
+					print "<h3>Tour n°<span class='notour'>$notour</span>/$npositions, récupérez les étuis:</br>";
+					print liste_etuis( $firstdonne, $paquet );
+					if ( ($gueridon > 0)&&($pairesNS == $pairesEO)&&( ($numNS==1)||($numNS==$pairesNS) ) ) {
+						print "à partager avec la table ".( ($numNS==1) ? $pairesNS : 1 );
+					}
+					print "</h3>";
+					
+					if ( $withback == $paire ) {
+						print '<p><button class="myButton" onclick="goto63()">Continuez à jouer</button></p><p>&nbsp;</p>';
+					}
+					else {
+						print '<p><button class="myButton" onclick="goto63()">Si numéro table OK</br>commencez à jouer</button></p>';
 					}
 				}
 				

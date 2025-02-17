@@ -70,6 +70,18 @@ function verifSyntaxe() {
 	parametres.opendays.samedi 		= day_6.checked ? "1" : "0";
 	parametres.opendays.dimanche 	= day_7.checked ? "1" : "0";
 	//console.log( parametres.opendays );
+
+	str = $("#maxweeks").val();
+	if ( isNumeric(str) ) {
+		parametres.maxweeks = parseFloat( str );
+		if ( parametres.maxweeks < 1 ) parametres.maxweeks = 1;
+		if ( parametres.maxweeks > 13 ) parametres.maxweeks = 13;
+		$("#maxweeks").val(parametres.maxweeks);
+	}
+	else {
+		$("#msgerr1").text( "Période pré-inscription incorrecte" );
+		return false;
+	}
 	
 	// durées
 	str = $("#dureedonne").val();
@@ -320,7 +332,7 @@ function saveparams() {
 	<tr><td colspan="2"><input type="text" id="mailcopie" name="mailcopie" value="<?php echo $parametres['mailcopie'] ?>"  placeholder="adresse mail" size="40"></td></tr>
 	
 	<tr><td colspan="2" style="background-color:lightgreen;">Ouverture du club<td></tr>
-	<tr><td colspan="2">Jours d'ouverture du club pour la recherche de partenaire</br>
+	<tr><td colspan="2" class="defparm">
 	Lundi<input type="checkbox" id="day_1" <?php echo ($opendays['lundi']=="1")?'checked':'' ?> >&nbsp;
 	Mardi<input type="checkbox" id="day_2" <?php echo ($opendays['mardi']=="1")?'checked':'' ?> >&nbsp;
 	Mercredi<input type="checkbox" id="day_3" <?php echo ($opendays['mercredi']=="1")?'checked':'' ?> >&nbsp;
@@ -328,6 +340,8 @@ function saveparams() {
 	Vendredi<input type="checkbox" id="day_5" <?php echo ($opendays['vendredi']=="1")?'checked':'' ?> >&nbsp;
 	Samedi<input type="checkbox" id="day_6" <?php echo ($opendays['samedi']=="1")?'checked':'' ?> >&nbsp;
 	Dimanche<input type="checkbox" id="day_7" <?php echo ($opendays['dimanche']=="1")?'checked':'' ?> >&nbsp;</td></tr>
+	
+	<tr><td class="defparm">Période pour pré-inscription tournoi:</br><em>entre 1 et 13 semaines</em></td><td class="valparm"><input type="text" id="maxweeks" name="maxweeks" value="<?php echo $parametres['maxweeks'] ?>" size="2"> sem</td></tr>
 	
 	<tr><td colspan="2" style="background-color:lightgreen;">Durées de jeu<td></tr>
 	<tr><td class="defparm">Durée pour jouer une donne:</br><em>entre 5 et 15 minutes</br>7.5 minutes habituellement</em></td>
@@ -338,12 +352,12 @@ function saveparams() {
 	<tr><td class="defparm">Durée supplémentaire pour</br>l'entrée des diagrammes:</br><em>entre 0 et 5 minutes</em></td><td class="valparm"><input type="text" id="dureediagrammes" name="dureediagrammes" value="<?php echo $parametres['dureediagrammes'] ?>" size="2"> mn</td></tr>
 
 	<tr><td colspan="2" style="background-color:lightgreen;">Affichage<td></tr>
-	<tr><td class="defparm">Nombre maximum de tournois</br>affichés dans la liste des</br>résultats précédents:</br><em>entre 1 et 100</em></td><td class="valparm"><input type="text" id="maxt" name="maxt" value="<?php echo $parametres['maxt'] ?>" size="2"></td class="valparm"></tr>
+	<tr><td class="defparm">Nombre maximum de tournois</br>affichés dans la liste des</br>résultats précédents:</br><em>entre 1 et 100</em></td><td class="valparm"><input type="text" id="maxt" name="maxt" value="<?php echo $parametres['maxt'] ?>" size="2"></td></tr>
 	
 	<!--
-	<tr><td class="defparm">Taille du tableau des joueurs actifs dans la liste des joueurs du club:</br><em>entre 10 et 100</em></td><td class="valparm"><input type="text" id="maxbj" name="maxbj" value="<?php echo $parametres['maxbj'] ?>" size="2"></td class="valparm"></tr>
+	<tr><td class="defparm">Taille du tableau des joueurs actifs dans la liste des joueurs du club:</br><em>entre 10 et 100</em></td><td class="valparm"><input type="text" id="maxbj" name="maxbj" value="<?php echo $parametres['maxbj'] ?>" size="2"></td></tr>
 	
-	<tr><td class="defparm">Nombre de joueurs affichés</br>dans la liste des joueurs effacés:</br><em>entre 10 et 100</em></td><td class="valparm"><input type="text" id="maxdel" name="maxdel" value="<?php echo $parametres['maxdel'] ?>" size="2"></td class="valparm"></tr>
+	<tr><td class="defparm">Nombre de joueurs affichés</br>dans la liste des joueurs effacés:</br><em>entre 10 et 100</em></td><td class="valparm"><input type="text" id="maxdel" name="maxdel" value="<?php echo $parametres['maxdel'] ?>" size="2"></td></tr>
 	-->
 	
 	<tr><td class="defparm">Largeur écran nécessaire pour</br>passer en affichage 2 colonnes:</br><em>défaut 700 pixels, mini 300</em></td><td class="valparm"><input type="text" id="maxw" name="maxw" value="<?php echo $parametres['maxw'] ?>" size="2"> px</td></tr>
@@ -380,9 +394,9 @@ function saveparams() {
 	<tr><td colspan="2" style="background-color:lightgreen;">Performances des joueurs<td></tr>
 	<tr><td class="defparm">Affichage des performances:&nbsp;</td><td class="valparm">Oui<input type="radio" id="affperfy" name="affperf" <?php echo ($parametres['affperf']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="affperfn" name="affperf" <?php echo ($parametres['affperf']==0)?'checked':'' ?> value="0"></td></tr>
 	
-	<tr><td class="defparm">Taille tableau des performances:</br><em>entre 3 et 100 joueurs</em></td><td class="valparm"><input type="text" id="nbjperf" name="nbjperf" value="<?php echo $parametres['nbjperf'] ?>" size="2"></td class="valparm"></tr>
-	<tr><td class="defparm">Période considérée pour l'analyse:</br><em>entre 1 et 12 dernier mois</em></td><td class="valparm"><input type="text" id="nbmperf" name="nbmperf" value="<?php echo $parametres['nbmperf'] ?>" size="2"></td class="valparm"></tr>
-	<tr><td class="defparm">Nombre minimum de tournois joués sur la période considérée:</br><em>entre 4 et 100 tournois</em></td><td class="valparm"><input type="text" id="minperf" name="minperf" value="<?php echo $parametres['minperf'] ?>" size="2"></td class="valparm"></tr>
+	<tr><td class="defparm">Taille tableau des performances:</br><em>entre 3 et 100 joueurs</em></td><td class="valparm"><input type="text" id="nbjperf" name="nbjperf" value="<?php echo $parametres['nbjperf'] ?>" size="2"></td></tr>
+	<tr><td class="defparm">Période considérée pour l'analyse:</br><em>entre 1 et 12 dernier mois</em></td><td class="valparm"><input type="text" id="nbmperf" name="nbmperf" value="<?php echo $parametres['nbmperf'] ?>" size="2"></td></tr>
+	<tr><td class="defparm">Nombre minimum de tournois joués sur la période considérée:</br><em>entre 4 et 100 tournois</em></td><td class="valparm"><input type="text" id="minperf" name="minperf" value="<?php echo $parametres['minperf'] ?>" size="2"></td></tr>
 	
 	<tr><td colspan="2" style="background-color:lightgreen;">Fonctions de test<td></tr>
 	<tr><td class="defparm">0 = normal<br/>1 = remplissage auto</td><td class="valparm"><input type="text" id="param1" name="param1" value="<?php echo $parametres['param1'] ?>" size="2"></td></tr>
@@ -390,7 +404,7 @@ function saveparams() {
 	
 	<p><button class="myButton" id="valid1" onClick="saveparams()">Enregistrer les paramètres</button></br><span id="msgerr1">&nbsp;</span></p>
 	<p><button class="mySmallButton" onclick="goto40()">Retour page direction de tournoi</button></p>
-	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="gotoindex()"/>
+	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="goto40()"/>
 	</div>
 </body>
 </html>

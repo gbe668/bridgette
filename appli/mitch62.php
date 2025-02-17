@@ -148,7 +148,7 @@ document.addEventListener('visibilitychange', function (event) {
 					if ( ($relaisNS > 0)&&($posrelaisNS == $numNS) ) {
 						// paire en relais
 						print "<h3>Vous êtes en relais</h3>";
-						print "<p>Dans la première position, la paire<br/><b>Nord Sud en relais</b> prépare les donnes<br/>et peut entrer les diagrammes.</p>";
+						if ( $notour == 1) print "<p>Dans la première position, la paire<br/><b>Nord Sud en relais</b> prépare les donnes<br/>et peut entrer les diagrammes.</p>";
 					}
 					else {
 						print "<h3>Vérifiez vos adversaires:</h3>";

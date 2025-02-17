@@ -32,13 +32,15 @@ $parametres = array(
 	'param2'  => 0,		// ???
 	
 	'opendays'=> $defopendays,
+	'maxweeks'=> 4,		// période pré-inscription en semaines
 );
 // valeurs enregistrées
 if ( file_exists( $file_params ) ) {
 	$parametres = json_decode( file_get_contents( $file_params ), true );
-	if ( !isset($parametres['avancem'] ) ) $parametres['avancem'] = 0;
-	if ( !isset($parametres['avanceh'] ) ) $parametres['avanceh'] = 1;
+	if ( !isset($parametres['avancem'] ) )	$parametres['avancem'] = 0;
+	if ( !isset($parametres['avanceh'] ) )	$parametres['avanceh'] = 1;
 	if ( !isset($parametres['opendays'] ) ) $parametres['opendays'] = $defopendays;
+	if ( !isset($parametres['maxweeks'] ) ) $parametres['maxweeks'] = 4;
 }
 
 //tests de qualification
@@ -376,19 +378,19 @@ $typetournois = array(
 '15'	=>array(15, 8, 3,24, 8,24, 0, 8, 1,$t_mitchell,"Mitchell, 8 tables incomplètes, guéridon entre les tables 4 et 5, pas d'étuis table 8, relais EO uniquement"),
 '16'	=>array(16, 8, 3,24, 8,24, 0, 0, 1,$t_mitchell,"Mitchell, 8 tables complètes, guéridon entre les tables 4 et 5, pas d'étuis table 8, les tables 1 et 8 se partagent les étuis qui arrivent à la table 1"),
 //'16'	=>array(16, 8, 4,32, 7,28, 4, 0, 0,$t_mitchell,"Mitchell, 8 tables complètes, 7 positions, saut après 4ème position"),
-'17'	=>array(17, 9, 3,27, 9,27, 0, 9, 0,$t_mitchell,"Mitchell, 9 tables incomplètes, 9 positions, relais EO table 9"),
+'17'	=>array(17, 9, 3,27, 9,27, 0, 9, 0,$t_mitchell,"Mitchell, 9 tables incomplètes, 9 positions, relais NS variable ou relais EO table 9"),
 '18'	=>array(18, 9, 3,27, 9,27, 0, 0, 0,$t_mitchell,"Mitchell, 9 tables complètes, 9 positions"),
 '19'	=>array(19,10, 3,30, 9,27, 5,10, 0,$t_mitchell,"Mitchell, 10 tables incomplètes, 9 positions, saut après 5ème position, relais NS variable ou relais EO table 10"),
 '20'	=>array(20,10, 3,30, 9,27, 5, 0, 0,$t_mitchell,"Mitchell, 10 tables complètes, 9 positions, saut après 5ème position"),
-'21'	=>array(21,11, 3,33, 9,27, 0,11, 0,$t_mitchell,"Mitchell, 11 tables incomplètes, 9 positions, relais EO"),
+'21'	=>array(21,11, 3,33, 9,27, 0,11, 0,$t_mitchell,"Mitchell, 11 tables incomplètes, 9 positions, relais NS variable ou relais EO table 11"),
 '22'	=>array(22,11, 3,33, 9,27, 0, 0, 0,$t_mitchell,"Mitchell, 11 tables complètes, 9 positions"),
-'23'	=>array(23,12, 2,24,12,24, 0,12, 1,$t_mitchell,"Mitchell, 12 tables incomplètes, 12 positions, guéridon entre les tables 6 et 7, pas d'étuis au relais table 12"),
+'23'	=>array(23,12, 2,24,12,24, 0,12, 1,$t_mitchell,"Mitchell, 12 tables incomplètes, 12 positions, guéridon entre les tables 6 et 7, pas d'étuis au relais EO table 12"),
 '24'	=>array(24,12, 3,36, 9,24, 6, 0, 0,$t_mitchell,"Mitchell, 12 tables complètes, 9 positions, saut après 6ème position"),
-'25'	=>array(25,13, 2,26,13,26, 0,13, 0,$t_mitchell,"Mitchell, 13 tables incomplètes, 13 positions, relais EO table 13"),
+'25'	=>array(25,13, 2,26,13,26, 0,13, 0,$t_mitchell,"Mitchell, 13 tables incomplètes, 13 positions, relais NS variable ou relais EO table 13"),
 '26'	=>array(26,13, 2,26,13,26, 0, 0, 0,$t_mitchell,"Mitchell, 13 tables complètes, 13 positions"),
-'27'	=>array(27,14, 2,28,13,26, 7,14, 0,$t_mitchell,"Mitchell, 14 tables incomplètes, saut après 7ème position"),
+'27'	=>array(27,14, 2,28,13,26, 7,14, 0,$t_mitchell,"Mitchell, 14 tables incomplètes, saut après 7ème position, relais NS variable ou relais EO table 14"),
 '28'	=>array(28,14, 2,28,13,26, 7, 0, 0,$t_mitchell,"Mitchell, 14 tables complètes, saut après 7ème position"),
-'29'	=>array(29,15, 2,30,13,26, 0,15, 0,$t_mitchell,"Mitchell, 15 tables incomplètes"),
+'29'	=>array(29,15, 2,30,13,26, 0,15, 0,$t_mitchell,"Mitchell, 15 tables incomplètes, relais NS variable ou relais EO table 15"),
 '30'	=>array(30,15, 2,30,13,26, 0, 0, 0,$t_mitchell,"Mitchell, 15 tables complètes"),
 //
 //				[0]'npaires' 
@@ -990,7 +992,7 @@ function _setRang( $idt, $dd, $dbh, $hweo, $x_donnes ) {
 	};
 };
 
-function htmlResultatDonne($idt, $etui, $numNS, $ordre) {
+function htmlResultatDonne($idt, $etui, $numNS, $numEO, $ordre) {
 	global $tab_donnes, $contratNJ;
 	$hweo = 0;
 	$dbh = connectBDD();
@@ -1037,13 +1039,16 @@ function htmlResultatDonne($idt, $etui, $numNS, $ordre) {
 			$str .= "<tr><td class='xres pairens'>$r1</td>";
 		else
 			$str .= "<tr><td class='xres'>$r1</td>";
-		$str .= "<td class='xres'>$r2</td>";
+		if ( $r2 == $numEO )
+			$str .= "<td class='xres pairens'>$r2</td>";
+		else
+			$str .= "<td class='xres'>$r2</td>";
 		$str .= "<td class='xres'>$r3</td>";
 		$str .= "<td class='xres'>$r4</td>";
 		$str .= "<td class='xres'>$r5</td>";
 		$str .= "<td class='xres'>$r6</td>";
 		$str .= "<td class='xres'>$r7</td>";
-		if ( $r1 == $numNS )
+		if ( ($r1 == $numNS)||($r2 == $numEO) )
 			$str .= "<td class='xres pairens'>$r8str</td></tr>";
 		else
 			$str .= "<td class='xres'>$r8str</td></tr>";
@@ -1053,23 +1058,6 @@ function htmlResultatDonne($idt, $etui, $numNS, $ordre) {
 	$dbh = null;
 	return $str;
 }
-function displayResultatsDonnes($idt, $ordre) {
-	$t = readTournoi( $idt );
-	$ndonnes = $t[ 'ndonnes' ];
-	for ( $i = 1; $i <= $ndonnes; $i++ ) {
-		$nsec = "nsec_" . $i;
-		print "<div id=$nsec class='section_invisible'>";
-		//$vulnerabilite = getinfoetui( $i );
-		//print "<h3 id='vulnerabilite'>$vulnerabilite</h3>";
-		print htmlResultatDonne($idt, $i, 0, $ordre);
-		
-		$diags = existeDiagramme($idt,$i);
-		$ndiag = "ndiag_" . $i;
-		if ( $diags == null ) print "<p>Diagrammes non enregistrés</p>";
-		else print "<p id='$ndiag' hidden>" . $diags . "</p>";
-		print "</div>";
-	}
-};
 function htmlResultatPaquet($idt, $ns, $eo) {
 	global $tab_donnes, $contratNJ;
 	$dbh = connectBDD();
@@ -1567,7 +1555,7 @@ function _getlignes($dbh, $idt) {
 					$idj = $row['idj1'];
 					$resj = $sthj->execute( array(':id'=>$idj) );
 					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
-					$ligne['A'] = array( 'id'=>$idj,
+					$ligne['A'] = array( 'id'=>$idj, 'prenom'=> $joueur['prenom'],
 						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
 						'telephone' => $joueur[ 'telephone' ],
 						'email' => $joueur[ 'email' ] );
@@ -1578,7 +1566,7 @@ function _getlignes($dbh, $idt) {
 					$idj = $row['idj3'];
 					$resj = $sthj->execute( array(':id'=>$idj) );
 					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
-					$ligne['B'] = array( 'id'=>$idj,
+					$ligne['B'] = array( 'id'=>$idj, 'prenom'=> $joueur['prenom'],
 						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
 						'telephone' => $joueur[ 'telephone' ],
 						'email' => $joueur[ 'email' ] );
@@ -1600,7 +1588,7 @@ function _getlignes($dbh, $idt) {
 					$idj = $row['idj2'];
 					$resj = $sthj->execute( array(':id'=>$idj) );
 					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
-					$ligne['A'] = array( 'id'=>$idj,
+					$ligne['A'] = array( 'id'=>$idj, 'prenom'=> $joueur['prenom'],
 						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
 						'telephone' => $joueur[ 'telephone' ],
 						'email' => $joueur[ 'email' ] );
@@ -1611,7 +1599,7 @@ function _getlignes($dbh, $idt) {
 					$idj = $row['idj4'];
 					$resj = $sthj->execute( array(':id'=>$idj) );
 					$joueur = $sthj->fetch(PDO::FETCH_ASSOC);
-					$ligne['B'] = array( 'id'=>$idj,
+					$ligne['B'] = array( 'id'=>$idj, 'prenom'=> $joueur['prenom'],
 						'nomcomplet'=> $joueur['prenom'] . " " . $joueur['nom'],
 						'telephone' => $joueur[ 'telephone' ],
 						'email' => $joueur[ 'email' ] );

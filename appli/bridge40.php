@@ -1,12 +1,14 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+require("libevents.php");
 
 // Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
 if( !isDirecteur() ){
 	header("Location: logdirecteur.php");
 	exit(); 
 }
+
 function getlastclosedtournoi() {
 	global $tab_tournois, $st_closed, $parametres;
 	global $nbl, $idtournois, $datetournois, $idtypes, $genres, $st_typetournoi;
@@ -22,6 +24,19 @@ function getlastclosedtournoi() {
 	else $idlast = 0;
 	$dbh = null;
 	return $idlast;
+};
+function getNbPairePreinscrites( $idt ) {
+	global $tab_pairesNS, $tab_pairesEO;
+	$dbh = connectBDD();
+	
+	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt'";
+	$nbns = $dbh->query($sql)->fetchColumn();
+	
+	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt'";
+	$nbeo = $dbh->query($sql)->fetchColumn();
+
+	$dbh = null;
+	return $nbns+$nbeo;
 };
 ?>
 
@@ -58,6 +73,10 @@ function setpassword() {
 };
 function admin() {
 	var nextstring = "logadmin.php";
+	location.replace( nextstring );
+};
+function goto26() {	// tournois pré-inscriptions
+	var nextstring = "bridge26.php";
 	location.replace( nextstring );
 };
 function goto30() {	// gestion joueurs
@@ -188,15 +207,16 @@ function clickAnnulSuppTournoi() {
 		$idtournoi = existeTournoiPreinscription($today);
 		if ( $idtournoi > 0 ) {
 			$t = readTournoi( $idtournoi );
+			$nb = getNbPairePreinscrites( $idtournoi );
 			$datef = $t['datef'];
 			print "<h2>Tournoi du $datef </h2>";
-			print '<h3>... avec des joueurs pré-inscrits</h3>';
+			print "<h3>... avec $nb paire(s) pré-inscrite(s)</h3>";
 			print "<p><button class='myBigButton' onclick='startInscriptionTournoi()'>Définition des tables</button></p>";
 		}
 		else {
 			print "<h2>Aujourd'hui " . strtoday() . "</h2>";
 			print '<h3>Pas de tournoi en préparation,</br>en cours ou en clôture</h2>';
-			print "<p><button class='myBigButton' onclick='createtournoi()'>Création nouveau tournoi</button></p>";
+			print "<p><button class='myBigButton' onclick='createtournoi()'>Création tournoi du jour</button></p>";
 		}
 		$genre = $t_unknown;
 	};
@@ -209,6 +229,7 @@ function clickAnnulSuppTournoi() {
 	idlastclosed = parseInt( "<?php echo $idlastclosed; ?>" );
 	</script>
 	
+	<p><button class="mySmallButton" onclick="goto26()">Prochains tournois</button></p>
 	<p>&nbsp;</p>
 	<p><button class="myBigButton" onclick="goto30()">Gestion des joueurs</button></p>
 	<p>&nbsp;</p>
@@ -238,6 +259,7 @@ function clickAnnulSuppTournoi() {
 	</div>
 	</div>
 	
+	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="gotoindex()"/>
 	</div>
 </body>
 </html>

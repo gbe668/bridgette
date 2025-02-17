@@ -186,7 +186,7 @@ document.addEventListener('visibilitychange', function (event) {
 		}
 		
 		$donne = ( $etui > 0 ) ? $etui : $res['numdonne'];	// numéro dernière donne enregistrée
-		print htmlResultatDonne($idtournoi, $donne, $oldNS, "points" );
+		print htmlResultatDonne($idtournoi, $donne, $oldNS, $oldEO, "points" );
 		
 		//Entrée diagramme
 		$diagramme = existeDiagramme( $idtournoi, $donne );

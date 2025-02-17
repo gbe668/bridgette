@@ -30,6 +30,7 @@ function goto43() {
 function cdeplus() {
 	$("#afficheplus").addClass( "section_invisible" );
 	$("#affichemoins").removeClass( "section_invisible" );
+	initcanselect();
 	setfocus( 1 );
 }
 function cdemoins() {
@@ -71,7 +72,7 @@ function clickValidiags() {
 		print_section_diagramme();
 		
 		print '<div id="afficheplus">';
-		print '<p><button onclick="cdeplus()">Correction diagramme</button></p>';
+		print '<p><button class="myButton" onclick="cdeplus()">Correction diagramme</button></p>';
 		print '</div>';
 
 		print '<div id="affichemoins" class="section_invisible">';

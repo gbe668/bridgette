@@ -1,6 +1,7 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+require("libevents.php");
 
 // Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
 if( !isAdmin() ){
@@ -11,6 +12,7 @@ error_reporting(E_ALL); // Activer le rapport d'erreurs PHP
 
 $backup_file = $dir_configs.$prefix.'importbdd.sql';
 if ( file_exists( $backup_file ) ) {
+	logevent("importbdd");	// table events non sauvegardée dans le backup
 	$importsql = file_get_contents( $backup_file );
 	$queries = explode( ";\n", $importsql );
 	$nbl = sizeof( $queries );
