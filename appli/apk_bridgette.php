@@ -212,16 +212,30 @@ function gotodownloadapk() {
 					print "<h3>Vous ne faites pas partie des joueurs inscrits!</h3>";
 			};
 			
-			print "<p><button onclick='cdeplus()'>Affiche/masque positions</button></p>";
+			// ajout 6 avril 2025
+			?>
+			<div id="section_paires" hidden>
+			<p><button class="myButton" onclick="$('#section_paires').toggle();">Masque paires</button></p>
+			<?php
+			displayPaires($idtournoi, $genre, $pns, $peo, 100);
+			?>
+			</div>
+			<p><button class="myButton" onclick="$('#section_paires').toggle();">Affiche/Masque paires</button></p>
+			<?php
+			// fin ajout
 			
-			print "<div id='afficheplus' class='section_invisible'>";
-			print "<div style='text-align:center; margin:auto; max-width:350px;' id='realtour'>&nbsp;</div>";
 			if ( $genre == $t_howell ) {
-				$npos = $t['npositions'];
-				print htmlPositionsHowell($idtype, $pns, $npos, $paquet);
+				?>
+				<p><button class="myButton" onclick="$('#section_positions').toggle();">Positions Howell</button></p>
+				<div id="section_positions" hidden>
+				<!-- <div style='text-align:center; margin:auto; max-width:350px;' id='realtour'>&nbsp;</div> -->
+				<?php
+				print htmlPositionsHowell($idtype, $pns, $t['npositions'], $paquet);
+				?>
+				<p><button class="myButton" onclick="$('#section_positions').toggle();">Masque positions Howell</button></p>
+				</div>
+				<?php
 			}
-			print "<p><button onclick='cdemoins()'>Masque positions</button></p>";
-			print "</div>";
 		};
 		
 		if ( $etat == $st_phase_fini ) {

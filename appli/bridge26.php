@@ -237,8 +237,8 @@ document.addEventListener('visibilitychange', function (event) {
 	</div>
 	<h2>Date: <span id="seljour">???</span></h2>
 	
-	<div id="section_calendrier" hidden>
-	<table style="width:100%;max-width:350px;margin:auto;background-color:#E2EFDA"><tbody>
+	<div id="section_calendrier" class="framestyle" hidden>
+	<table style="width:100%;max-width:350px;margin:auto;"><tbody>
 	
 	<tr><td><h3>Ouverture du club</h3></td><td><span class="cross" onclick="toggle_calendar()" style="border:.5pt solid">&#x274C;</span></td></tr>
 	
@@ -256,8 +256,8 @@ document.addEventListener('visibilitychange', function (event) {
 	
 	<div id="msgdatetournoi"></div>
 	
-	<div id="section_inscription" hidden>
-	<table style="width:100%;max-width:350px;margin:auto;background-color:#E2EFDA"><tbody>
+	<div id="section_inscription" class="framestyle" hidden>
+	<table style="width:100%;max-width:350px;margin:auto;"><tbody>
 	<tr><td style="width:90%"><h3>Tournoi du <span id="tabdujour">???</span></h3></td><td><span class="cross" onclick="close_inscription()" style="border:.5pt solid">&#x274C;</span></td></tr>
 	<tr><td colspan="2">
 		<div id="section_tableau" hidden>

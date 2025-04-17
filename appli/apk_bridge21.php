@@ -11,6 +11,7 @@ require("lib63.php");
     <meta charset="UTF-8">
 	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
+	<script src="/js/jquery.mobile-1.5.0-rc1.min.js"></script>
 	<script src="/js/bridge65.js"></script>
 </head>
 
@@ -65,6 +66,9 @@ $(document).ready(function() {
 	$("#etuim1").bind('click', function( event ){ key_select( -1 ); });
 	$("#etuip1").bind('click', function( event ){ key_select( 1 ); });
 	$("#etuip10").bind('click', function( event ){ key_select( 10 ); });
+	//$("#swipebox").bind('swipe', function( event ){ key_select( 1 ); });
+	$("#swipebox").bind('swipeleft', function( event ){ key_select( 1 ); });
+	$("#swipebox").bind('swiperight', function( event ){ key_select( -1 ); });
 	$('td.select').click(function(event) {
 		var id = event.target.id;
 		const figs = id.split('_');
@@ -98,6 +102,7 @@ $(document).on( "click", "td.xres", function(event) {
 	$("#etui").text(figs[1]);
 	key_select( 0 );
 });
+$.mobile.loading().hide();		// suite ajout jquery.mobile-1.5.0-rc1.min.js
 </script>
 
 <body>
@@ -112,7 +117,7 @@ $(document).on( "click", "td.xres", function(event) {
 	?>
 
 	<div id="section_donnes">
-	<p>Naviguez entre les différentes donnes</br>en cliquant sur les chiffres pour avancer</br>ou reculer d'une unité ou d'une dizaine</p>
+	<p>Naviguez entre les différentes donnes</br>en balayant l'écran ou en cliquant sur les chiffres</p>
 	
 	<table border="0" style="width:90%; max-width: 300px; margin:auto;" id="tablenav"><tbody><tr>
 	<td class='xNum2'><div id="etuim10">-10</div></td>
@@ -130,10 +135,12 @@ $(document).on( "click", "td.xres", function(event) {
 	else {
 		$ordre = "points";
 	}
+	print '<div id="swipebox">';
 	print '<div id="section_resultat">';
 	print htmlResultatDonne($idtournoi, 1, 0, 0, $ordre);
 	print '</div>';
 	print_section_diagramme();
+	print '</div>';
 	?>
 	<p><button class="myButton" onclick="display_roadmap()">Affichage feuille de route</button></p>
 	</div>

@@ -359,7 +359,7 @@ $typetournois = array(
 //				 |  |  |  |  |  |  |  |  |  [9] genre tournoi
 //				 |  |  |  |  |  |  |  |  |  |			[10] description
 '4'		=>array( 4, 4, 4,24, 6,24, 0, 0, 0,$t_howell,  "Equivalent Howell avec 2 tables, 3 positions jouant 2 paquets, échange des paquets en milieu de position, affichage en % ou IMP selon paramétrage"),
-'5'		=>array( 5, 5, 5,20, 4,15, 0, 6, 0,$t_howell,  "Howell 5 paires avec 3 tables incomplètes, 4 positions, table relais variable en fonction du numéro de tour, affichage en % ou IMP selon paramétrage"),
+'5'		=>array( 5, 5, 5,20, 4,20, 0, 6, 0,$t_howell,  "Howell 5 paires avec 3 tables incomplètes, 4 positions, table relais variable en fonction du numéro de tour, affichage en % ou IMP selon paramétrage"),
 '6'		=>array( 6, 6, 5,25, 5,25, 0, 0, 0,$t_howell,  "Howell 6 paires avec 3 tables, 5 positions, partage des donnes à la dernière position"),
 '7'		=>array( 7, 7, 3,21, 7,18, 0, 8, 0,$t_howell,  "Howell 7 paires avec 4 tables incomplètes, 7 positions, table relais variable en fonction du numéro de tour"),
 '47'	=>array( 7, 4, 4,16, 4,16, 0, 4, 1,$t_mitchell,"Mitchell, 4 tables incomplètes, 4 positions, guéridon entre les tables 2 et 3, pas d'étuis table 4, relais EO uniquement"),
@@ -3020,7 +3020,7 @@ function displayCnxTables() {
 	
 	print '<table border="1" style="width:90%; max-width: 350px; margin:auto;">';
 	print '<tbody>';
-	print '<tr><td  colspan="5" class="xTitre">Avancement tournoi</td></tr>';
+	//print '<tr><td  colspan="5" class="xTitre">Avancement tournoi</td></tr>';
 	print '<tr class="xtr"><td class="xTitre">Paire</br>NS</td><td class="xTitre">Paire</br>EO</td><td class="xTitre">Dernière</br>donne</br>enreg.</td><td class="xTitre">Donnes</br>jouées</td><td class="xTitre">Position</br>courante</td></tr>';
 	for  ($i = 1; $i < $max_tables+1; $i++) {
 		$stcnx = $stconn[ $i ];

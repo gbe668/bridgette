@@ -195,6 +195,7 @@ function cdemoins() {
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=16">Test 8 tables complètes</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=17">Test 9 tables incomplètes</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=18">Test 9 tables complètes</a></h3>';
+		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=30">Test 15 tables complètes</a></h3>';
 	}
 	?>
 	

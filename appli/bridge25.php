@@ -222,7 +222,7 @@ $(document).ready(function() {		// sélection date tournoi
 		// test club ouvert
 		if ( seldate in calendrier ) {
 			let special = calendrier[seldate];
-			$("#errdatetournoi").html( special.obs );
+			$("#errdatetournoi").html( "<p style='color:red'><b>"+special.obs+"</b></p>" );
 			if (special.etat == 0) {
 				$("#section_inscription").hide();
 				return;
@@ -261,7 +261,6 @@ document.addEventListener('visibilitychange', function (event) {
 	if ( $userid > 0 ) {
 		$joueur = getJoueur( $userid );
 		print "<p>Hello ".$joueur['nomcomplet']."</p>";
-		print '<p><button class="mButton" onclick="goto24()">Mes données personnelles</button></p>';
 	}
 	?>
 	<h2>Pré-inscription à un tournoi</h2>
@@ -277,8 +276,8 @@ document.addEventListener('visibilitychange', function (event) {
 	<div id="errdatetournoi"></div>
 	<div id="msgdatetournoi"></div>
 	
-	<div id="section_inscription" hidden>
-	<table style="width:100%;max-width:350px;margin:auto;background-color:#E2EFDA"><tbody>
+	<div id="section_inscription" class="framestyle" hidden>
+	<table style="width:100%;max-width:350px;margin:auto;"><tbody>
 	<tr><td>
 	<div id="section_tableau" hidden>
 	<table style="width:100%;margin:auto;"><tbody><tr>
@@ -324,12 +323,12 @@ document.addEventListener('visibilitychange', function (event) {
 		<p><button class="myButton" onclick="$('#section_annuaire').toggle(); elmnt = document.getElementById('section_annuaire'); elmnt.scrollIntoView();">Affiche/Masque annuaire</button></p>
 		
 		<h2>Mes données personnelles</h2>
-		<div id="section_perso" hidden>
-		<div style="background-color:#E2EFDA">
+		<div id="section_perso" class="framestyle" hidden>
 		<h3>Mes coordonnées</h3>
 		<p>Au sein du club, vous avez le n°<b><?php echo $joueur['numero'] ?></b></p>
+		<!--
 		<p>Monsieur <input type="radio" id="male" name="gender" <?php echo ($joueur['genre']=='Mr')?'checked':'' ?> value="Mr"> Madame <input type="radio" id="female" name="gender" <?php echo ($joueur['genre']=='Me')?'checked':'' ?>  value="Me"></p>
-		
+		-->
 		<p>Prénom:<input type="text" id="fname" value="<?php echo $joueur['prenom'] ?>" size="20"></p>
 		<p>Nom:<input type="text" id="lname" value="<?php echo $joueur['nom'] ?>" size="20"></p>
 		
@@ -342,7 +341,6 @@ document.addEventListener('visibilitychange', function (event) {
 		<h3>Mes performances passées</h3>
 		<?php	print getMyClassement($userid);	?>
 		
-		</div>
 		</div>
 		<p><button class="myButton" onclick="$('#section_perso').toggle(); elmnt = document.getElementById('section_perso'); elmnt.scrollIntoView();">Affiche/Masque mes données</button></p>
 		

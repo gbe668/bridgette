@@ -65,18 +65,6 @@ function goto61() {
 	var nextstring = 'mitch61.php?idtournoi=' + idtournoi;
 	location.replace( nextstring );
 };
-function clickForcageArretTournoi() {
-	$("#section_arret_tournoi").removeClass( "section_invisible" );
-}
-function clickAnnulationArretTournoi() {
-	$("#section_arret_tournoi").addClass( "section_invisible" );
-}
-function toggleAffichagePaires() {
-	if ( $("#section_tableaux").hasClass( 'section_invisible' ) )
-		$('#section_tableaux').removeClass( 'section_invisible' );
-	else
-		$('#section_tableaux').addClass( 'section_invisible' );
-}
 function reload() {
 	var nextstring = "bridge43.php?idtournoi=" + idtournoi + "&etui=" + etui + "&w=" +  window.innerWidth;
 	location.replace( nextstring );
@@ -86,9 +74,10 @@ function refreshConnexions() {
 	lstConnexions();
 	// test tournoi terminé
 	if ( tstfintournoi() ) {
-		$('#section_encours').addClass( 'section_invisible' );
-		$("#section_affichage").removeClass( "section_invisible" );
-		$("#section_forcage").addClass( "section_invisible" );
+		$('#section_encours').hide();
+		$('#section_npositions').hide();
+		$("#section_affichage").show();
+		$("#section_forcage").hide();
 		//goto44();
 	}
 	else {
@@ -98,7 +87,7 @@ function refreshConnexions() {
 </script>
 
 <body>
-	<div style="text-align:center; margin:auto;">
+	<div style="text-align:center; max-width:350px; margin:auto;">
 	
 	<?php
 	$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
@@ -137,33 +126,41 @@ function refreshConnexions() {
 	?>
 	
 	<div id="section_encours">
-	<div id="section_tableaux" class="section_invisible">
-	<p><button onclick="toggleAffichagePaires()">Affiche / masque les paires</button></p>
-
+	
+	<div id="section_tableaux" hidden>
+	<p><button class='myButton' onclick="$('#section_tableaux').toggle();">Affiche / masque les paires</button></p>
 	<?php
 	displayPaires($idtournoi, $genre, $pns, $peo, $screenw);
 	?>
 	</div>
-	<p><button onclick="toggleAffichagePaires()">Affiche / masque les paires</button></p>
+	<p><button class='myButton' onclick="$('#section_tableaux').toggle();">Affiche / masque les paires</button></p>
 
+	<div id="back241">
 	<?php
 	$donnesjouees = getdonnesjouees();
 	if ( ($donnesjouees == 0)&&($parametres['back241']==1) ) {
-		print "<div id='back241' >";
-		print "<p>En cas d'arrivée tardive d'un joueur et si <b>personne n’a commencé à jouer</b>, il est possible de revenir à la page de définition des paires pour prendre en compte le joueur en retard. <button class='myButton' onclick='goto41()'>Revenir définition des paires</button></p>";
-		print "</div>";
+		print "<p>En cas d'arrivée tardive d'un joueur et si <b>personne n’a commencé à jouer</b>, il est possible de revenir à la page de définition des paires pour prendre en compte le joueur en retard.</p>";
+		print "<p><button class='myButton' onclick='goto41()'>Revenir définition des paires</button></p>";
 	}	
 	?>
-	
-	<p>Si le tournoi s'éternise, vous pouvez</br>diminuer le nombre de positions</p>
-	<p>Nombre positions:&nbsp;<span class='xNum2' id="signemoins"><img src="images/signe-moins.png" height="20"/></span>
-	<span id='npositions' class="xDigit" style="padding-left:20px; padding-right:20px;"><?php echo $npositions ?></span>
-	<span class='xNum2' id="signeplus"><img src="images/signe-plus.png" height="20"/></span>
-	</br>Donnes jouées: <span id="njouees"><?php echo $njouees ?></span> sur <span id="ndonnes"><?php echo $ndonnes ?></p>
-	<p><b>fin tournoi: <span id="fintournoi"><?php echo $strfintournoi ?></span></b></p>
-	<p id="msgerr">&nbsp;</p>
 	</div>
 	
+	<div id="section_correction" class="framestyle">
+	<h3>Corrections en cours de tournoi</h3>
+	<p>En cas d'erreur de saisie sur une donne, vous pouvez corriger le résultat sans attendre que le tournoi soit terminé. En cas d'erreur sur un étui, vous pouvez afficher le diagramme pour reconfigurer l'étui ou corriger le diagramme.</p>
+	<p><em>Sélectionnez l'étui concerné</em></br>
+	<span id="etuim10" class='xNum2'>&nbsp;-10&nbsp;</span>&nbsp;
+	<span id="etuim1" class='xNum2'>&nbsp;-1&nbsp;</span>&nbsp;
+	<span class="xDigit">n°<span id='etui'><?php echo $etui; ?></span></span>&nbsp;
+	<span id="etuip1" class='xNum2'>&nbsp;+1&nbsp;</span>&nbsp;
+	<span id="etuip10" class='xNum2'>&nbsp;+10&nbsp;</span></p>
+	<p><button class="myButton" onClick="goto43c()">Correction</button>&nbsp;
+	<button class="myButton" onClick="goto46()">Diagramme</button></p>
+	</div>
+	
+	</div><!-- section_encours -->
+	
+	<h3>Avancement tournoi</h3>
 	<?php
 	displayCnxTables();
 	$maxpositions = getmaxpositions( $idtype );	// pour éviter de repartir de la valeur modifiée en cas de rechargement de la page
@@ -171,32 +168,32 @@ function refreshConnexions() {
 	//print "<p>jouées: ".$donnesjouees." ".$maxdonnesjouees."</p>";
 	?>
 	
-	<div id="section_affichage" class="section_invisible">
+	<div id="section_npositions" class="framestyle">
+	<h3>Nombre de positions</h3>
+	<p>Si le tournoi s'éternise, vous pouvez</br>diminuer le nombre de positions</p>
+	<p>Nombre positions:&nbsp;<span class='xNum2' id="signemoins"><img src="images/signe-moins.png" height="20"/></span>
+	<span id='npositions' class="xDigit" style="padding-left:20px; padding-right:20px;"><?php echo $npositions ?></span>
+	<span class='xNum2' id="signeplus"><img src="images/signe-plus.png" height="20"/></span>
+	</br>Donnes jouées: <span id="njouees"><?php echo $njouees ?></span> sur <span id="ndonnes"><?php echo $ndonnes ?></p>
+	<p><b>fin tournoi: <span id="fintournoi"><?php echo $strfintournoi ?></span></b></p>
+	<p id="msgerr"></p>
+	</div>
+	
+	<div id="section_affichage" hidden>
 	<h3>Tournoi terminé</h3>
 	<p><button class="myButton" onclick="goto44()">Affichage résultats provisoires</br>Arbitrage / Clôture du tournoi</button></p>
 	<p>&nbsp;</p>
 	</div>
 	
 	<div id="section_forcage">
-	<p>En cas d'erreur de saisie sur une donne, vous pouvez corriger le résultat sans attendre que le tournoi soit terminé, en cas de souci sur un étui, vous pouvez afficher le diagramme pour reconfigurer l'étui.</p>
-	<p><em>Sélectionnez l'étui concerné</em></br>
-	<span id="etuim10" class='xNum2'>&nbsp;-10&nbsp;</span>&nbsp;
-	<span id="etuim1" class='xNum2'>&nbsp;-1&nbsp;</span>&nbsp;
-	<span class="xDigit">n°<span id='etui'><?php echo $etui; ?></span></span>&nbsp;
-	<span id="etuip1" class='xNum2'>&nbsp;+1&nbsp;</span>&nbsp;
-	<span id="etuip10" class='xNum2'>&nbsp;+10&nbsp;</span></p>
-	
-	<p><button class="myButton" onClick="goto43c()">Correction</button>&nbsp;
-	<button class="myButton" onClick="goto46()">Diagramme</button></p>
-	
 	<h3>Attente tournoi terminé pour afficher les résultats provisoires</h3>
 	<p>S'il manque des résultats, forçage terminaison et entrée des résultats manquants en utilisant les feuilles de suivi des étuis ou la feuille de marque de la table concernée.</p>
-	<p><button class="myButton" onClick="clickForcageArretTournoi()">Forcer l'arrêt du tournoi</button></p>
+	<p><button class="myButton" onClick="$('#section_arret_tournoi').show();">Forcer l'arrêt du tournoi</button></p>
 	
-	<div id="section_arret_tournoi" class="section_invisible">
+	<div id="section_arret_tournoi" hidden>
 	<p>Attention, après l'arrêt, le directeur devra rentrer les résultats manquants !</p>
 	<p><button class="myButton oktogoon" id="valid2" onClick="stoptournoi()">Je confirme</button></p>
-	<p><button class="myButton kotogoon" id="valid3" onClick="clickAnnulationArretTournoi()">Oups ! J'annule</button></p>
+	<p><button class="myButton kotogoon" id="valid3" onClick="$('#section_arret_tournoi').hide();">Oups ! J'annule</button></p>
 	</div>
 	
 	</div>
@@ -232,9 +229,10 @@ function refreshConnexions() {
 	maxdonnesjouees = parseInt( "<?php echo $maxdonnesjouees; ?>" );
 
 	if( donnesjouees == maxdonnesjouees ) {
-		$('#section_encours').addClass( 'section_invisible' );
-		$("#section_affichage").removeClass( "section_invisible" );
-		$("#section_forcage").addClass( "section_invisible" );
+		$('#section_encours').hide();
+		$('#section_npositions').hide();
+		$("#section_affichage").show();
+		$("#section_forcage").hide();
 	}
 	else {
 		refreshConnexions();

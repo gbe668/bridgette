@@ -67,7 +67,7 @@ $(document).on( "click", "button.selliste", function(event) {
 	if ( liste == 3 ) $("#liste_3").addClass( "oktogoon" );
 	liste_joueurs();
 });
-$(document).on( "click", "td.selordre", function(event) {
+$(document).on( "click", "th.selordre", function(event) {
 	console.log( "event", event.target.id );
 	var figs = event.target.id.split('_');
 	ordre = figs[1];
