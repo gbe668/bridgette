@@ -99,7 +99,7 @@ function changenpositions( valeur ) {
 	newpositions = npositions + valeur;
 	if ( (newpositions > maxpositions ) || (newpositions < (maxpositions - 2) ) ) {
 		$("#msgerr").text( "Non autorisé ..." );
-		setTimeout(function() { $("#msgerr").html( "&nbsp;" ); }, 1500);
+		setTimeout(function() { $("#msgerr").html( "" ); }, 1500);
 	}
 	else {
 		npositions = newpositions;
@@ -116,7 +116,7 @@ function changenpositions( valeur ) {
 		$.get("setnpositions.php", {idtournoi:idtournoi, npositions:npositions}, function(texte) {
 			$("#msgerr").text( "Enregistrement terminé." );
 			//$("#msgerr").text( texte );
-			setTimeout(function() { $("#msgerr").html( "&nbsp;" ); }, 1500);
+			setTimeout(function() { $("#msgerr").html( "" ); }, 1500);
 		},"text");
 	}
 };
