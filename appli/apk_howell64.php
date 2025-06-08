@@ -26,6 +26,7 @@ $_SESSION['back64'] = $back64;
     <meta charset="UTF-8">
 	<link rel="stylesheet" href="/css/bridgestylesheet.css" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
+	<script src="/js/jquery.mobile-1.5.0-rc1.min.js"></script>
 	<script src="/js/bridge65.js"></script>
 </head>
 
@@ -72,6 +73,35 @@ $(document).on( "click", "td.seletui", function(event) {
 		passAndroid( retparms );
 	}
 });
+$(function() {
+	$("div.swipebox").on('swipeleft' , function(event) { swipeleft();  } );
+	$("div.swipebox").on('swiperight', function(event) { swiperight(); } );
+})
+function swipeleft() {
+	if ( enableswipe > 0 ) {
+		let first = Math.floor( (donne-1)/paquet )*paquet +1;
+		let max = first + paquet -1;
+		console.log("swipeleft", "first", first, "max", max, "donne", donne );
+		if ( donne < max ) {
+			// rechargement donne sélectionnée
+			retparms = { next:"howell64", etui:(donne+1) };
+			passAndroid( retparms );
+		}
+	}
+}
+function swiperight() {
+	if ( enableswipe > 0 ) {
+		let first = Math.floor( (donne-1)/paquet )*paquet +1;
+		let max = first + paquet -1;
+		console.log("swiperight", "first", first, "max", max, "donne", donne );
+		if ( donne > first ) {
+			// rechargement donne sélectionnée
+			retparms = { next:"howell64", etui:(donne-1) };
+			passAndroid( retparms );
+		}
+	}
+}
+$.mobile.loading().hide();		// suite ajout jquery.mobile-1.5.0-rc1.min.js
 
 // mécanisme détectant une page expirée
 var agepagemax = "<?php echo $agepagemax; ?>";
@@ -101,6 +131,7 @@ document.addEventListener('visibilitychange', function (event) {
 	<?php
 	$t = readTournoi( $idtournoi );
 	$etat = $t['etat'];
+	$enableswipe = 0;
 	if ( ($etat == $st_phase_jeu)||($etat == $st_phase_fini) ) {
 		$idtype  = $t['idtype'];
 		$njouees = $t['njouees'];
@@ -168,6 +199,7 @@ document.addEventListener('visibilitychange', function (event) {
 
 			print "<p>Nord Sud: $nameNord et $nameSud</br>Est Ouest: $nameEst et $nameOuest</p>";
 
+			print '<div class="swipebox">';
 			$donne = ( $etui > 0 ) ? $etui : $res['numdonne'];	// numéro dernière donne enregistrée
 			print htmlResultatDonne($idtournoi, $donne, $numNS, 0, "points" );
 		
@@ -181,12 +213,14 @@ document.addEventListener('visibilitychange', function (event) {
 			else {
 				print_section_diagramme();
 			}
+			print '</div>';		// swipebox
 			
 			if ( $cpt == 1) print "<p>1ère donne jouée sur $njouees</p>";
 			else print "<p>$cpt donnes jouées sur $njouees</p>";
 			if ( $cpt < $njouees ) {
 				if ( $changement == 0 and $cpt > 0 ) {
 					print htmlResultatPaquet($idtournoi, $numNS, $numEO );
+					$enableswipe = 1;
 				
 					//print "<h3>Attention</br>les joueurs changent de position !</h3>";
 					print '<p><button class="myStartButton" onclick="goto62()">Passez à la</br>position suivante</button></p>';
@@ -203,6 +237,7 @@ document.addEventListener('visibilitychange', function (event) {
 			}
 			else {
 				print htmlResultatPaquet($idtournoi, $numNS, $numEO );
+				$enableswipe = 1;
 				
 				setCnxFin( $numNS );
 				setCnxFin( $numEO );
@@ -221,6 +256,8 @@ document.addEventListener('visibilitychange', function (event) {
 	var cpt	   = parseInt( "<?php echo $cpt; ?>" );
 	var numNS  = parseInt( "<?php echo $numNS; ?>" );
 	var numEO  = parseInt( "<?php echo $numEO; ?>" );
+	var enableswipe = parseInt( "<?php echo $enableswipe; ?>" );;
+	var paquet = parseInt( "<?php echo $paquet; ?>" );;
 
 	var diagramme = String( "<?php echo $diagramme; ?>" );
 	//console.log( "diagramme", diagramme );

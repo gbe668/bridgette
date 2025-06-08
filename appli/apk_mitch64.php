@@ -26,6 +26,7 @@ $_SESSION['back64'] = $back64;
     <meta charset="UTF-8">
 	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
+	<script src="/js/jquery.mobile-1.5.0-rc1.min.js"></script>
 	<script src="/js/bridge65.js"></script>
 </head>
 
@@ -71,6 +72,35 @@ $(document).on( "click", "td.seletui", function(event) {
 		passAndroid( retparms );
 	}
 });
+$(function() {
+	$("div.swipebox").on('swipeleft' , function(event) { swipeleft();  } );
+	$("div.swipebox").on('swiperight', function(event) { swiperight(); } );
+})
+function swipeleft() {
+	if ( enableswipe > 0 ) {
+		let first = Math.floor( (donne-1)/paquet )*paquet +1;
+		let max = first + paquet -1;
+		console.log("swipeleft", "first", first, "max", max, "donne", donne );
+		if ( donne < max ) {
+			// rechargement donne sélectionnée
+			retparms = { next:"mitch64", etui:(donne+1) };
+			passAndroid( retparms );
+		}
+	}
+}
+function swiperight() {
+	if ( enableswipe > 0 ) {
+		let first = Math.floor( (donne-1)/paquet )*paquet +1;
+		let max = first + paquet -1;
+		console.log("swiperight", "first", first, "max", max, "donne", donne );
+		if ( donne > first ) {
+			// rechargement donne sélectionnée
+			retparms = { next:"mitch64", etui:(donne-1) };
+			passAndroid( retparms );
+		}
+	}
+}
+$.mobile.loading().hide();		// suite ajout jquery.mobile-1.5.0-rc1.min.js
 
 // mécanisme détectant une page expirée
 var agepagemax = "<?php echo $agepagemax; ?>";
@@ -102,6 +132,7 @@ document.addEventListener('visibilitychange', function (event) {
 	
 	$t = readTournoi( $idtournoi );
 	$etat = $t['etat'];
+	$enableswipe = 0;
 	if ( ($etat == $st_phase_jeu)||($etat == $st_phase_fini) ) {
 		$idtype   = $t['idtype'];
 		$pairesNS = $t['pairesNS'];
@@ -185,6 +216,7 @@ document.addEventListener('visibilitychange', function (event) {
 			print "<p>Nord Sud: $nameNord et $nameSud</br>Est Ouest: $nameEst et $nameOuest</p>";
 		}
 		
+		print '<div class="swipebox">';
 		$donne = ( $etui > 0 ) ? $etui : $res['numdonne'];	// numéro dernière donne enregistrée
 		print htmlResultatDonne($idtournoi, $donne, $oldNS, $oldEO, "points" );
 		
@@ -198,6 +230,7 @@ document.addEventListener('visibilitychange', function (event) {
 		else {
 			print_section_diagramme();
 		}
+		print '</div>';		// swipebox
 
 		$njouees = $t[ 'njouees' ];
 		$changement = $cpt % $paquet;
@@ -207,6 +240,7 @@ document.addEventListener('visibilitychange', function (event) {
 			if ( $changement == 0 and $cpt > 0 ) {
 				//print htmlResultatPaquet($idtournoi, $numNS, $oldEO );
 				print htmlResultatPaquet($idtournoi, $numtable, $oldEO );
+				$enableswipe = 1;
 				
 				if ( ( $position == $saut ) and ( $saut > 0) ) {
 					print "<h3>Les Est-Ouest sautent une table</h3>";
@@ -225,6 +259,7 @@ document.addEventListener('visibilitychange', function (event) {
 		}
 		else {
 			print htmlResultatPaquet($idtournoi, $numNS, $oldEO );
+			$enableswipe = 1;
 			
 			setCnxFin( $numtable );
 			print "<p>La table $numtable a terminé le tournoi.</p>";
@@ -251,6 +286,8 @@ document.addEventListener('visibilitychange', function (event) {
 	var numEO  = parseInt( "<?php echo $oldEO; ?>" );
 	var vulns  = 0;
 	var vuleo  = 0;
+	var enableswipe = parseInt( "<?php echo $enableswipe; ?>" );;
+	var paquet = parseInt( "<?php echo $paquet; ?>" );;
 	
 	var diagramme = String( "<?php echo $diagramme; ?>" );
 	console.log( diagramme );
