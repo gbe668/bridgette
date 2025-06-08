@@ -612,8 +612,8 @@ class Donnejouee {
 			}
 			else {
 				this.calculpoints();
-				html += imgPos(this.pos)+": "+this.shortContrat()+" "+this.shortResultat()+"<br/>";
-				html += "Points NS: " + this.points + "</b></span>";
+				html += imgPos(this.pos)+": "+this.shortContrat()+" "+this.shortResultat()+"</b></span>";
+				html += "<br/>Points NS: " + this.points + "";
 			}
 			$("#section_validation").removeClass( "section_invisible" );
 			$("#textePoints").html( html );

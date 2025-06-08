@@ -359,7 +359,7 @@ function displayClavierSaisieJoueur() {
 	str += '<td colspan="7" class="xNum2 xNumSmall"><div onclick="enleveJoueur()">Efface joueur en place</div></td>';
 	str += '</tr>';
 	*/
-	str += '<tr><td colspan="10" class="xDigit" style="border: 1px solid black"><div id="btnAlphabetic">&nbsp;</div></td></tr>';
+	str += '<tr><td colspan="10" class="xDigit" style="border: 1px solid black"><div id="btnAlphabetic"><span class="blinking-cursor">|</span></div></td></tr>';
 	str += '<tr>';
 	str += '<td colspan="10" class="xNum">';
 	
@@ -454,10 +454,10 @@ function process_touche( touche ) {
 			touche = " ";
 		default:
 			strname = strname + touche;
-			$("#btnAlphabetic").text( strname );
+			//$("#btnAlphabetic").text( strname );
 			if ( strname.length > 2 ) lstJoueurs();
 	}		
-	$("#btnAlphabetic").text( strname );
+	$("#btnAlphabetic").html( strname + "<span class='blinking-cursor'>|</span>" );
 	return true;
 }
 $(document).keydown(function(event) {

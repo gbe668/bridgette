@@ -271,10 +271,10 @@ function process_touche( touche ) {
 			touche = " ";
 		default:
 			strname = strname + touche;
-			$("#btnAlphabetic").text( strname );
+			//$("#btnAlphabetic").text( strname );
 			if ( strname.length > 2 ) lstJoueurs();
 	}		
-	$("#btnAlphabetic").text( strname );
+	$("#btnAlphabetic").html( strname + "<span class='blinking-cursor'>|</span>" );
 	return true;
 }
 

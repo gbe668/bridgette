@@ -73,6 +73,19 @@ function displaydeal( deal, etui ) {
 			$("#ligne_16").text( enmain );
 		}
 	}
+	// ajout 18 mai 2025
+	let donneur = etuis[etui][1];
+	$("#ph_nord") .css('background', '#FFFFFF' );
+	$("#ph_est")  .css('background', '#FFFFFF' );
+	$("#ph_sud")  .css('background', '#FFFFFF' );
+	$("#ph_ouest").css('background', '#FFFFFF' );
+	switch( donneur ) {
+		case 1: $("#ph_nord") .css('background', 'yellow' ); break;
+		case 2: $("#ph_est")  .css('background', 'yellow' ); break;
+		case 3: $("#ph_sud")  .css('background', 'yellow' ); break;
+		case 4: $("#ph_ouest").css('background', 'yellow' ); break;
+	}
+	
 	$("#ph_nord").text( points[1] );
 	$("#ph_est").text( points[2] );
 	$("#ph_sud").text( points[3] );
