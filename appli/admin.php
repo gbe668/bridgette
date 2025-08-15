@@ -39,21 +39,41 @@ function countElements() {
 	global $tab_joueurs, $nbjoueurs, $min_noclub, $tab_tournois, $nbtournois, $tab_donnes, $nbdonnes, $tab_diagrammes, $nbdiagrammes;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT count(*) FROM $tab_joueurs where numero >= '$min_noclub';";
-	$sth = $dbh->query( $sql );
-	$nbjoueurs = $sth->fetchColumn();
-	
-	$sql = "SELECT count(*) FROM $tab_tournois;";
-	$sth = $dbh->query( $sql );
-	$nbtournois = $sth->fetchColumn();
-	
-	$sql = "SELECT count(*) FROM $tab_donnes;";
-	$sth = $dbh->query( $sql );
-	$nbdonnes = $sth->fetchColumn();
-	
-	$sql = "SELECT count(*) FROM $tab_diagrammes;";
-	$sth = $dbh->query( $sql );
-	$nbdiagrammes = $sth->fetchColumn();
+	try {
+		$sql = "SELECT count(*) FROM $tab_joueurs where numero >= '$min_noclub';";
+		$sth = $dbh->query( $sql );
+		$nbjoueurs = $sth->fetchColumn();
+	}
+	catch (Exception $e) {
+		$nbjoueurs = 0;
+	}
+		
+	try {
+		$sql = "SELECT count(*) FROM $tab_tournois;";
+		$sth = $dbh->query( $sql );
+		$nbtournois = $sth->fetchColumn();
+	}
+	catch (Exception $e) {
+		$nbtournois = 0;
+	}
+		
+	try {
+		$sql = "SELECT count(*) FROM $tab_donnes;";
+		$sth = $dbh->query( $sql );
+		$nbdonnes = $sth->fetchColumn();
+	}
+	catch (Exception $e) {
+		$nbdonnes = 0;
+	}
+		
+	try {
+		$sql = "SELECT count(*) FROM $tab_diagrammes;";
+		$sth = $dbh->query( $sql );
+		$nbdiagrammes = $sth->fetchColumn();
+	}
+	catch (Exception $e) {
+		$nbdiagrammes = 0;
+	}
 	
 	$dbh = null;
 }
@@ -65,7 +85,7 @@ function display_sizedb() {
 	global $nomtables, $dimtables;
 	print "<table border='1' style='width:90%; max-width: 350px; margin:auto;'>";
 	print '<tbody>';
-	print "<tr><th>Table</th><th>Taille (KB)</th></tr>";
+	print "<tr><th>Table BDD</th><th>Taille (KB)</th></tr>";
 	for ( $j = 0; $j < sizeof($nomtables); $j++ ) {
 		print "<tr><td>$nomtables[$j]</td><td>$dimtables[$j]</td></tr>";
 	}
@@ -134,6 +154,7 @@ function getNbThisYear( $datet ) {
 
 // import / export BDD
 $backup_file = $dir_configs.$prefix.'importbdd.sql';
+$post_max_size = ini_parse_quantity( ini_get('post_max_size') ); 	// in bytes
 
 // liste événements
 $maxevents = 10;
@@ -222,13 +243,10 @@ function lstDirecteurs() {
 };
 function clickSuppression() {
 	if ( idsel >= 0 )
-		$("#section_confirme_suppression").removeClass( "section_invisible" );
+		$("#section_confirme_suppression").show();
 	else
 		$("#seldir").html( "Pour supprimer un rôle dans la liste,<br/>commencez par le sélectionner." );
 };
-function clickAnnulationSuppression() {
-	$("#section_confirme_suppression").addClass( "section_invisible" );
-}
 function clickConfirmeSuppression() {
 	$("#seldir").text( "Suppression en cours ..." );
 	var dataString = 'deletedirecteur.php?id=' + ids[ idsel ];
@@ -241,18 +259,12 @@ function clickConfirmeSuppression() {
 	},"text");
 };
 
-function suppressionVieuxTournois() {
-	$("#section_suppression_tournois").removeClass( "section_invisible" );
-};
 function confirmeSuppressionVieuxTournois() {
 	$("#msgvieuxtournois").html( "Suppression en cours ..." );
 	$.get( "purgevieuxtournois.php?", { n:oldtournois }, function(html) {
 		$("#msgvieuxtournois").html( html );
 		setTimeout(function() { reload(); }, 2000);
 	},"html");
-}
-function annulationSuppressionVieuxTournois() {
-	$("#section_suppression_tournois").addClass( "section_invisible" );
 }
 
 $(document).ready(function() {
@@ -275,23 +287,117 @@ $(document).ready(function() {
 		}
 	});
 });
-function toggleAffichagePseudos() {
-	if ( $("#section_pseudos").hasClass( 'section_invisible' ) )
-		$('#section_pseudos').removeClass( 'section_invisible' );
-	else
-		$('#section_pseudos').addClass( 'section_invisible' );
+
+// import export BDD
+const post_max_size = parseInt( "<?php echo $post_max_size; ?>" );
+var sqlfile = null;
+var queue;
+function videqueue() {
+	if ( queue.length > 0 ) {
+		let job = queue.shift();
+		//console.log( "job", job );
+		var queries = job.pieces;
+		fetch( "importbddpart.php", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" }, // On envoie du JSON
+			body: JSON.stringify({ queries: queries }) // On envoie un objet avec la clé "queries"
+		})
+		.then(response => response.json())
+		.then(data => {
+			$("#msgbdd").html( job.deb +" "+ job.fin+ " : "+data.message );
+			$("#complete").html( job.pc );
+			if ( data.ok ) videqueue();
+		})
+		.catch(error => {
+			console.error("Erreur :", error);
+		});
+	}
+	else {
+		$("#complete").html( "import terminé" );
+		$("#msgbdd").html( "<span style='color:red'><b>Retournez page d'accueil pour vérifier l'importation !</b></span>" );
+	}
 }
-function toggleAffichageEvents() {
-	if ( $("#section_events").hasClass( 'section_invisible' ) )
-		$('#section_events').removeClass( 'section_invisible' );
-	else
-		$('#section_events').addClass( 'section_invisible' );
+function uploadpart() {
+	$('#section_confirme').hide();
+	if ( sqlfile ) {
+		console.log( "uploadpart", sqlfile, "size", sqlfile.size );
+		var reader = new FileReader();
+		reader.readAsText(sqlfile);
+		reader.onload  = event => {
+			// supprime commentaires
+			var sqlLines = event.target.result
+			.replace(/(\/\*[^*]*\*\/)|(\/\/[^*]*)|\n(--[^.].*)/g, '')	// comment
+			.replace(/^\s+/gm,'')										// ligne vide
+			.split( ";\n" );
+			for ( let i=0; i<sqlLines.length; i++ ) sqlLines[i] += ";";
+
+			// avancement exprimé en %, pas minimum de 3% si possible soit 33 pas
+			let sizemax = parseInt( post_max_size / 10 );	// pour tenir compte encodage / décodage
+			let n = Math.ceil( sqlfile.size/sizemax );		// nombre de morceaux
+			let nlpm = Math.ceil( sqlLines.length / n );
+			queue = [];
+			console.log( "sqlLines", sqlLines.length, "nb morceaux", n, nlpm );
+			if ( n == 1 ) {
+				// Un seul morceau
+				let job = [];
+				job.pieces = [];
+				job.deb = 1;
+				job.fin = sqlLines.length;
+				for ( let j=0; j<sqlLines.length; j++ ) {
+					job.pieces.push( sqlLines[cpt] );
+				}
+				job.pc = "100%";
+				queue.push( job );
+			}
+			else {
+				// plusieurs morceaux, calcul moyenne nb lignes / morceaux
+				$("#complete").html( "0%" );
+				let cpt = 0;	// compteur de lignes
+				for ( let i=0; i<n; i++ ) {
+					// pour chaque paquet
+					let job = [];
+					job.pieces = [];
+					job.deb = cpt+1;
+					for ( let j=0; j<nlpm; j++ ) {
+						job.pieces.push( sqlLines[cpt] );
+						cpt++;
+						if ( cpt == sqlLines.length ) break;	// 1ère sécurité
+					}
+					job.fin = cpt;
+					job.pc = Math.ceil( cpt/sqlLines.length *100 )+"%";
+					queue.push( job );
+					if ( cpt == sqlLines.length ) break;		// 2ème sécurité
+				}
+			}
+			videqueue();
+		}
+		reader.onerror = event => {
+			$("#msgbdd").html('Unable to read ' + sqlfile.fileName);
+		}
+	}
+	else {
+		$("#msgbdd").html( "Pas de fichier sélectionné !" );
+	}
 }
-function toggleAffichageBDD() {
-	if ( $("#section_bdd").hasClass( 'section_invisible' ) )
-		$('#section_bdd').removeClass( 'section_invisible' );
-	else
-		$('#section_bdd').addClass( 'section_invisible' );
+$(document).ready(function() {
+	document.getElementById('choicefile').addEventListener('change', (event) => {
+		sqlfile = event.target.files[0];
+		$("#msgbdd").html( "&nbsp;" );
+		console.log( "upload", sqlfile.name );
+	});
+});
+function btn_upload() {
+	if ( sqlfile ) {
+		$('#section_confirme').show();
+	}
+	else {
+		$('#section_confirme').hide();
+		$("#msgbdd").html( "Pas de fichier sélectionné !" );
+	}
+}
+function importbdd() {
+	$("#msgbdd").html( "&nbsp;" );
+	$("#section_importBDD").show();
 }
 function exportbdd() {
 	$("#msgbdd").html( "Export en cours ..." );
@@ -308,24 +414,6 @@ function exportbdd() {
 		$("#msgbdd").html('Erreur: '+ ex ); 
 	} );
 }
-function confirmationImportBDD() {
-	$("#section_importBDD").addClass( "section_invisible" );
-	$("#msgbdd").html( "Import en cours, patientez ..." );
-	$.get( 'importbdd.php', {}, function(strjson) {
-		$("#msgbdd").html( strjson.comment );
-	},"json")
-	.done( function() {  } )
-	.fail( function( jqxhr,settings,ex ) {
-		$("#msgbdd").html('Erreur: '+ ex ); 
-	} );
-};
-function annulationImportBDD() {
-	$("#section_importBDD").addClass( "section_invisible" );
-}
-function importbdd() {
-	$("#msgbdd").html( "&nbsp;" );
-	$("#section_importBDD").removeClass( "section_invisible" );
-}
 </script>
 
 <body>	
@@ -335,27 +423,25 @@ function importbdd() {
 	<h3>Votre pseudo : <?php echo $_SESSION["pseudo"]; ?></h3>
 	<p><button class="mButton" onclick="setpassword()">Changer mon mot de passe</button></p>
 
-	<p><button class="myButton" onclick="toggleAffichagePseudos()">Gestion des pseudos !</button></p>
-	<div id="section_pseudos" class="section_invisible">
+	<p><button class="myButton" onclick="$('#section_pseudos').toggle();">Gestion des pseudos !</button></p>
+	<div id="section_pseudos" hidden>
 	<p><button class="mButton" onclick="setloginadmin()">Ajout administrateur</button></p>
 	<p><button class="mButton" onclick="setlogindirecteur()">Ajout directeur tournoi</button></p>
 	<p><button class="mButton" onclick="setloginformateur()">Ajout formateur</button></p>
 	<p><b>Liste des pseudos enregistrés</b></p>
-	<?php
-	displayDirecteurs();
-	?>
+	<?php displayDirecteurs(); ?>
 	<p id="seldir">Attente sélection</p>
 	
 	<p><button class="myButton" onclick="clickSuppression()">Suppression</br>pseudo sélectionné</button></p>
-	<div id="section_confirme_suppression" class="section_invisible">
+	<div id="section_confirme_suppression" hidden>
 	<p><button class="myButton oktogoon" onClick="clickConfirmeSuppression()">Je confirme</button></p>
-	<p><button class="myButton kotogoon" onClick="clickAnnulationSuppression()">Oups ! J'annule</button></p>
+	<p><button class="myButton kotogoon" onClick="$('#section_confirme_suppression').hide();">Oups ! J'annule</button></p>
 	</div>
 	<p>&nbsp;</p>
 	</div>
 	
-	<p><button class="myButton" onclick="toggleAffichageBDD()">Base de données</button></p>
-	<div id="section_bdd" class="section_invisible">
+	<p><button class="myButton" onclick="$('#section_bdd').toggle();">Base de données</button></p>
+	<div id="section_bdd" hidden>
 	<p>Joueurs enregistrés: <?php echo $nbjoueurs; ?></p>
 	<p>Tournois enregistrés: <?php echo $nbtournois; ?><p>
 	<p>Donnes jouées: <?php echo $nbdonnes; ?></p>
@@ -370,40 +456,40 @@ function importbdd() {
 		$oldtournois = getNbThisYear( $firstdatet );
 		print "<p>Date 1er tournoi: $firstTournoi</br>Nb tournois même année: $oldtournois</p>";
 		print "<p><button class='mButton' onclick='suppressionVieuxTournois()'>Suppression $oldtournois anciens tournois</button></p>";
-		print "<div id='section_suppression_tournois' class='section_invisible'>";
+		print "<div id='section_suppression_tournois' hidden>";
 		print "<p><button class='myButton oktogoon' id='valid4' onClick='confirmeSuppressionVieuxTournois()'>Je confirme</button></p>";
-		print "<p><button class='myButton kotogoon' id='valid5' onClick='annulationSuppressionVieuxTournois()'>Oups ! J'annule</button></p>";
+		print "<p><button class='myButton kotogoon' id='valid5' onClick='$(`#section_suppression_tournois`).hide();'>Oups ! J'annule</button></p>";
 		print "<p id='msgvieuxtournois'>&nbsp;</p>";
 		print "</div>";
 	}
 	?>
 	</div>
 	
-	<p><button class="myButton" onclick="toggleAffichageEvents()">Evénements</button></p>
-	<div id="section_events" class="section_invisible">
-	<?php
-	print htmlevents( $maxevents );
-	?>
+	<p><button class="myButton" onclick="$('#section_events').toggle()">Evénements</button></p>
+	<div id="section_events" hidden>
+	<?php print htmlevents( $maxevents ); ?>
 	</div>
-	<p>&nbsp;</p>
 	
 	<h2>Fonctions d'import export à utiliser en cas de migration.</h2>
 	<p><button class='mButton' onclick='exportbdd()'>Export base de données</button></p>
 	<p><button class='mButton' onclick='importbdd()'>Import base de données</button></p>
-	<div id="section_importBDD" class="section_invisible">
-	<p style="color:red"><b>Attention:</b> l'importation de la base de données va remplacer toutes les données existantes dans la base de données actuelle, y compris les identifiants des administrateurs !</p>
-	<p>Le fichier d'importation de la base de données doit s'appeler <b><?php echo $prefix.'importbdd.sql' ?></b>. </br>Concrètement, vous devez recopier le fichier <b><?php echo $prefix.'yyyy_mm_jj.sql' ?></b> provenant d'un export réalisé sur l'ancien serveur dans ce fichier <b><?php echo $prefix.'importbdd.sql' ?></b>, 'copier' et non 'renommer' pour conserver une sauvegarde.</p>
-	<p>Assurez-vous que ce fichier <b><?php echo $prefix.'importbdd.sql' ?></b> existe dans le répertoire <b><?php echo $dir_configs ?></b> de l'application Bridgette sur le nouveau serveur.</p>
-	<p><em>En cas d'erreur, vérifier l'encodage du fichier .sql qui doit être en UTF8</em></p>
-	<p><em>L'importation du fichier .sql peut prendre plusieurs minutes !!!</em></p>
-	<p>Puis confirmez !</p>
-	<p><button class="myButton oktogoon" onClick="confirmationImportBDD()">Je confirme</button></p>
-	<p><button class="myButton kotogoon" onClick="annulationImportBDD()">Oups ! J'annule</button></p>
+	<div id="section_importBDD" hidden>
+	<p style="color:red"><b>Attention:</b> l'importation de la base de données va remplacer toutes les données existantes dans la base de données actuelle, y compris les identifiants des administrateurs !</br>L'importation du fichier peut prendre plusieurs minutes. <b>N'interrompez pas le processus !!!</b></p>
+	<p><b>2 méthodes possibles pour importer la base de données</b></p>
+	
+	<p><b>Méthode 1: </b>Utilisez l'application "PHPMyAdmin" sur le serveur de base de données de votre nouvel hébergement pour importer le fichier précédemment exporté dans la base de données "bridgette".</p>
+	
+	<p><b>Méthode 2: </b>Choisissez le fichier à utiliser sur votre disque dur, fichier  provenant d'un export réalisé sur l'ancien serveur.</p>
+	<p>Fichier à importer: <input type="file" id="choicefile" name="sqlfile" accept=".sql" /> <button id="upload" onclick="btn_upload();">Import fichier</button> <span id="complete">&nbsp;</span></p>
+	
+	<div id="section_confirme" hidden>
+	<p><button class="myButton oktogoon" onClick="uploadpart()">Je confirme</button> <button class="myButton kotogoon" onClick="$('#section_confirme').hide(); $('#section_importBDD').hide();">Oups ! J'annule</button></p>
 	</div>
+
 	<p id="msgbdd">&nbsp;</p>
-	<p>&nbsp;</p>
+	</div>
+	
 	<p><button class="mySmallButton" onclick="gotoindex()">Retour page d'accueil</button></p>
-	<p>&nbsp;</p>
 	
 	<?php
 	display_sizedb();

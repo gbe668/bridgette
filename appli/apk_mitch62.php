@@ -263,20 +263,20 @@ document.addEventListener('visibilitychange', function (event) {
 						$nameNord = $ligneNS['N']['nomcomplet'];
 						$nameSud  = $ligneNS['S']['nomcomplet'];
 						print "<p> En Nord Sud: $nameNord et $nameSud</p>";
-					}
 					
-					print "<h3>Tour n°<span class='notour'>$notour</span>/$npositions, récupérez les étuis:</br>";
-					print liste_etuis( $firstdonne, $paquet );
-					if ( ($gueridon > 0)&&($pairesNS == $pairesEO)&&( ($numNS==1)||($numNS==$pairesNS) ) ) {
-						print "à partager avec la table ".( ($numNS==1) ? $pairesNS : 1 );
-					}
-					print "</h3>";
-					
-					if ( $withback == $paire ) {
-						print '<p><button class="myButton" onclick="goto63()">Continuez à jouer</button></p><p>&nbsp;</p>';
-					}
-					else {
-						print '<p><button class="myButton" onclick="goto63()">Si numéro table OK</br>commencez à jouer</button></p>';
+						print "<h3>Tour n°<span class='notour'>$notour</span>/$npositions, récupérez les étuis:</br>";
+						print liste_etuis( $firstdonne, $paquet );
+						if ( ($gueridon > 0)&&($pairesNS == $pairesEO)&&( ($numNS==1)||($numNS==$pairesNS) ) ) {
+							print "à partager avec la table ".( ($numNS==1) ? $pairesNS : 1 );
+						}
+						print "</h3>";
+						
+						if ( $withback == $paire ) {
+							print '<p><button class="myButton" onclick="goto63()">Continuez à jouer</button></p><p>&nbsp;</p>';
+						}
+						else {
+							print '<p><button class="myButton" onclick="goto63()">Si numéro table OK</br>commencez à jouer</button></p>';
+						}
 					}
 				}
 				

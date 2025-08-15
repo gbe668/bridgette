@@ -91,17 +91,16 @@ $sql_donnes = "CREATE TABLE IF NOT EXISTS $tab_donnes (
 	hweo TINYINT not null default 0
 	);";
 
-// ALTER TABLE `ttt_diagrammes` ADD `h1` INT NULL DEFAULT NULL AFTER `dealt`, ADD `h2` INT NULL DEFAULT NULL AFTER `h1`, ADD `h3` INT NULL DEFAULT NULL AFTER `h2`, ADD `h4` INT NULL DEFAULT NULL AFTER `h3`;
-//
 $sql_diagrammes = "CREATE TABLE IF NOT EXISTS $tab_diagrammes (
 	id INT primary key not null auto_increment,
-    idtournoi INT,
-    etui INT,
+	idtournoi INT,
+	etui INT,
 	dealt VARCHAR(70),
 	h1 INT,
 	h2 INT,
 	h3 INT,
-	h4 INT
+	h4 INT,
+	dds VARCHAR(32) default null		/* ajout 30/07/2025 */
 	);";
 
 function init_tab_directeurs($dbh) {

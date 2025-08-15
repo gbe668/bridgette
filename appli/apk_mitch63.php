@@ -208,7 +208,8 @@ document.addEventListener('visibilitychange', function (event) {
 				print liste_etuis( $donne, $paquet );
 				print "<h2><span class='numetui' id='etui'>$donne</span></h2>";
 				if ( first2play( $idtournoi, $firstdonne ) == 0 ) {
-					if ( existeDiagramme( $idtournoi, $donne ) == null ) {
+					[$diags,$dds] = existeDiagramme($idtournoi, $donne);
+					if ( $diags == null ) {
 						print $strFirst2play;
 					}
 				}
@@ -237,7 +238,8 @@ document.addEventListener('visibilitychange', function (event) {
 				print showPaquet2play( $firstdonne, $paquet );
 				
 				if ( first2play( $idtournoi, $donne ) == 0 ) {
-					if ( existeDiagramme( $idtournoi, $donne ) == null ) {
+					[$diags,$dds] = existeDiagramme($idtournoi, $donne);
+					if ( $diags == null ) {
 						print $strFirst2play;
 					}
 					else {

@@ -37,15 +37,17 @@ function gotoindex() {
 	de type "Mitchell" de 5 tables à 13 tables et "Howell" de 4 à 8 paires. Le nombre d'étuis par table est ajustable avant démarrage pour les deux types de tournois. A la fin d'un tournoi, l'application donne les résultats et le classement respectif des paires avec des possibilités d'arbitrage ou de correction de résultats.</p>
 	<p>L'application est destinée principalement aux clubs de bridge qui ne sont pas affiliés à une fédération et donc qui ne sont pas connectés aux moyens informatiques de cette fédération.</p>
 	<p>Le matériel utilisé est le smartphone de l'un des joueurs de la table. L'application a besoin pour fonctionner d'un site web avec base de données propre à chaque club utilisateur. La base de données stocke les noms des joueurs, les résultats successifs lors du tournoi et les classements des joueurs pour chaque tournoi.</p>
-	<h2>Mode d'emploi: <a href ="mode d'emploi bridgette.pdf" target="_blank">présentation rapide du fonctionnement</a> pour les joueurs et directeurs de tournoi</h2>
-	<h2><a href ="Types_tournois.pdf" target="_blank">Types de tournois</a> implémentés</h2>
+	<p>Bridgette inclut le programme "double dummy solver DDS" développé par <a href="https://privat.bahnhof.se/wb758135/index.html" target="_blank">Bo Haglund et al.</a> ainsi que son implémentation en javascript réalisé par <a href="https://github.com/danvk/dds.js" target="_blank">Dan Vanderkam (danvk)</a>, programmes sous license <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache 2.0</a>.</p>
+	<p>Bridgette peut exporter les donnes d'un tournoi pour analyse avec <a href = "https://mirgo2.co.uk/bridgesolver/"  target="_blank">Bridge Solver Online</a> développé par <b>John Goacher</b> mail: goacher.apps@gmail.com</p>
+	<h2>Mode d'emploi: présentation rapide du fonctionnement pour les <a href ="aide_joueur.pdf" target="_blank">joueurs</a> et les <a href ="aide_directeur.pdf" target="_blank">directeurs de tournoi</a>.</h2>
+	<h2>Documentation: <a href ="guide.pdf" target="_blank">description détaillée de l'application</a> de l'installation au paramétrage ...</h2>
+	<h2>Types de tournois implémentés</h2>
 	<?php
 	print htmlTableTypeTournois();
 	?>
-	<h2>Documentation: <a href ="guide.htm" target="_blank">description détaillée de l'application</a> de l'installation au paramétrage ...</h2>
 	<h3>Crédits</h3>
 	<p>Conçu et réalisé par Bruno Coiffier.</br>Contact: bridgette@coiffier.org</br>
-	Copyright (C) 2024  Bruno Coiffier</p>
+	Copyright (C) 2024, 2025 Bruno Coiffier</p>
 	<p><button class="mySmallButton" onclick="gotoindex()">Retour page d'accueil</button></p>
 	<h2>Licence</h2>
 	</div>

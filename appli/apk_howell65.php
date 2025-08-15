@@ -2,6 +2,13 @@
 require("configuration.php");
 require("bridgette_bdd.php");
 require("lib63.php");
+
+$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
+$paire = htmlspecialchars( $_GET['paire'] );
+$ligne = htmlspecialchars( $_GET['ligne'] );
+
+$numpaire = $paire;
+$donne = htmlspecialchars( $_GET['donne'] );
 ?>
 
 <!DOCTYPE HTML>
@@ -16,6 +23,9 @@ require("lib63.php");
 </head>
 
 <script>
+const relpgm = "<?php echo $relpgm; ?>";
+const relimg = "<?php echo $relimg; ?>";
+
 function gotoindex() {
 	retparms = { next:"bridge60" };
 	passAndroid( retparms );
@@ -24,19 +34,6 @@ function goto64() {
 	retparms = { next:"howell64", etui:donne };
 	passAndroid( retparms );
 };
-function clickValidiags() {
-	$("#section_inputdiags").addClass( "section_invisible" );
-	$("#section_validiags").addClass( "section_invisible" );
-	$("#tstvalidok").removeClass( "section_invisible" );
-	
-	// Enregistrement du diagramme
-	$.get( "/f65setdiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield, token:token },
-	function(strjson) {
-		$('#validok').html( strjson.display );
-		goto64();
-	},"json");	
-};
-
 function passAndroid( parms ) {
 	Android.processNext( JSON.stringify(parms) );
 };
@@ -54,9 +51,14 @@ document.addEventListener('visibilitychange', function (event) {
 			pop.style.display = "inline-block";
 			setTimeout(function() { gotoindex(); }, 2000);
 		}
-    }
+	}
 });
+
+// ajout analyse diagramme - 30/07/2025
+var Module = {};
 </script>
+<script src="/jsdds/out.js"></script>
+<script src="/jsdds/dds.js"></script>
 
 <body>
 	<center>
@@ -70,23 +72,16 @@ document.addEventListener('visibilitychange', function (event) {
 
 	<div style="text-align: center">
 	<?php
-	$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
-	$paire = htmlspecialchars( $_GET['paire'] );
-	$ligne = htmlspecialchars( $_GET['ligne'] );
-	
-	$numpaire = $paire;
-	$donne = htmlspecialchars( $_GET['donne'] );
-
-    print "<h2>Diagrammes donne n°$donne</h2>";
-	print_section_diagramme();
-	print '<div id="section_inputdiags">';
-	print '<p id="msg">&nbsp;</p>';
-	print_clavier_diagramme();
-	print '</div>';
+	print "<h2>Diagrammes donne n°$donne</h2>";
 	?>
+	<div id="section_diagramme">diagramme</div>
+	<div id="section_inputdiags">
+	<p id="msg">&nbsp;</p>
+	<div id="section_kbddiags"></div>
+	</div>
 
-	<div id="section_validiags" class="section_invisible">
-	<p><button class="myStartButton" id="valid1" onClick="clickValidiags()">Enregistrez</br>les diagrammes</button></p>
+	<div id="section_validiags" hidden>
+	<p><button class="myStartButton" id="valid1" onClick="clickValidiags(goto64)">Enregistrez</br>les diagrammes</button></p>
 	</div>
 
 	<p id="validok">Attente fin d'entrée des diagrammes</p>
@@ -99,7 +94,10 @@ document.addEventListener('visibilitychange', function (event) {
 	var idtournoi  = parseInt( "<?php echo $idtournoi; ?>" );
 	var numpaire  = parseInt( "<?php echo $numpaire; ?>" );
 	var donne  = parseInt( "<?php echo $donne; ?>" );
-	$("#section_diagramme").removeClass( "section_invisible");
+	
+	$("#section_diagramme").html( diag_skeleton() );
+	$("#showanalysis").hide();
+	$("#section_kbddiags").html( diag_keyboard() );
 	initcanselect();
 	setfocus( 1 );
 	</script>

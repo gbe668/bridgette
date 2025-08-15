@@ -11,8 +11,8 @@ error_reporting(E_ALL); // Activer le rapport d'erreurs PHP
 
 // https://stackoverflow.com/questions/13659534/backup-mysql-tables-with-php
 function backup_tables($host, $user, $pass, $name) {
-	global $tab_joueurs, $tab_directeurs, $tab_tournois, $tab_donnes, $tab_pairesNS, $tab_pairesEO, $tab_diagrammes;	// table connexions non exportée
-	$tables = "$tab_joueurs $tab_directeurs $tab_tournois $tab_donnes $tab_pairesNS $tab_pairesEO $tab_diagrammes";
+	global $tab_joueurs, $tab_directeurs, $tab_tournois, $tab_donnes, $tab_pairesNS, $tab_pairesEO, $tab_diagrammes, $tab_connexions;
+	$tables = "$tab_joueurs $tab_directeurs $tab_tournois $tab_donnes $tab_pairesNS $tab_pairesEO $tab_diagrammes $tab_connexions";
 	
 	$dbh = connectBDD();
 	$sql = "SET NAMES `utf8` COLLATE `utf8_general_ci`";

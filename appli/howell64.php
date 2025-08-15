@@ -32,11 +32,18 @@ $_SESSION['back64'] = $back64;
 </head>
 
 <script>
+const relpgm = "<?php echo $relpgm; ?>";
+const relimg = "<?php echo $relimg; ?>";
+
 var back64 = "<?php echo $back64; ?>";
 
 var idtournoi = parseInt( "<?php echo $idtournoi; ?>" );
 var numpaire = parseInt( "<?php echo $numpaire; ?>" );
 
+function gotoindex() {
+	var nextstring = "bridgette.php";
+	location.replace( nextstring );
+};
 function goto62() {
 	var nextstring = "howell62.php?idtournoi=" + idtournoi + '&paire=' + numpaire;
 	location.replace( nextstring );
@@ -55,54 +62,24 @@ function goto66() {
 	var nextstring = "bridge66.php?idtournoi=" + idtournoi + "&w=" + window.innerWidth;
 	location.replace( nextstring );
 };
-function gotoindex() {
-	var nextstring = "bridgette.php";
-	location.replace( nextstring );
-};
 $(document).on( "click", "td.seletui", function(event) {
 	var id = $(this).parent().attr("id");
 	const figs = id.split('_');
 	console.log( "Etui ", figs[1] );
-	if ( donne != figs[1] ) {
-		// rechargement donne sélectionnée
-		var nextstring = "howell64.php?idtournoi=" + idtournoi;
-		nextstring += '&paire=' + numpaire + '&etui=' + figs[1];
-		location.replace( nextstring );
+	if ( donne != parseInt(figs[1]) ) {
+		donne = parseInt(figs[1]);
+		display_resultat(donne);
+		$("#makeableContracts").hide();
 	}
 });
 $(function() {
 	$("div.swipebox").on('swipeleft' , function(event) { swipeleft();  } );
 	$("div.swipebox").on('swiperight', function(event) { swiperight(); } );
 })
-function swipeleft() {
-	console.log("enable", enableswipe );
-	if ( enableswipe > 0 ) {
-		let first = Math.floor( (donne-1)/paquet )*paquet +1;
-		let max = first + paquet -1;
-		console.log("swipeleft", "first", first, "max", max, "donne", donne );
-		if ( donne < max ) {
-			// rechargement donne sélectionnée
-			var nextstring = "howell64.php?idtournoi=" + idtournoi;
-			nextstring += '&table=' + numNS + '&etui=' + (donne+1);
-			location.replace( nextstring );
-		}
-	}
-}
-function swiperight() {
-	console.log("enable", enableswipe );
-	if ( enableswipe > 0 ) {
-		let first = Math.floor( (donne-1)/paquet )*paquet +1;
-		let max = first + paquet -1;
-		console.log("swiperight", "first", first, "max", max, "donne", donne );
-		if ( donne > first ) {
-			// rechargement donne sélectionnée
-			var nextstring = "howell64.php?idtournoi=" + idtournoi;
-			nextstring += '&table=' + numNS + '&etui=' + (donne-1);
-			location.replace( nextstring );
-		}
-	}
-}
 $.mobile.loading().hide();		// suite ajout jquery.mobile-1.5.0-rc1.min.js
+
+// ajout affichage résultat analyse - 30/07/2025
+$(document).on( "click", "#showanalysis", function() { $("#makeableContracts").toggle(); });
 
 // mécanisme détectant une page expirée
 var agepagemax = "<?php echo $agepagemax; ?>";
@@ -198,22 +175,15 @@ document.addEventListener('visibilitychange', function (event) {
 			$nameOuest	= $ligneEO['S']['nomcomplet'];
 
 			print "<p>Nord Sud: $nameNord et $nameSud</br>Est Ouest: $nameEst et $nameOuest</p>";
-
-			print '<div class="swipebox">';
+			
 			$donne = ( $etui > 0 ) ? $etui : $res['numdonne'];	// numéro dernière donne enregistrée
-			print htmlResultatDonne($idtournoi, $donne, $numNS, 0, "points" );
-		
-			//Entrée diagramme
-			$diagramme = existeDiagramme( $idtournoi, $donne );
-			if ( $diagramme == null ) {
-				//print '<p>&nbsp;</p>';
-				print '<p><button class="myButton" onclick="goto65()">Entrez les diagrammes</button></p>';
-				print "<p><em>Si vous n'avez pas le temps de les entrer</br>laissez aux suivants !</em></p>";
-			}
-			else {
-				print_section_diagramme();
-			}
-			print '</div>';	// swipebox
+
+			// modifié le 10/06/2024
+			print '<div class="swipebox">';
+			print '<div id="section_resultat">résultat</div>';
+			print '<div id="section_diagramme">diagramme</div>';
+			print '<div id="makeableContracts" hidden>&nbsp;</div>';
+			print '</div>';
 			
 			if ( $cpt == 1) print "<p>1ère donne jouée sur $njouees</p>";
 			else print "<p>$cpt donnes jouées sur $njouees</p>";
@@ -228,13 +198,12 @@ document.addEventListener('visibilitychange', function (event) {
 					// ajout le 12/07/2024
 					$_SESSION['withback'] = $numpaire;	// retour possible
 					//
-					if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto62, 1000 );</script>";
 				}
 				else {
 					//$nextdonne = $donne +1;
 					print "<p><button class='myStartButton' onclick='goto63()'>Passez à la</br>donne suivante</button></p>";
-					if ( $teston > 0 ) print "TEST remplissage auto TEST<script>setTimeout( goto63, 1000 );</script>";
 				}
+				if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto62, 1000 );</script>";
 			}
 			else {
 				print htmlResultatPaquet($idtournoi, $numNS, $numEO );
@@ -255,17 +224,15 @@ document.addEventListener('visibilitychange', function (event) {
 	?>
 	<div class="return"><img src="images/icon_return.png" style="width:40px;" onclick="gotoindex()"/>
 	</div>	
+	
 	<script type="text/javascript">
 	var donne  = parseInt( "<?php echo $donne; ?>" );
-	var cpt	   = parseInt( "<?php echo $cpt; ?>" );
 	var numNS  = parseInt( "<?php echo $numNS; ?>" );
-	var numEO  = parseInt( "<?php echo $numEO; ?>" );
+	var numEO  = 0;
 	var enableswipe = parseInt( "<?php echo $enableswipe; ?>" );;
 	var paquet = parseInt( "<?php echo $paquet; ?>" );;
 
-	var diagramme = String( "<?php echo $diagramme; ?>" );
-	console.log( diagramme );
-	if ( displaydeal( diagramme, donne ) == true ) $("#section_diagramme").removeClass( "section_invisible");
+	display_resultat(donne);
 	</script>
 	</div>
 </body>

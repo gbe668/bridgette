@@ -23,6 +23,9 @@ if( !isFormateur() ){
 </head>
 
 <script>
+const relpgm = "<?php echo $relpgm; ?>";
+const relimg = "<?php echo $relimg; ?>";
+
 function gotoindex() {
 	var nextstring = "bridgform10.php";
 	location.replace( nextstring );
@@ -34,12 +37,10 @@ function gotoindex() {
 	<p><img src="images/bridgform.png" alt="bridge" style="width:90%; max-width:350px;" />	</p>	
 	<h2>Entrée des diagrammes d'une donne</h2>
 	
-	<?php
-	print_section_diagramme();
-	print '<div id="section_inputdiags">';
-	print '<p id="msg">&nbsp;</p>';
-	print_clavier_diagramme();
-	?>
+	<div id="section_diagramme">diagramme</div>
+	<div id="section_inputdiags">
+	<p id="msg">&nbsp;</p>
+	<div id="section_kbddiags"></div>
 	
 	<p id="dealfield" hidden>&nbsp;</p>
 	</div>
@@ -54,7 +55,10 @@ function gotoindex() {
  	</div>
   
 	<script>
-	$("#section_diagramme").removeClass( "section_invisible");
+	$("#section_diagramme").html( diag_skeleton() );
+	$("#showanalysis").hide();
+	$("#section_kbddiags").html( diag_keyboard() );
+
 	initcanselect();
 	setfocus( 1 );
 	</script>

@@ -362,9 +362,9 @@ $typetournois = array(
 '5'		=>array( 5, 5, 5,20, 4,20, 0, 6, 0,$t_howell,  "Howell 5 paires avec 3 tables incomplètes, 4 positions, table relais variable en fonction du numéro de tour, affichage en % ou IMP selon paramétrage"),
 '6'		=>array( 6, 6, 5,25, 5,25, 0, 0, 0,$t_howell,  "Howell 6 paires avec 3 tables, 5 positions, partage des donnes à la dernière position"),
 '7'		=>array( 7, 7, 3,21, 7,18, 0, 8, 0,$t_howell,  "Howell 7 paires avec 4 tables incomplètes, 7 positions, table relais variable en fonction du numéro de tour"),
-'47'	=>array( 7, 4, 4,16, 4,16, 0, 4, 1,$t_mitchell,"Mitchell, 4 tables incomplètes, 4 positions, guéridon entre les tables 2 et 3, pas d'étuis table 4, relais EO uniquement"),
+'47'	=>array( 7, 4, 5,20, 4,20, 0, 4, 1,$t_mitchell,"Mitchell, 4 tables incomplètes, 4 positions, guéridon entre les tables 2 et 3, pas d'étuis table 4, relais EO uniquement"),
 '8'		=>array( 8, 8, 3,21, 7,21, 0, 0, 0,$t_howell,  "Howell 8 paires avec 4 tables, 7 positions"),
-'48'	=>array( 8, 4, 4,16, 4,16, 0, 0, 1,$t_mitchell,"Mitchell, 4 tables complètes, 4 positions, guéridon entre les tables 2 et 3, pas d'étuis table 4, les tables 1 et 4 se partagent les étuis qui arrivent à la table 1"),
+'48'	=>array( 8, 4, 5,20, 4,20, 0, 0, 1,$t_mitchell,"Mitchell, 4 tables complètes, 4 positions, guéridon entre les tables 2 et 3, pas d'étuis table 4, les tables 1 et 4 se partagent les étuis qui arrivent à la table 1"),
 '32'	=>array( 9, 9, 3,27, 8,24, 0,10, 0,$t_howell,  "Howell 9 paires avec 5 tables incomplètes, 8 positions"),
 '9'		=>array( 9, 5, 5,25, 5,20, 0, 5, 0,$t_mitchell,"Mitchell, 5 tables incomplètes, 5 positions, relais NS variable ou relais EO table 5"),
 '33'	=>array(10,10, 3,27, 9,27, 0, 0, 0,$t_howell,  "Howell 10 paires avec 5 tables, 9 positions"),
@@ -1105,7 +1105,8 @@ function htmlResultatPaquet($idt, $ns, $eo) {
 		$r7 = $tabr7[$j];
 		//$r7str = sprintf( "%.1f", $r7);
 		$str .= "<tr id='$nr' class='xres2'>";
-		if ( existeDiagramme( $idt, $r1 ) == null ) {
+		[$diags,$dds] = existeDiagramme($idt, $r1);
+		if ( $diags == null ) {
 			$str .= "<td class='xres seletui pairens'>$r1</td>";
 		}
 		else {
@@ -2252,14 +2253,23 @@ function existeDiagramme($idt,$n) {		// return diagramme, null si non trouvé
 			// on lit la première ligne
 			$sth = $dbh->query( "SELECT * FROM $tab_diagrammes where idtournoi = '$idt' and etui= '$n';" );
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
-			$diag = $row['dealt'];
-		} else $diag = null;
-	} else $diag = null;
+			$diags = $row['dealt'];
+			$dds   = $row['dds'];
+		}
+		else {
+			$diags = null;
+			$dds   = null;
+		}
+	}
+	else {
+		$diags = null;
+		$dds   = null;
+	}
 	
 	$dbh = null;
-	return $diag;
+	return [$diags,$dds];
 };
-function insertDiagramme($idt,$n,$diag) {
+function insertDiagramme($idt,$n,$diag,$dds) {
 	global $tab_diagrammes;
 	$mains = [];
 	$h =[];	// points honneurs N E S O
@@ -2279,7 +2289,7 @@ function insertDiagramme($idt,$n,$diag) {
 			$h[$i] = 4*substr_count($mains[$i],"A")+3*substr_count($mains[$i],"K")
 			+2*substr_count($mains[$i],"Q")+substr_count($mains[$i],"J");
 		}
-		$sql = "INSERT INTO $tab_diagrammes ( idtournoi, etui, dealt, h1, h2, h3, h4 ) VALUES ('$idt', '$n', '$diag', $h[0], $h[1], $h[2], $h[3] );";
+		$sql = "INSERT INTO $tab_diagrammes ( idtournoi, etui, dealt, h1, h2, h3, h4, dds ) VALUES ('$idt', '$n', '$diag', $h[0], $h[1], $h[2], $h[3], '$dds' );";
 		$res = $dbh->query($sql);
 		$id = $dbh->lastInsertId();
 	}
@@ -2293,7 +2303,7 @@ function insertDiagramme($idt,$n,$diag) {
 	$dbh = null;
 	return $id;
 };
-function updateDiagramme($idt,$n,$diag) {
+function updateDiagramme($idt,$n,$diag,$dds) {
 	global $tab_diagrammes;
 	$mains = [];
 	$h =[];	// points honneurs N E S O
@@ -2312,7 +2322,7 @@ function updateDiagramme($idt,$n,$diag) {
 			$h[$i] = 4*substr_count($mains[$i],"A")+3*substr_count($mains[$i],"K")
 			+2*substr_count($mains[$i],"Q")+substr_count($mains[$i],"J");
 		};
-		$sql = "UPDATE $tab_diagrammes SET dealt='$diag', h1=$h[0], h2=$h[1], h3=$h[2], h4=$h[3] where idtournoi='$idt' and etui='$n';";
+		$sql = "UPDATE $tab_diagrammes SET dealt='$diag', h1=$h[0], h2=$h[1], h3=$h[2], h4=$h[3], dds='$dds' where idtournoi='$idt' and etui='$n';";
 		$res = $dbh->query($sql);
 		$r = 1;
 	}

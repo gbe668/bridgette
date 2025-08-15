@@ -5,7 +5,8 @@ require("bridgette_bdd.php");
 $idtournoi = $_GET['idtournoi'];
 $donne = $_GET['donne'];
 $diagramme = $_GET['diagramme'];
-$ok = insertDiagramme( $idtournoi, $donne, $diagramme );
+$dds = $_GET['dds'];
+$ok = insertDiagramme( $idtournoi, $donne, $diagramme, $dds );
 
 if ( $ok == 0 ) $strok = "erreur enregistrement";
 else $strok = "enregistrement terminé";

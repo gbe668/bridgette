@@ -2,6 +2,10 @@
 require("configuration.php");
 require("bridgette_bdd.php");
 require("lib63.php");
+
+$idtournoi	= htmlspecialchars( $_GET['idtournoi'] );
+$numtable	= htmlspecialchars( $_GET['table'] );
+$donne		= htmlspecialchars( $_GET['donne'] );
 ?>
 
 <!DOCTYPE HTML>
@@ -18,6 +22,9 @@ require("lib63.php");
 </head>
 
 <script>
+const relpgm = "<?php echo $relpgm; ?>";
+const relimg = "<?php echo $relimg; ?>";
+
 function goto64diags() {
 	var nextstring = "mitch64diags.php?idtournoi=" + idtournoi;
 	nextstring += '&table=' + numtable + '&donne=' + donne;
@@ -27,18 +34,8 @@ function gotoindex() {
 	var nextstring = "bridgette.php";
 	location.replace( nextstring );
 };
-function clickValidiags() {
-	$("#section_inputdiags").addClass( "section_invisible" );
-	$("#section_validiags").addClass( "section_invisible" );
-	$("#tstvalidok").removeClass( "section_invisible" );
-	
-	// Enregistrement du diagramme
-	$.get( "f65setdiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield },
-	function(strjson) {
-		$('#validok').html( strjson.display );
-		//goto64();
-	},"json");	
-};
+function donothing() {
+}
 
 // mécanisme détectant une page expirée
 var agepagemax = "<?php echo $agepagemax; ?>";
@@ -52,8 +49,12 @@ document.addEventListener('visibilitychange', function (event) {
 		}
     }
 });
-</script>
 
+// ajout analyse diagramme - 30/07/2025
+var Module = {};
+</script>
+<script src="jsdds/out.js"></script>
+<script src="jsdds/dds.js"></script>
 
 <body>
 	<center>
@@ -67,10 +68,6 @@ document.addEventListener('visibilitychange', function (event) {
 
 	<div style="text-align: center">
 	<?php
-	$idtournoi	= htmlspecialchars( $_GET['idtournoi'] );
-	$numtable	= htmlspecialchars( $_GET['table'] );
-	$donne		= htmlspecialchars( $_GET['donne'] );
-	
 	$t = readTournoi( $idtournoi );
 	$etat = $t['etat'];
 	if ( $etat == $st_phase_jeu ) {
@@ -98,24 +95,24 @@ document.addEventListener('visibilitychange', function (event) {
 		print "</h3>";
 		
 		//Entrée diagramme
-		$diagramme = existeDiagramme( $idtournoi, $donne );
-		if ( $diagramme == null ) {
-			print "<h2>Diagrammes donne n°$donne</h2>";
-			print_section_diagramme();
-			print '<div id="section_inputdiags">';
-			print '<p id="msg">&nbsp;</p>';
-			print_clavier_diagramme();
+		[$diags,$dds] = existeDiagramme($idtournoi, $donne);
+		if ( $diags == null ) {
+			print "<h2>Préparez la donne n°$donne,<br/>puis entrez les diagrammes</h2>";
 			?>
-			
+			<div id="section_diagramme">diagramme</div>
+			<div id="section_inputdiags">
+			<p id="msg">&nbsp;</p>
+			<div id="section_kbddiags"></div>
 			<p id="dealfield" hidden>&nbsp;</p>
 			</div>
 
 			<div id="section_validiags" class="section_invisible">
-			<p><button class="myStartButton" id="valid1" onClick="clickValidiags()">Enregistrez</br>les diagrammes</button></p>
+			<p><button class="myStartButton" id="valid1" onClick="clickValidiags(donothing)">Enregistrez</br>les diagrammes</button></p>
 			</div>
 
 			<p id="validok">Attente fin d'entrée des diagrammes</p>
 			<?php
+			if ( $teston == 2 ) print "<p><button onClick='autoDiagramme()'>auto remplissage</button></p>";
 		}
 		else print "<p>Diagrammes donne $donne déjà enregistrés.</p>";
 		$cpt = $donne - $firstdonne;
@@ -139,7 +136,10 @@ document.addEventListener('visibilitychange', function (event) {
 	var idtournoi  = parseInt( "<?php echo $idtournoi; ?>" );
 	var numtable  = parseInt( "<?php echo $numtable; ?>" );
 	var donne  = parseInt( "<?php echo $donne; ?>" );
-	$("#section_diagramme").removeClass( "section_invisible");
+	
+	$("#section_diagramme").html( diag_skeleton() );
+	$("#section_kbddiags" ).html( diag_keyboard() );
+	$("#showanalysis").hide();
 	initcanselect();
 	setfocus( 1 );
 	elmnt = document.getElementById("section_diagramme");

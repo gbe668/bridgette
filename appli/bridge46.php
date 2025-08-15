@@ -23,33 +23,72 @@ if( !isDirecteur() ){
 </head>
 
 <script>
+const relpgm = "<?php echo $relpgm; ?>";
+const relimg = "<?php echo $relimg; ?>";
+
 function goto43() {
 	var nextstring = "bridge43.php?idtournoi=" + idtournoi + "&etui=" + etui + "&w=" +  window.innerWidth;
 	location.replace( nextstring );
 };
 function cdeplus() {
-	$("#afficheplus").addClass( "section_invisible" );
-	$("#affichemoins").removeClass( "section_invisible" );
+	$("#afficheplus") .hide();
+	$("#affichemoins").show();
 	initcanselect();
 	setfocus( 1 );
 }
 function cdemoins() {
-	$("#afficheplus").removeClass( "section_invisible" );
-	$("#affichemoins").addClass( "section_invisible" );
+	$("#afficheplus") .show();
+	$("#affichemoins").hide();
 }
-function clickValidiags() {
-	//$("#section_inputdiags").addClass( "section_invisible" );
-	//$("#section_validiags").addClass( "section_invisible" );
-	$("#tstvalidok").removeClass( "section_invisible" );
+
+function clickcorrectiondiags() {
+	$("#section_inputdiags").hide();
+	$("#section_validiags").hide();
+	$("#tstvalidok").show();
+	
+	// Calcul des contrats possibles, reformate la chaine pour avoir le donneur en premier
+	let etui = etuis[donne];
+	let deal = dealfield.slice(2).split(' ');
+	let validDealers = "NESW";
+	
+	let index = etui[1]-1;	// N:0
+	let str = validDealers[index];
+	str += ":";
+	for (let j=0; j<4; j++) {
+		str += deal[index];
+		if (j!=3) str += " ";
+		index++;
+		if (index==4) index=0;
+	}
+	console.log( "deal reformatté", str );
+	let DDTable = calcDDTable(str);
+	console.log( DDTable );
+	
+	// codage pour la bdd
+	let tabi = ['N','S', 'H', 'D', 'C'];
+	let tabj = ['N', 'S', 'E', 'W'];
+	let dds = "";
+	for ( let j in tabj ) {
+		for ( let i in tabi ) {
+			let value = DDTable[tabi[i]][tabj[j]];
+			dds += String.fromCharCode(97 + value);
+		}
+	}
+	console.log( "dds", dds );
 	
 	// Enregistrement du diagramme
-	$.get( "f65upddiagramme.php", { idtournoi:idtournoi, donne:etui, diagramme:dealfield },
+	$.get( relpgm+"f65upddiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield, dds:dds },
 	function(strjson) {
 		$('#validok').html( strjson.display );
 		goto43();
-	},"json");	
+	},"json");
 };
+
+// ajout analyse diagramme - 30/07/2025
+var Module = {};
 </script>
+<script src="jsdds/out.js"></script>
+<script src="jsdds/dds.js"></script>
 
 <body>
 	<div style="text-align: center">
@@ -64,26 +103,25 @@ function clickValidiags() {
 	?>
 	<h2>Affichage diagramme étui n°<?php echo $etui; ?></h2>
 	<?php
-	$diagramme = existeDiagramme($idtournoi,$etui);
+	[$diagramme,$dds] = existeDiagramme($idtournoi, $etui);
 	if ( $diagramme == null ) {
 		print '<p>Diagramme non enregistré</p>';
 	}
 	else {
-		print_section_diagramme();
+		print '<div id="section_diagramme">diagramme</div>';
 		
 		print '<div id="afficheplus">';
 		print '<p><button class="myButton" onclick="cdeplus()">Correction diagramme</button></p>';
 		print '</div>';
 
-		print '<div id="affichemoins" class="section_invisible">';
-		//print '<p><button onclick="cdemoins()" style="font-style: italic;">referme</button></p>';
+		print '<div id="affichemoins" hidden>';
 		print '<div id="section_inputdiags">';
 		print '<p id="msg">&nbsp;</p>';
-		print_clavier_diagramme();
+		print '<div id="section_kbddiags"></div>';
 		print "<p>La main d'Ouest est complétée automatiquement. Corrigez les autres mains.</p>";
 		
-		print '<div id="section_validiags" class="section_invisible">';
-		print '<p><button class="myStartButton" id="valid1" onClick="clickValidiags()">Enregistrez</br>les diagrammes</button></p>';
+		print '<div id="section_validiags">';
+		print '<p><button class="myStartButton" id="valid1" onClick="clickcorrectiondiags()">Enregistrez</br>les diagrammes</button></p>';
 		print "<p id='validok'>Attente fin d'entrée des diagrammes</p>";
 		print '</div>';
 		
@@ -95,10 +133,16 @@ function clickValidiags() {
 	<script>
 	idtournoi = parseInt( "<?php echo $idtournoi; ?>" );
 	etui	  = parseInt( "<?php echo $etui; ?>" );
+	donne  = etui;
 	pairesNS  = parseInt( "<?php echo $pairesNS; ?>" );
 	pairesEO  = parseInt( "<?php echo $pairesEO; ?>" );
+	
+	$("#section_diagramme").html( diag_skeleton() );
+	$("#section_kbddiags") .html( diag_keyboard() );
+	$("#showanalysis").hide();
+	
 	var diagramme = String( "<?php echo $diagramme; ?>" );
-	if ( displaydeal( diagramme, etui ) == true ) $("#section_diagramme").removeClass( "section_invisible");
+	if ( displaydeal( diagramme, etui ) == true ) $("#section_diagramme").show();
 	</script>
 	
 	<p><button class="mySmallButton" onclick="goto43()">Retour au tableau de bord</button></p>
