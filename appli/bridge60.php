@@ -134,7 +134,7 @@ function affposprov() {
 </script>
 
 <body>
-	<div style="text-align: center">
+	<div style="text-align:center; max-width:350px; margin:auto;">
 	<p><img src="images/bridgette.png" alt="bridge" style="width:90%; max-width:350px;" /></p>
 	
 	<?php
@@ -171,8 +171,8 @@ function affposprov() {
 			$paquet	= $t['paquet'];
 			$pns	= $t['pairesNS'];
 			$peo	= $t['pairesEO'];
-			$desc = getdescriptiontournoi($idtype);
-			print "<p>$desc, $paquet étuis par table</p>";
+			$desc	= $t['desc'];
+			print "<p>$desc</p>";
 			
 			if ( $genre == $t_mitchell )
 				print "<button class='myBigButton' onclick='goto61m()'>Rejoindre le tournoi</button>";

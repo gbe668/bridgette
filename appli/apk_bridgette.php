@@ -191,8 +191,8 @@ function gotodownloadapk() {
 			$paquet	= $t['paquet'];
 			$pns	= $t['pairesNS'];
 			$peo	= $t['pairesEO'];
-			$desc = getdescriptiontournoi($idtype);
-			print "<p>$desc, $paquet étuis par table</p>";
+			$desc	= $t['desc'];
+			print "<p>$desc</p>";
 			
 			// Recherche du joueur dans le tableau des participants
 			$user = recherche_joueur( $idtournoi, $userid );

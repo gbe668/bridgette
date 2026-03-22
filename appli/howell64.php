@@ -198,12 +198,13 @@ document.addEventListener('visibilitychange', function (event) {
 					// ajout le 12/07/2024
 					$_SESSION['withback'] = $numpaire;	// retour possible
 					//
+					if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto62, 1000 );</script>";
 				}
 				else {
 					//$nextdonne = $donne +1;
 					print "<p><button class='myStartButton' onclick='goto63()'>Passez à la</br>donne suivante</button></p>";
+					if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto63, 1000 );</script>";
 				}
-				if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto62, 1000 );</script>";
 			}
 			else {
 				print htmlResultatPaquet($idtournoi, $numNS, $numEO );

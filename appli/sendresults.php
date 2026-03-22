@@ -79,8 +79,10 @@ else {
 	$attach .= htmlDisplayTournoi( $idtournoi, -1 );
 }
 
+$appbridgette = $config['appbridgette'] . "/bridge20.php?token=" . $token;
+
 //$attach .= htmlDisplayTournoi($idtournoi, -1);
-$attach .= "<p>Voir le détail des résultats sur le site <a href=$urlbridgette>$urlbridgette</a>, rubrique '<b>Affichage derniers résultats</b>'.</p>";
+$attach .= "<p>Voir le détail des résultats sur l'application <a href=$appbridgette>Bridg'ette</a>.</p>";
 
 $dests = buildDestinatairesResultats($idtournoi);
 $sujet = "Bridgette: résultats du tournoi du jour";

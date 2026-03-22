@@ -113,7 +113,7 @@ document.addEventListener('visibilitychange', function (event) {
 	</div>
 	</center>
 
-	<div style="text-align: center">
+	<div style="text-align:center; max-width:350px; margin:auto;">
 	<?php
 	// voir code php en entête de ce fichier
 	if ( $idtournoi == null ) {
@@ -130,10 +130,10 @@ document.addEventListener('visibilitychange', function (event) {
 			$pairesNS = $t['pairesNS'];
 			$paquet   =	$t['paquet'];
 			$idtype   = $t['idtype'];
-			$desc = getdescriptiontournoi($idtype);
+			$desc  = $t['desc'];
 		
 			print "<h2>Tournoi du $datef</h2>";
-			print "<p>$desc, $paquet étuis par table</p>";
+			print "<p>$desc</p>";
 
 			$okcheck = true;
 			if ( $parametres['checkuser'] > 0 ) {

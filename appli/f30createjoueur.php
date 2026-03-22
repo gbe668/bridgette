@@ -27,7 +27,7 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 	}
 	
 	// test joueur déjà connu
-	$sql = "SELECT count(*) from $tab_joueurs where genre='$gender' and prenom='$fname' and nom='$lname';";
+	$sql = "SELECT count(*) from $tab_joueurs where prenom='$fname' and nom='$lname';";
 	$nbl = $dbh->query($sql)->fetchColumn();
 	if ( $nbl == 0 ) {
 		// rechercher un numéro club disponible
@@ -109,8 +109,7 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$result["noclub"] = $row[ 'numero' ];
 			$joueur = $row[ 'joueur' ];
-			if ( $gender == "Me" ) $result["msg"] = "$joueur est déjà connue.";
-			else $result["msg"] = "$joueur est déjà connu.";
+			$result["msg"] = "M ou Me $joueur est déjà connue.";
 		} 
 		else {
 			$result["msg"] = "Bug BDD: $joueur multiples.";

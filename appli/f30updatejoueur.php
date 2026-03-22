@@ -13,6 +13,28 @@ function updateJoueur( $idj, $gender, $fname, $lname, $phone, $email ) {
 	if ( $idj ) {
 		$dbh = connectBDD();
 		$joueur = $gender . " " . strtoupper( $lname );
+		
+		// test adresse mail déjà utilisée
+		if ( $email !== "" ) { 
+			$sql = "SELECT count(*) from $tab_joueurs where email='$email' and id<>'$idj';";
+			$nbl = $dbh->query($sql)->fetchColumn();
+			if ( $nbl > 0 ) {
+				$result['success'] = 0;
+				$result["msg"] = "Email $email déjà utilisé.";
+				$dbh = null;
+				return $result;
+			}
+		}
+	
+		// test homonyme
+		$sql = "SELECT count(*) from $tab_joueurs where prenom='$fname' and nom='$lname' and id<>'$idj';";
+		$nbl = $dbh->query($sql)->fetchColumn();
+		if ( $nbl > 0 ) {
+				$result['success'] = 0;
+				$result["msg"] = "$fname $lname déjà utilisé (homonyme).";
+				$dbh = null;
+				return $result;
+		}
 		$sql = "UPDATE $tab_joueurs SET joueur='$joueur' , genre='$gender', prenom='$fname', nom='$lname', telephone='$phone', email='$email' where id='$idj';";
 		$sth = $dbh->query( $sql );
 		$result['success'] = 1;

@@ -1,6 +1,18 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+
+$idtournoi = existeTournoiNonClos();
+if ( $idtournoi == 0 ) {
+	$idtournoi = getlastclosedtournois();
+}
+if ( $idtournoi == 0 ) {
+	$etat = $st_notfound;
+}
+else {
+	$t = readTournoi( $idtournoi );
+	$etat = $t['etat'];
+}
 ?>
 
 <!DOCTYPE HTML>
@@ -36,6 +48,9 @@ require("bridgette_bdd.php");
 </head>
 
 <script>
+var idtournoi = parseInt( "<?php echo $idtournoi; ?>" );
+var etat = parseInt( "<?php echo $etat; ?>" );
+
 function gotoindex() {
 	var nextstring = "bridgette.php";
 	location.replace( nextstring );
@@ -214,19 +229,6 @@ var base64 = function(mimeType, base64) {
 		Your browser does not support the audio element.
 	</audio>
 	
-	<?php
-	$idtournoi = existeTournoiNonClos();
-	if ( $idtournoi == 0 ) {
-		$idtournoi = getlastclosedtournois();
-	}
-	if ( $idtournoi == 0 ) {
-		$etat = $st_notfound;
-	}
-	else {
-		$t = readTournoi( $idtournoi );
-		$etat = $t['etat'];
-	}
-	?>
 	<div id='titre'></div>
 	<div id='affichage'></div>	<!-- tableau -->
 	<p id='dsprest' class="bigDigit" hidden></p>	<!-- décompte -->
@@ -236,8 +238,6 @@ var base64 = function(mimeType, base64) {
 	</div>
 	
 <script>
-var idtournoi = parseInt( "<?php echo $idtournoi; ?>" );
-var etat = parseInt( "<?php echo $etat; ?>" );
 console.log( "idtournoi=", idtournoi, "etat=", etat );
 dispatch( etat );
 
