@@ -1,7 +1,6 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
-require("libevents.php");
 
 // Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
 if( !isAdmin() ){
@@ -156,8 +155,33 @@ function getNbThisYear( $datet ) {
 $backup_file = $dir_configs.$prefix.'importbdd.sql';
 $post_max_size = ini_parse_quantity( ini_get('post_max_size') ); 	// in bytes
 
-// liste événements
+// Evénements
 $maxevents = 10;
+function htmlevents( $n ) {
+	global $tab_events;
+	$dbh = connectBDD();
+	$sql = "SELECT count(*) FROM $tab_events;";
+	$res = $dbh->query( $sql );
+	$nbl = $res->fetchColumn();
+	if ( $nbl > 0 ) {
+		$sql = "SELECT * FROM $tab_events order by id desc;";
+		$res = $dbh->query( $sql );
+		if ( $n > 0 ) $nbl = min( $nbl, $n );
+		$str = "<p>Derniers événements enregistrés:</p>";
+		$str .= "<table border='1' style='margin:auto;'><tbody>";
+		$str .= "<tr><th class='xTxt1'>Pseudo</th><th class='xTxt1'>Heure TU</th><th class='xTxt1'>Event</th></tr>";
+		for ( $i = 0; $i < $nbl; $i++ ) {
+			$row = $res->fetch(PDO::FETCH_ASSOC);
+			$str .= "<tr><td class='xTxt1'>".$row['pseudo']."</td><td class='xTxt1'>".$row['datevt']."</td><td class='xTxt1'>".$row['event']."</td></tr>";
+		}
+		$str .= "</tbody></table>";
+	}
+	else {
+		$str = "<p>Pas d'événements enregistrés !</p>";
+	}
+	$dbh = null;
+	return $str;
+}
 ?>
 
 <!DOCTYPE HTML>
@@ -313,12 +337,15 @@ function videqueue() {
 		});
 	}
 	else {
-		$("#complete").html( "import terminé" );
-		$("#msgbdd").html( "<span style='color:red'><b>Retournez page d'accueil pour vérifier l'importation !</b></span>" );
+		$("#complete").html( "Import terminé ..." );
+		$("#msgbdd").html( "Retournez page d'accueil pour vérifier l'importation !" );
+		$('.importongoing').show();
+		$('#section_confirme').hide();
 	}
 }
 function uploadpart() {
-	$('#section_confirme').hide();
+	$('.importongoing2').hide();
+	$("#msgbdd").html( "Démarrage importation ..." );
 	if ( sqlfile ) {
 		console.log( "uploadpart", sqlfile, "size", sqlfile.size );
 		var reader = new FileReader();
@@ -388,9 +415,12 @@ $(document).ready(function() {
 });
 function btn_upload() {
 	if ( sqlfile ) {
+		$('.importongoing').hide();
 		$('#section_confirme').show();
+		$("#msgbdd").html( "Attente confirmation ... ou annulation." );
 	}
 	else {
+		$('.importongoing').show();
 		$('#section_confirme').hide();
 		$("#msgbdd").html( "Pas de fichier sélectionné !" );
 	}
@@ -420,6 +450,8 @@ function exportbdd() {
 	<div style="text-align: center">
 	<p><img src="images/bridgette.png" alt="bridge" style="width:90%; max-width:350px;" /></p>	 	
 	<h1>Administration</h1>
+	
+	<div class="importongoing">
 	<h3>Votre pseudo : <?php echo $_SESSION["pseudo"]; ?></h3>
 	<p><button class="mButton" onclick="setpassword()">Changer mon mot de passe</button></p>
 
@@ -439,7 +471,9 @@ function exportbdd() {
 	</div>
 	<p>&nbsp;</p>
 	</div>
+	</div>
 	
+	<div class="importongoing">
 	<p><button class="myButton" onclick="$('#section_bdd').toggle();">Base de données</button></p>
 	<div id="section_bdd" hidden>
 	<p>Joueurs enregistrés: <?php echo $nbjoueurs; ?></p>
@@ -464,36 +498,53 @@ function exportbdd() {
 	}
 	?>
 	</div>
+	</div>
 	
+	<div class="importongoing">
 	<p><button class="myButton" onclick="$('#section_events').toggle()">Evénements</button></p>
 	<div id="section_events" hidden>
 	<?php print htmlevents( $maxevents ); ?>
 	</div>
+	</div>
 	
+	<div class="importongoing">
 	<h2>Fonctions d'import export à utiliser en cas de migration.</h2>
 	<p><button class='mButton' onclick='exportbdd()'>Export base de données</button></p>
 	<p><button class='mButton' onclick='importbdd()'>Import base de données</button></p>
+	</div>
+	
 	<div id="section_importBDD" hidden>
-	<p style="color:red"><b>Attention:</b> l'importation de la base de données va remplacer toutes les données existantes dans la base de données actuelle, y compris les identifiants des administrateurs !</br>L'importation du fichier peut prendre plusieurs minutes. <b>N'interrompez pas le processus !!!</b></p>
+	<div class="importongoing">
 	<p><b>2 méthodes possibles pour importer la base de données</b></p>
 	
 	<p><b>Méthode 1: </b>Utilisez l'application "PHPMyAdmin" sur le serveur de base de données de votre nouvel hébergement pour importer le fichier précédemment exporté dans la base de données "bridgette".</p>
 	
 	<p><b>Méthode 2: </b>Choisissez le fichier à utiliser sur votre disque dur, fichier  provenant d'un export réalisé sur l'ancien serveur.</p>
-	<p>Fichier à importer: <input type="file" id="choicefile" name="sqlfile" accept=".sql" /> <button id="upload" onclick="btn_upload();">Import fichier</button> <span id="complete">&nbsp;</span></p>
+	<p>Fichier à importer: <input type="file" id="choicefile" name="sqlfile" accept=".sql" /> <button id="upload" onclick="btn_upload();">Import fichier</button></p>
+	</div>
 	
 	<div id="section_confirme" hidden>
-	<p><button class="myButton oktogoon" onClick="uploadpart()">Je confirme</button> <button class="myButton kotogoon" onClick="$('#section_confirme').hide(); $('#section_importBDD').hide();">Oups ! J'annule</button></p>
-	</div>
-
-	<p id="msgbdd">&nbsp;</p>
+	<p style="color:red"><b>Attention:</b></p>
+	<p>L'importation de la base de données remplace toutes les données existantes dans la base de données actuelle,</br>y compris <b>les identifiants des administrateurs et des directeurs!</b></p>
+	<p>L'importation du fichier peut prendre plusieurs minutes.</p>
+	<p style="color:red"><b>N'interrompez pas le processus !!!</b></p>
+	
+	<div class="importongoing2">
+	<p><button class="myButton oktogoon" onClick="uploadpart()">Je confirme</button> <button class="myButton kotogoon" onClick="$('#section_confirme').hide(); $('#section_importBDD').hide();$('.importongoing').show();">Oups ! J'annule</button></p>
 	</div>
 	
+	</div>
+
+	<p><b><span id="complete" style="color:red">&nbsp;</span></b> <span id="msgbdd">&nbsp;</span> </p>
+	</div>
+	
+	<div class="importongoing">
 	<p><button class="mySmallButton" onclick="gotoindex()">Retour page d'accueil</button></p>
 	
 	<?php
 	display_sizedb();
 	?>
+	</div>
 	</div>
 	
 	<script>

@@ -7,6 +7,10 @@ if( !isDirecteur() ){
 	header("Location: logdirecteur.php");
 	exit(); 
 }
+
+$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
+$screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
+
 ?>
 <!DOCTYPE HTML>
 <html>
@@ -67,7 +71,7 @@ function changepaquet( valeur ) {
 		paquet = newpaquet;
 		let njouees = npositions * paquet;
 		let ndonnes = ntables * paquet;
-		if ( genre == t_howell ) ndonnes = njouees;
+		if ( genre == t_howell ) ndonnes = (ntables-1) * paquet;//= njouees;
 		
 		// recalcul heure de fin
 		firstduree	= paquet * (dureedonne + dureediagrammes) + dureeinitiale;	// en secondes
@@ -85,19 +89,12 @@ function changepaquet( valeur ) {
 		$("#fintournoi").text(strfintournoi);
 	}
 };
-$(document).ready(function() {
-	$("#signemoins").bind('click', function( event ){ changepaquet( -1 ); });
-	$("#signeplus").bind('click', function( event ){ changepaquet( 1 ); });
-});
 </script>
 
 <body>
 	<div style="text-align:center; max-width:350px; margin:auto;">
 	
 	<?php
-	$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
-	$screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
-	
 	$t = readTournoi( $idtournoi );
 	$datef = $t['datef'];
 
@@ -113,15 +110,15 @@ $(document).ready(function() {
 	$gueridon = $t['gueridon'];
 	$saut  =	$t['saut'];
 	$genre =	$t['genre'];
+	$desc =		$t['desc'];
 
 	$tt = gettypetournoi( $idtype );
-	$maxpaquet =  $tt['paquet']+1;
-	$desc = getdescriptiontournoi($idtype);
+	$maxpaquet =  $tt['maxpaquet'];
 	
 	//print "<h2>Tournoi $st_typetournoi[$genre] $idtype du $datef</h2>";
 	print "<h2>Tournoi du $datef</h2>";
 	print "<p>Vérifiez les caractéristiques du tournoi:</p>";
-	print "<p style='color:red;font-size: 1.2em;'>$desc</p>";
+	print "<p style='color:red;font-size: 1.2em;' id='desc'>$desc</p>";
 	//if ( $genre == $t_howell ) {
 	//	// tournoi type Howell
 	//	$textetables = "$pns paires et $npositions positions";
@@ -148,11 +145,13 @@ $(document).ready(function() {
 	<p style="text-align: center"><button class="myButton" onclick="goto41()">Si incorrect</br>retour définition des paires</button></p>
 	
 	<p><b>Fin tournoi prévue à <span id="fintournoi">fintournoi</span></b></p>
-	<p><b><span id="ndonnes"><?php echo $ndonnes ?></span></b> donnes en circulation</br><b><span id="njouees"><?php echo $njouees ?></span></b> donnes jouées par table</p>
+	<p>
+	<!--<b><span id="ndonnes"><?php echo $ndonnes ?></span></b> donnes en circulation</br>-->
+	<b><span id="njouees"><?php echo $njouees ?></span></b> donnes jouées par table</p>
 	<p>Avant le démarrage du tournoi,</br>vous pouvez raccourcir la durée du tournoi</br>en diminuant le nombre d'étuis par tables</p>
-	<p>Etuis par table:&nbsp;<span class='xNum2' id="signemoins"><img src="images/signe-moins.png" height="20"/></span>
+	<p>Etuis par table:&nbsp;<span class='xNum2' onclick='changepaquet(-1);'><img src="images/signe-moins.png" height="20"/></span>
 	<span id='paquet' class="xDigit" style="padding-left:20px; padding-right:20px;"><?php echo $paquet ?></span>
-	<span class='xNum2' id="signeplus"><img src="images/signe-plus.png" height="20"/></span></p>
+	<span class='xNum2' onclick='changepaquet(1);'><img src="images/signe-plus.png" height="20"/></span></p>
 	<p id="msgerr">&nbsp;</p>
 	
  	<p style="text-align: center"><button class="myStartButton" onclick="goto43()">Démarrage tournoi !</button></p>

@@ -91,6 +91,7 @@ function refreshConnexions() {
 	
 	<?php
 	$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
+	$etui = $config['site'] ?? 3;
 	$etui = isset( $_GET['etui'] ) ? htmlspecialchars( $_GET['etui'] ) : '1';
 	$screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
 	
@@ -110,12 +111,11 @@ function refreshConnexions() {
 	$relais =	$t[ 'relais' ];
 	$gueridon = $t[ 'gueridon' ];
 	$genre = $t[ 'genre' ];
-
-	$desc = getdescriptiontournoi($idtype);
+	$desc  = $t[ 'desc' ];
 	
 	//print "<h2>Tournoi $st_typetournoi[$genre] du $datef</h2>";
 	print "<h2>Tournoi du $datef</h2>";
-	print "<p style='color:red;font-size: 1.2em;'>$desc, $paquet étuis par table</p>";
+	print "<p style='color:red;font-size: 1.2em;' id='desc'>$desc</p>";
 	if ( $parametres['checkin'] > 0 ) print "<h3>Code d'accès $code</h3>";
 	
 	$startseq = $t[ 'startseq' ];				// date fin 1ère séquence en secondes
@@ -149,11 +149,11 @@ function refreshConnexions() {
 	<h3>Corrections en cours de tournoi</h3>
 	<p>En cas d'erreur de saisie sur une donne, vous pouvez corriger le résultat sans attendre que le tournoi soit terminé. En cas d'erreur sur un étui, vous pouvez afficher le diagramme pour reconfigurer l'étui ou corriger le diagramme.</p>
 	<p><em>Sélectionnez l'étui concerné</em></br>
-	<span id="etuim10" class='xNum2'>&nbsp;-10&nbsp;</span>&nbsp;
-	<span id="etuim1" class='xNum2'>&nbsp;-1&nbsp;</span>&nbsp;
+	<span onclick='sel_etui(-10);' class='xNum2'>&nbsp;-10&nbsp;</span>&nbsp;
+	<span onclick='sel_etui( -1);' class='xNum2'>&nbsp;-1&nbsp;</span>&nbsp;
 	<span class="xDigit">n°<span id='etui'><?php echo $etui; ?></span></span>&nbsp;
-	<span id="etuip1" class='xNum2'>&nbsp;+1&nbsp;</span>&nbsp;
-	<span id="etuip10" class='xNum2'>&nbsp;+10&nbsp;</span></p>
+	<span onclick='sel_etui(  1);' class='xNum2'>&nbsp;+1&nbsp;</span>&nbsp;
+	<span onclick='sel_etui( 10);' class='xNum2'>&nbsp;+10&nbsp;</span></p>
 	<p><button class="myButton" onClick="goto43c()">Correction</button>&nbsp;
 	<button class="myButton" onClick="goto46()">Diagramme</button></p>
 	</div>
@@ -163,7 +163,7 @@ function refreshConnexions() {
 	<h3>Avancement tournoi</h3>
 	<?php
 	displayCnxTables();
-	$maxpositions = getmaxpositions( $idtype );	// pour éviter de repartir de la valeur modifiée en cas de rechargement de la page
+	$maxpositions = getmaxpositions( $idtype, $paquet );	// pour éviter de repartir de la valeur modifiée en cas de rechargement de la page
 	$maxdonnesjouees = $pns*$njouees;
 	//print "<p>jouées: ".$donnesjouees." ".$maxdonnesjouees."</p>";
 	?>
@@ -171,9 +171,9 @@ function refreshConnexions() {
 	<div id="section_npositions" class="framestyle">
 	<h3>Nombre de positions</h3>
 	<p>Si le tournoi s'éternise, vous pouvez</br>diminuer le nombre de positions</p>
-	<p>Nombre positions:&nbsp;<span class='xNum2' id="signemoins"><img src="images/signe-moins.png" height="20"/></span>
+	<p>Nombre positions:&nbsp;<span class='xNum2' onclick='changenpositions(-1);'><img src="images/signe-moins.png" height="20"/></span>
 	<span id='npositions' class="xDigit" style="padding-left:20px; padding-right:20px;"><?php echo $npositions ?></span>
-	<span class='xNum2' id="signeplus"><img src="images/signe-plus.png" height="20"/></span>
+	<span class='xNum2' onclick='changenpositions(1);'><img src="images/signe-plus.png" height="20"/></span>
 	</br>Donnes jouées: <span id="njouees"><?php echo $njouees ?></span> sur <span id="ndonnes"><?php echo $ndonnes ?></p>
 	<p><b>fin tournoi: <span id="fintournoi"><?php echo $strfintournoi ?></span></b></p>
 	<p id="msgerr"></p>

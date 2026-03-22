@@ -1,13 +1,13 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
-require("lib63.php");
+//require("lib63.php");
 
 $idtournoi = htmlspecialchars( $_GET['idtournoi'] );
 $screenw = htmlspecialchars( $_GET['w'] );
 
 $t = readTournoi( $idtournoi );
-$datef = $t[ 'datef' ];
+$datef   = $t[ 'datef' ];
 $ndonnes = $t[ 'ndonnes' ];
 if ( ($t['idtype'] <= $min_type_affimp)&&($parametres['affimp']==1) ) {
 	$ordre = "pointsIMP";
@@ -16,25 +16,6 @@ else {
 	$ordre = "points";
 }
 
-function getdiagrammes($idt) {
-	global $tab_diagrammes;
-	
-	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_diagrammes where idtournoi = '$idt';";
-	$res = $dbh->query($sql);
-	$nb = $res->fetchColumn();
-	$diags = Array();
-	if ( $nb > 0 ) {
-		$sql = "SELECT etui, dealt FROM $tab_diagrammes where idtournoi = '$idt' order by etui;";
-		$res = $dbh->query($sql);
-		for ( $i = 0; $i < $nb; $i++ ) {
-			$row = $res->fetch(PDO::FETCH_ASSOC);
-			array_push( $diags, array( 'etui'=>$row['etui'], 'deal'=>$row['dealt'] ) );
-		}
-	}
-	$dbh = null;
-	return json_encode( $diags );
-};
 $diagrammes = getdiagrammes($idtournoi);
 ?>
  
@@ -55,8 +36,11 @@ $diagrammes = getdiagrammes($idtournoi);
 const relpgm = "<?php echo $relpgm; ?>";
 const relimg = "<?php echo $relimg; ?>";
 
+const club  = "<?php echo $titre; ?>";
+const idtournoi  = parseInt( "<?php echo $idtournoi; ?>" );
+const datef = "<?php echo $datef; ?>";
+const ndonnes = parseInt( "<?php echo $ndonnes; ?>" );
 const diagrammes = <?php echo $diagrammes; ?>;
-const club = "<?php echo $titre; ?>";
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
@@ -132,101 +116,7 @@ $(document).on( "click", "td.seletui", function(event) {
 $.mobile.loading().hide();		// suite ajout jquery.mobile-1.5.0-rc1.min.js
 
 // ajout affichage résultat analyse - 30/072025
-var pbnfile = false;
 $(document).on( "click", "#showanalysis", function() { $("#makeableContracts").toggle(); });
-function downloadFile(text, fileType, fileName) {
-	var blob = new Blob([text], { type: fileType });
-	var a = document.createElement('a');
-	a.download = fileName;
-	a.href = URL.createObjectURL(blob);
-	a.click();
-	a.remove();
-}
-function exportDDSolver() {
-	console.log( "exportDDSolver" );
-	if ( !pbnfile ) {
-		var suits = ["NT"," S"," H"," D"," C"];
-		var declarer = "NSEW";
-		let validDealers = "-NESW";
-		var i,j,k;
-		var str="";
-		var n = diagrammes.length;
-		if ( n > 0 ) {
-			str += "% PBN 2.1\r\n";
-			str += "% EXPORT\r\n";
-			str += "%Content-type: text/x-pbn; charset=ISO-8859-1\r\n";
-			str += "%Creator: Bridge Solver Online\r\n";
-			str += "[Site \""+ club +"\"]\r\n";
-			str += "[Event \"Tournoi du "+ datef +"\"]\r\n";
-			//str += "[Date \"\"]\r\n";
-			
-			for ( i=0; i< n; i++ ) 	{
-				let diagramme = diagrammes[i];
-				let boardName = diagramme.etui;
-				
-				let etui = etuis[boardName];
-				let dealer = validDealers[etui[1]];
-				let v = etui[2]+etui[3]*2;
-				let vul;
-				switch( v ) {
-					case 0: vul="None";	break;
-					case 1: vul="NS";	break;
-					case 2: vul="EW";	break;
-					case 3: vul="All";	break;
-				}
-				
-				str += "[Board \"" + boardName + "\"]\r\n";
-				//str += "[West \"\"]\r\n";
-				//str += "[North \"\"]\r\n";
-				//str += "[East \"\"]\r\n";
-				//str += "[South \"\"]\r\n";
-				str += "[Dealer \"" + dealer + "\"]\r\n";
-				str += "[Vulnerable \"" + vul + "\"]\r\n";
-				
-				var deal = diagramme.deal.slice(2).split(' ');
-				
-				str += "[Deal \"" + dealer.charAt(0) + ":";
-				
-				//var dealer = g_hands.boards[i].Dealer.charAt(0);
-				
-				var index = 0;
-				
-				if (dealer=='N') index = 0;
-				else if (dealer=='E') index = 1;
-				else if (dealer=='S') index = 2;
-				else index = 3;
-				
-				for (j=0;j<4;j++) {
-					str += deal[index];
-					if (j!=3) str += " ";
-					index++;
-					if (index==4) index=0;
-				}
-				
-				str += "\"]\r\n";
-				
-				//str += "[Scoring \"\"]\r\n";
-				//str += "[Declarer \"\"]\r\n";
-				//str += "[Contract \"\"]\r\n";
-				//str += "[Result \"\"]\r\n";
-
-				str += "\r\n";
-			}
-			
-			//log("button=save");
-			downloadFile(str, "text/pbn", "boards.pbn");
-			pbnfile = true;
-			$("#btndds").show();
-			$("#btnexpdds").hide();
-		}
-		else {
-			alert("Aucun diagramme enregistré pour ce tournoi !");
-		}
-	}
-}
-function DDSolver() {
-	open( "https://dds.bridgewebs.com/bsol_standalone/ddummy.htm", "_blank" );
-}
 </script>
 
 <body>
@@ -238,7 +128,7 @@ function DDSolver() {
 	</script>
 	
 	<?php
-	displayResultatsTournoi( $idtournoi, $screenw );
+	print htmlDisplayResultatsTournoi( $idtournoi, $screenw, True );
 	?>
 
 	<div id="section_donnes">
@@ -268,7 +158,9 @@ function DDSolver() {
 	<p><button class="myButton" onclick="$('#section_donnes').show();$('#section_roadmap').hide();">Affichage donnes</button></p>
 	</div>
 	
+	<div id="section_dds" hidden>
 	<p><button id="btnexpdds" onclick="exportDDSolver()">Exporte les donnes</button> <button id="btndds" onclick="DDSolver()">Ouvre DDSolver</button></p>
+	</div>
 	
 	<p><button class="mySmallButton" onclick="goto20()">Retour liste des tournois</button></p>
 	<p><button class="mySmallButton" onclick="gotoindex()">Retour à l'accueil</button></p>
@@ -276,13 +168,11 @@ function DDSolver() {
 	</div>	
 
 	<script>
-	idtournoi  = parseInt( "<?php echo $idtournoi; ?>" );
-	ndonnes = parseInt( "<?php echo $ndonnes; ?>" );
 	key_select( 0 );	// affichage 1er diagramme
 	$("#nsec_1").show();
 	
 	// ajout analyse
-	datef  = "<?php echo $datef; ?>";
+	if ( diagrammes.length > 0 )  $("#section_dds").show();
 	$("#showanalysis").toggle();
 
 	</script>

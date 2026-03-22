@@ -8,6 +8,10 @@ if( !isDirecteur() ){
 	header("Location: logdirecteur.php");
 	exit(); 
 }
+
+$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
+$screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
+
 ?>
 <!DOCTYPE HTML>
 <html>
@@ -56,24 +60,11 @@ function reload() {
 	var nextstring = "bridge41.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
 	location.replace( nextstring );
 };
-function cdeplus() {
-	if ( $("#afficheplus").hasClass( "section_invisible" ) )
-		$("#afficheplus").removeClass( "section_invisible" );
-	else
-		$("#afficheplus").addClass( "section_invisible" );
-}
-function cdemoins() {
-	$("#afficheplus").addClass( "section_invisible" );
-}
 </script>
 
 <body>
 	<div style="text-align: center">
 	<p><img src="images/bridgette.png" alt="bridge" style="width:90%; max-width:350px;" /></p>
-	<?php
-	$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
-	$screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
-	?>
 	
 	<script>
 	idtournoi  = parseInt( "<?php echo $idtournoi; ?>" );
@@ -82,14 +73,14 @@ function cdemoins() {
 	if ( isNaN( screenw ) ) reload();
 	</script>
 	
-	<p><button class="mySmallButton" onclick="cdeplus()">Affiche / masque types de tournoi</button></p>
-	<div id="afficheplus" class="section_invisible">
+	<p><button class="mySmallButton" onclick=$("#afficheplus").toggle();>Affiche / masque types de tournoi</button></p>
+	<div id="afficheplus" hidden>
 	<div id="listetypes">
 	<?php
 	print htmlTableTypeTournois();
 	?>
 	</div>
-	<p><button class="mySmallButton" onclick="cdemoins()">Masque types de tournoi</button></p>
+	<p><button class="mySmallButton" onclick=$("#afficheplus").hide();>Masque types de tournoi</button></p>
 	</div>
 	
 	<?php
@@ -99,11 +90,10 @@ function cdemoins() {
 	print '</div>';
 	
 	$t = readTournoi( $idtournoi );
-	$idtype = $t['idtype'];
+	$genre = $t['genre'];
 	
 	print '<div id="section_tableaux">';
-	//if ( $idtype < $min_type_mitchell ) {
-	if ( $t['genre'] == $t_howell ) {
+	if ( $genre == $t_howell ) {
 		// type Howell
 		print "<p><button class='myButton' onclick='settypetournoi_mitchell($def_type_mitchell)'>Howell <img src='images/right.png' height='13' /> Mitchell</button></p>";
 		print "<p><b>Howell:</b> compléter le tableau des paires,</br>minimum 4 paires pour 2 tables complètes,</br>$warningPMR</p>";
@@ -170,7 +160,11 @@ function cdemoins() {
 	
 	okns = parseInt( "<?php echo testlignescompletesNS( $idtournoi ); ?>" );
 	okeo = parseInt( "<?php echo testlignescompletesEO( $idtournoi ); ?>" );
-	idtype = parseInt( "<?php echo $idtype; ?>" );
+
+	genre = parseInt( "<?php echo $genre; ?>" );
+	t_mitchell = parseInt( "<?php echo $t_mitchell; ?>" );
+	t_howell = parseInt( "<?php echo $t_howell; ?>" );
+
 	masquelignesNS();
 	masquelignesEO();
 	checktableaux();
@@ -186,6 +180,7 @@ function cdemoins() {
 		print '<p>Fonctions de test: génération automatique des paires</p>';
 		print '<h3><a href="bridge49h.php?idtournoi=' . $idtournoi . '&paires=6">Test 6 paires Howell</a></h3>';
 		print '<h3><a href="bridge49h.php?idtournoi=' . $idtournoi . '&paires=8">Test 8 paires Howell</a></h3>';
+		print '<h3><a href="bridge49h.php?idtournoi=' . $idtournoi . '&paires=12">Test 12 paires Howell</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=10">Test 5 tables complètes</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=11">Test 6 tables incomplètes</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=12">Test 6 tables complètes</a></h3>';
@@ -195,6 +190,7 @@ function cdemoins() {
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=16">Test 8 tables complètes</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=17">Test 9 tables incomplètes</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=18">Test 9 tables complètes</a></h3>';
+		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=28">Test 14 tables complètes</a></h3>';
 		print '<h3><a href="bridge49m.php?idtournoi=' . $idtournoi . '&paires=30">Test 15 tables complètes</a></h3>';
 	}
 	?>

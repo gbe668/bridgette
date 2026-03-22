@@ -17,7 +17,6 @@ else $version = "inconnue";
         <meta name="viewport" content="width=device-width, initial-scale=1">	
         <link rel="stylesheet" href="css/bridgestylesheet.css" />
 		<link rel="icon" type="image/x-icon" href="images/favicon.ico">
-	<script src="js/jquery-3.6.0.min.js"></script>
     </head>
 <script>
 function goto20() {
@@ -62,7 +61,7 @@ function gotodownloadapk() {
 	<div style="text-align: center">
 	<p><img src="images/bridgette.png" alt="bridge" style="width:90%; max-width:350px;" />	</p>	
 	<?php
-	echo "<h2>$titre</h2>";
+	echo "<h2>" . htmlspecialchars($titre) . "</h2>";
 	// test installation application
 	connectBDD();
 	
@@ -70,7 +69,7 @@ function gotodownloadapk() {
 	if ( $resultIdent['status'] == $ID_CORRECT ) {
 		$userid = $resultIdent['userid'];
 		$joueur = getJoueur( $userid );
-		print "<h3>Hello ".$joueur['nomcomplet']."</h3>";
+		print "<h3>Hello ".htmlspecialchars($joueur['nomcomplet'])."</h3>";
 	}
 	else {
 		//print "<h3>Vous n'êtes pas identifié !</h3>";
@@ -99,12 +98,14 @@ function gotodownloadapk() {
 	?>
 	<script>
 	//if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
-	if( /Android/i.test(navigator.userAgent) ) {
-		$("#section_apk").show();
-	}
-	else {
-		$("#section_apk").hide();
-	}
+	document.addEventListener("DOMContentLoaded", function() {
+		const sectionApk = document.getElementById("section_apk");
+		if (/Android/i.test(navigator.userAgent)) {
+			sectionApk.style.display = "inline-block"; // ou "block" selon le rendu souhaité
+		} else {
+			sectionApk.style.display = "none";
+		}
+	});
 	</script>
 	</div>
 </body>

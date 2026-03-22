@@ -1,7 +1,6 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
-require("libevents.php");
 
 // Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
 if( !isAdmin() ){

@@ -30,15 +30,18 @@ function goto43() {
 	var nextstring = "bridge43.php?idtournoi=" + idtournoi + "&etui=" + etui + "&w=" +  window.innerWidth;
 	location.replace( nextstring );
 };
-function cdeplus() {
-	$("#afficheplus") .hide();
-	$("#affichemoins").show();
+function efface() {
+	diagramme = null;
+	raz_cartes();
 	initcanselect();
 	setfocus( 1 );
 }
-function cdemoins() {
-	$("#afficheplus") .show();
-	$("#affichemoins").hide();
+function corrige() {
+	$("#afficheplus") .hide();
+	$("#affichemoins").show();
+	$(".edit").show();
+	initcanselect();
+	setfocus( 1 );
 }
 
 function clickcorrectiondiags() {
@@ -108,10 +111,11 @@ var Module = {};
 		print '<p>Diagramme non enregistré</p>';
 	}
 	else {
+		print '<p class="edit"><button class="myButton" onclick="efface()">Effacer les diagrammes actuels</button></p>';
 		print '<div id="section_diagramme">diagramme</div>';
 		
 		print '<div id="afficheplus">';
-		print '<p><button class="myButton" onclick="cdeplus()">Correction diagramme</button></p>';
+		print '<p><button class="myButton" onclick="corrige()">Correction diagramme</button></p>';
 		print '</div>';
 
 		print '<div id="affichemoins" hidden>';
@@ -140,6 +144,7 @@ var Module = {};
 	$("#section_diagramme").html( diag_skeleton() );
 	$("#section_kbddiags") .html( diag_keyboard() );
 	$("#showanalysis").hide();
+	$(".edit").hide();
 	
 	var diagramme = String( "<?php echo $diagramme; ?>" );
 	if ( displaydeal( diagramme, etui ) == true ) $("#section_diagramme").show();

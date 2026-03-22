@@ -201,6 +201,7 @@ if ( file_exists( $file_config ) ) {
 	$maxSizeBDD = $config['maxSizeBDD'];		// kilo octets
 
 	// Dimensionnement selon abonnement du club
+	$min_noclub = 100;	// recherche numéro club disponible pour un nouveau joueur
 	$max_noclub		= $config['max_noclub'];
 }
 else {
@@ -221,10 +222,11 @@ $tab_directeurs	= $prefix . "directeurs";
 $tab_joueurs	= $prefix . "joueurs";
 $tab_connexions	= $prefix . "connexions";
 $tab_diagrammes	= $prefix . "diagrammes";
+$tab_events 	= $prefix . "events";
 
 // constantes utilisées pour l'installation si requise
 $debinvites = 4;
-$max_tables = 13;
+$max_tables = 15;		# limitation à 15
 
 //
 // test d'une commande à exécuter avec le token
@@ -246,10 +248,41 @@ if ( isset($_GET['cmd'])&&$withtoken ) {
 			$dbh->query( $sql_pairesEO );
 			$dbh->query( $sql_donnes );
 			$dbh->query( $sql_diagrammes );
+			$dbh->query( $sql_events );
 			echo '<p>----> peuplement des tables si vides</p>';
 			init_tab_directeurs($dbh);
 			init_tab_joueurs($dbh);
 			init_tab_connexions($dbh);
+			echo '<p>----> terminé.</p>';
+			break;
+		}
+        case 'patch':
+            writelogerrors('Patch requested by admin');
+            // Charger le script d'installation en local (vérifier existence)
+            $patchFile = __DIR__ . '/patch.php';
+            if (!is_file($patchFile)) {
+                writelogerrors('patch.php missing');
+                exit('Fichier patch absent.');
+            }
+            require $patchFile;
+            // Les scripts SQL doivent utiliser PDO et être sécurisés
+            try {
+                $dbh->beginTransaction();
+                if (function_exists('executepatch'))	executepatch($dbh);
+				else echo '<p>Fonction executepatch absente.</p>';
+                $dbh->commit();
+                echo 'Installation terminée.';
+            } catch (PDOException $e) {
+                $dbh->rollBack();
+                writelogerrors('Patch error: ' . $e->getMessage());
+                exit('Erreur durant l\'exécution du patch.');
+            }
+            break;
+		case "droptables": {
+			writelogerrors( "Suppression des tables avant reinstallation ..." );
+			echo "<p><b>Suppression des tables avant reinstallation ...</b></p>";
+			require( "installtablesbdd.php" );
+			droptablesbdd($dbh);
 			echo '<p>----> terminé.</p>';
 			break;
 		}

@@ -1,12 +1,13 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
-require("lib63.php");
+//require("lib63.php");
 
 $idtournoi = htmlspecialchars( $_GET['idtournoi'] );
 $screenw = htmlspecialchars( $_GET['w'] );
 
 $t = readTournoi( $idtournoi );
+$datef   = $t[ 'datef' ];
 $ndonnes = $t[ 'ndonnes' ];
 if ( ($t['idtype'] <= $min_type_affimp)&&($parametres['affimp']==1) ) {
 	$ordre = "pointsIMP";
@@ -14,6 +15,8 @@ if ( ($t['idtype'] <= $min_type_affimp)&&($parametres['affimp']==1) ) {
 else {
 	$ordre = "points";
 }
+
+$diagrammes = getdiagrammes($idtournoi);
 ?>
 
 <!DOCTYPE HTML>
@@ -31,6 +34,12 @@ else {
 var token = "<?php echo $token; ?>";
 const relpgm = "<?php echo $relpgm; ?>";
 const relimg = "<?php echo $relimg; ?>";
+
+const club  = "<?php echo $titre; ?>";
+const idtournoi  = parseInt( "<?php echo $idtournoi; ?>" );
+const datef = "<?php echo $datef; ?>";
+const ndonnes = parseInt( "<?php echo $ndonnes; ?>" );
+const diagrammes = <?php echo $diagrammes; ?>;
 
 function gotoindex() {
 	retparms = { next:"bridge60" };
@@ -118,9 +127,13 @@ $(document).on( "click", "#showanalysis", function() { $("#makeableContracts").t
 	if ( $idtournoi == 0 ) {
 		$idtournoi = getlastclosedtournois();
 	}
-	displayResultatsTournoi( $idtournoi, $screenw );
+	print htmlDisplayResultatsTournoi( $idtournoi, $screenw, True );
 	?>
 
+	<div id="section_dds" hidden>
+	<p><button id="btnexpdds" onclick="exportDDSolver()">Exporte les donnes</button> <button id="btndds" onclick="DDSolver()">Ouvre DDSolver</button></p>
+	</div>
+	
 	<div id="section_donnes">
 	<p>Naviguez entre les différentes donnes</br>en balayant l'écran ou en cliquant sur les chiffres</p>
 	
@@ -151,13 +164,11 @@ $(document).on( "click", "#showanalysis", function() { $("#makeableContracts").t
 	<p><button class="mySmallButton" onclick="goto20()">Retour liste des tournois</button></p>
 	
 	<script>
-	idtournoi  = parseInt( "<?php echo $idtournoi; ?>" );
-	ndonnes = parseInt( "<?php echo $ndonnes; ?>" );
 	key_select( 0 );	// affichage 1er diagramme
 	$("#nsec_1").show();
 	
 	// ajout analyse
-	datef  = "<?php echo $datef; ?>";
+	if ( diagrammes.length > 0 )  $("#section_dds").show();
 	$("#showanalysis").toggle();
 
 	</script>

@@ -206,6 +206,7 @@ document.addEventListener('visibilitychange', function (event) {
 	if ( !document.hidden ) {
 		var agepage = Math.floor(Date.now()/1000)-loadedpage;
 		if ( agepage > agepagemax ) {
+			const pop = document.getElementById('pop');
 			pop.style.display = "inline-block";
 			setTimeout(function() { gotoindex(); }, 2000);
 		}

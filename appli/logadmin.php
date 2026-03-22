@@ -1,7 +1,6 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
-require("libevents.php");
 
 	if ( isset($_POST['pseudo']) ){
 		$pseudo = stripslashes($_REQUEST['pseudo']);

@@ -172,6 +172,7 @@ function okmail() {
 	email = $("#email1").val();
 	email = email.trim( email );
 	email = email.toLowerCase();
+	email = email.replace( "-", " ");
 	$("#email1").val( email );
 	if ( !isEmail( email) ) {
 		$("#mailperso").text( "email incorrect" );
@@ -239,6 +240,7 @@ document.addEventListener('visibilitychange', function (event) {
 	if ( !document.hidden ) {
 		var agepage = Math.floor(Date.now()/1000)-loadedpage;
 		if ( agepage > agepagemax ) {
+			const pop = document.getElementById('pop');
 			pop.style.display = "inline-block";
 			setTimeout(function() { gotoindex(); }, 2000);
 		}
@@ -294,7 +296,7 @@ document.addEventListener('visibilitychange', function (event) {
 		<p>Vous n'êtes pas inscrit à ce tournoi !</p>
 		<p>Vous pouvez contacter un joueur en recherche de partenaire en cliquant sur son nom</p>
 		<p>ou vous inscrire <button class="myButton" onclick="sans_partenaire()">sans partenaire</button></p>
-		<p>ou vous inscrire <button class="myButton" onclick="avec_partenaire()">avec un partenaire</button></p>
+		<p>ou vous inscrire <button class="myButton" onclick="avec_partenaire()">avec un partenaire</button> qui peut être un joueur pré-inscrit en recherche de partenaire après avoir obtenu son accord.</p>
 		</div>
 		
 		<div id="menu_inscrit" hidden>

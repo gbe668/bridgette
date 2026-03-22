@@ -69,7 +69,7 @@ document.addEventListener('visibilitychange', function (event) {
 	<h2 style="color:red">Résultats provisoires</h2>
 	
 	<?php
-	displayResultatsTournoi( $idtournoi, $screenw );
+	print htmlDisplayResultatsTournoi( $idtournoi, $screenw );
 	?>
 	<p><button class='mySmallButton' onclick='gotoindex()'>Retour page d'accueil</button></p>
 	

@@ -278,7 +278,7 @@ document.addEventListener('visibilitychange', function (event) {
 	<p>Vous n'êtes pas inscrit à ce tournoi !</p>
 	<p>Vous pouvez contacter un joueur en recherche de partenaire en cliquant sur son nom</p>
 	<p>ou vous inscrire <button class="myButton" onclick="sans_partenaire()">sans partenaire</button></p>
-	<p>ou vous inscrire <button class="myButton" onclick="avec_partenaire()">avec un partenaire</button></p>
+	<p>ou vous inscrire <button class="myButton" onclick="avec_partenaire()">avec un partenaire</button> qui peut être un joueur pré-inscrit en recherche de partenaire après avoir obtenu son accord.</p>
 	</div>
 	
 	<div id="menu_inscrit" hidden>

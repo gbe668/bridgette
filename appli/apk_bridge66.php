@@ -55,7 +55,7 @@ document.addEventListener('visibilitychange', function (event) {
 	$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
 	$screenw = htmlspecialchars( $_GET['w'] );
 	print "<h2 style='color:red'>Résultats provisoires</h2>";
-	displayResultatsTournoi( $idtournoi, $screenw );
+	print htmlDisplayResultatsTournoi( $idtournoi, $screenw );
 	?>
 	
 	</div>

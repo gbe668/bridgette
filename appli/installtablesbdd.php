@@ -103,6 +103,27 @@ $sql_diagrammes = "CREATE TABLE IF NOT EXISTS $tab_diagrammes (
 	dds VARCHAR(32) default null		/* ajout 30/07/2025 */
 	);";
 
+$sql_events = "CREATE TABLE IF NOT EXISTS $tab_events (
+	id INT primary key not null auto_increment,
+	pseudo varchar(64),
+	datevt varchar(64),
+	event varchar(250)
+	);";
+
+function droptablesbdd($dbh) {
+	global $tab_directeurs, $tab_joueurs, $tab_tournois, $tab_pairesNS, $tab_pairesEO, $tab_donnes, $tab_diagrammes, $tab_connexions, $tab_events;
+	
+	try { $sql = "DROP TABLE $tab_directeurs;"; $sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_joueurs;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_tournois;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_pairesNS;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_pairesEO;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_donnes;";		$sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_diagrammes;"; $sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_connexions;"; $sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_events;"; 	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
+}
+
 function init_tab_directeurs($dbh) {
 	global $tab_directeurs;
 	// test table déjà remplie
