@@ -7,7 +7,7 @@ if( !isDirecteur() ){
 	echo "Durée session directeur écoulée !"; 
 }
 else {
-	$jsonparms  = $_GET['jsonparms'];
+	$jsonparms  = $_POST['jsonparms'];
 	if ( file_put_contents( $file_params, $jsonparms ) ){
 		logevent("saveparams");
 		echo "Enregistrement terminé.";

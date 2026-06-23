@@ -149,13 +149,15 @@ function affposprov() {
 		if ( $etat == $st_phase_init ) {
 			// définition des paires en cours
 			print '<h2>Tableau des participants</br>en cours de définition.</h2>';
-			print '<p id="imwaiting">Attendez le démarrage du tournoi.</p>';
+			print '<h3 id="imwaiting">Attendez le démarrage du tournoi.</h3>';
 
-			print "<p><button class='myBigButton' onclick='affposprov()'>Affiche / masque</br>les positions provisoires</button></p>";
-			print "<div id='idposprov' hidden>";
-			print "<div style='text-align:center; margin:auto; max-width:350px;' id='posprov'>&nbsp;</div>";
-			print "fermeture automatique dans <span id='nsec'>10</span> s";
-			print "</div>";
+			if ( $parametres['affposprov'] > 0 ) {
+				print "<p><button class='myBigButton' onclick='affposprov()'>Affiche / masque</br>les positions provisoires</button></p>";
+				print "<div id='idposprov' hidden>";
+				print "<div style='text-align:center; margin:auto; max-width:350px;' id='posprov'>&nbsp;</div>";
+				print "fermeture automatique dans <span id='nsec'>10</span> s";
+				print "</div>";
+			}
 			?>
 			<script type="text/javascript"> 
 			idtournoi = parseInt( "<?php echo $idtournoi; ?>" );

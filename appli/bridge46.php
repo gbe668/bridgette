@@ -8,6 +8,9 @@ if( !isDirecteur() ){
 	header("Location: logdirecteur.php");
 	exit(); 
 }
+
+$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
+$etui = htmlspecialchars( $_GET['etui'] );
 ?>
 <!DOCTYPE HTML>
 <html>
@@ -30,11 +33,8 @@ function goto43() {
 	var nextstring = "bridge43.php?idtournoi=" + idtournoi + "&etui=" + etui + "&w=" +  window.innerWidth;
 	location.replace( nextstring );
 };
-function efface() {
-	diagramme = null;
-	raz_cartes();
-	initcanselect();
-	setfocus( 1 );
+function supprime() {
+	deletediags(idtournoi, etui, goto43);
 }
 function corrige() {
 	$("#afficheplus") .hide();
@@ -43,49 +43,6 @@ function corrige() {
 	initcanselect();
 	setfocus( 1 );
 }
-
-function clickcorrectiondiags() {
-	$("#section_inputdiags").hide();
-	$("#section_validiags").hide();
-	$("#tstvalidok").show();
-	
-	// Calcul des contrats possibles, reformate la chaine pour avoir le donneur en premier
-	let etui = etuis[donne];
-	let deal = dealfield.slice(2).split(' ');
-	let validDealers = "NESW";
-	
-	let index = etui[1]-1;	// N:0
-	let str = validDealers[index];
-	str += ":";
-	for (let j=0; j<4; j++) {
-		str += deal[index];
-		if (j!=3) str += " ";
-		index++;
-		if (index==4) index=0;
-	}
-	console.log( "deal reformatté", str );
-	let DDTable = calcDDTable(str);
-	console.log( DDTable );
-	
-	// codage pour la bdd
-	let tabi = ['N','S', 'H', 'D', 'C'];
-	let tabj = ['N', 'S', 'E', 'W'];
-	let dds = "";
-	for ( let j in tabj ) {
-		for ( let i in tabi ) {
-			let value = DDTable[tabi[i]][tabj[j]];
-			dds += String.fromCharCode(97 + value);
-		}
-	}
-	console.log( "dds", dds );
-	
-	// Enregistrement du diagramme
-	$.get( relpgm+"f65upddiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield, dds:dds },
-	function(strjson) {
-		$('#validok').html( strjson.display );
-		goto43();
-	},"json");
-};
 
 // ajout analyse diagramme - 30/07/2025
 var Module = {};
@@ -97,40 +54,42 @@ var Module = {};
 	<div style="text-align: center">
 	
 	<?php
-	$idtournoi = htmlspecialchars( $_GET['idtournoi'] );
-	$etui = htmlspecialchars( $_GET['etui'] );
 	$t = readTournoi( $idtournoi );
 	$pairesNS = $t[ 'pairesNS' ];
 	$pairesEO = $t[ 'pairesEO' ];
 
 	?>
 	<h2>Affichage diagramme étui n°<?php echo $etui; ?></h2>
+	<h2><span class='numetui' id='etui'><?php echo $etui; ?></span></h2>
 	<?php
 	[$diagramme,$dds] = existeDiagramme($idtournoi, $etui);
 	if ( $diagramme == null ) {
 		print '<p>Diagramme non enregistré</p>';
 	}
-	else {
-		print '<p class="edit"><button class="myButton" onclick="efface()">Effacer les diagrammes actuels</button></p>';
-		print '<div id="section_diagramme">diagramme</div>';
+	else { ?>
+		<div id="section_diagramme">diagramme</div>
 		
-		print '<div id="afficheplus">';
-		print '<p><button class="myButton" onclick="corrige()">Correction diagramme</button></p>';
-		print '</div>';
+		<div id="afficheplus">
+		<p><button class="myButton" onclick="corrige()">Correction diagramme</button></p>
+		</div>
 
-		print '<div id="affichemoins" hidden>';
-		print '<div id="section_inputdiags">';
-		print '<p id="msg">&nbsp;</p>';
-		print '<div id="section_kbddiags"></div>';
-		print "<p>La main d'Ouest est complétée automatiquement. Corrigez les autres mains.</p>";
+		<div id="affichemoins" hidden>
+		<div id="section_inputdiags">
+		<p id="msg">&nbsp;</p>
+		<div id="section_kbddiags"></div>
+		<p>La main d'Ouest est complétée automatiquement. Corrigez les autres mains.</p>
 		
-		print '<div id="section_validiags">';
-		print '<p><button class="myStartButton" id="valid1" onClick="clickcorrectiondiags()">Enregistrez</br>les diagrammes</button></p>';
-		print "<p id='validok'>Attente fin d'entrée des diagrammes</p>";
-		print '</div>';
+		<div id="section_validiags">
+		<p><button class="myStartButton" id="valid1" onClick="clickcorrectiondiags(donothing)">Enregistrez</br>les diagrammes</button></p>
+		<p id='validok'>Attente fin d'entrée des diagrammes</p>
+		</div>
 		
-		print '</div>';
-		print '</div>';
+
+		</div>
+		</div>
+		<p><button class="mButton" onclick="$('#section_del').toggle();">Supprimer le diagramme</button></p>
+		<div id='section_del' hidden><p><button class='mButton' onclick='supprime();' style='background-color:lightgreen'>Je confirme</button> <button class='mButton' onclick='$(`#section_del`).toggle();' style='background-color:#FF5050'>Oups !!! J'annule</button></p></div>
+		<?php
 	}
 	?>
 	

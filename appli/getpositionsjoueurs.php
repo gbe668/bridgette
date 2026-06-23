@@ -8,6 +8,10 @@ $dbh = connectBDD();
 $t = _readTournoi( $dbh, $idt );
 $etat = $t[ 'etat' ];
 
+$tour = 0;
+$endofseq = 0;
+$tempo = 0;
+
 switch( $etat ) {
 	case $st_phase_jeu: {
 		$idtype = $t['idtype'];
@@ -43,7 +47,7 @@ switch( $etat ) {
 			};
 
 			if ( $t['genre'] == $t_howell ) {
-				$tab = "<table style='width:100%; margin:auto;'><tbody>";
+				$tab = "<table style='width:90%; margin:auto;'><tbody>";
 				$tab .= "<tr><th class='xNum3' colspan='5'>Tour $tour</th></tr>";
 				$tab .= "<tr><td class='xNum3'>P</td><td class='xNum3' style='width:50%'>Joueurs</td>";
 				$tab .= "<td class='xNum3'>Position</td><td class='xNum3'>Etuis</td></tr>";
@@ -87,7 +91,7 @@ switch( $etat ) {
 					$fullj4[$i] = $joueur['nomcomplet'];
 				};
 
-				$tab = "<table style='width:100%; margin:auto;'><tbody>";
+				$tab = "<table style='width:90%; margin:auto;'><tbody>";
 				$tab .= "<tr><th class='xNum3' colspan='5'>Tour $tour</th></tr>";
 				$tab .= "<tr><td class='xNum3'>N</td><td class='xNum3' style='width:40%'>Joueurs en NS</td>";
 				$tab .= "<td class='xNum3' style='width:40%'>Joueurs en EO</td><td class='xNum3'>Etuis</td></tr>";
@@ -163,17 +167,13 @@ switch( $etat ) {
 			setTournoi($idt);
 			$tab = htmlDisplayTournoi( $idt, 1380 );	// sur 2 colonnes
 		}
-		$endofseq = 0;
-		$tempo = 0;
 		break;
 	}
 	default: {
 		$tab = "attendez";
-		$endofseq = 0;
-		$tempo = 0;
 		break;
 	}
 }
 $dbh = null;
-echo json_encode( array( 'etat'=>$etat, 'positions'=>$tab, 'endofseq'=>$endofseq, 'tempo'=>$tempo ) );
+echo json_encode( array( 'etat'=>$etat, 'positions'=>$tab, 'endofseq'=>$endofseq, 'tempo'=>$tempo, 'tour'=>$tour ) );
 ?>

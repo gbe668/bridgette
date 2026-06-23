@@ -90,7 +90,7 @@ var Module = {};
 	$nameEst	= $ligneEO['E']['nomcomplet'];
 	$nameOuest	= $ligneEO['O']['nomcomplet'];
 	
-	print "<h2><span class='numpaire'>Table n°$numtable</span> <button id='sos' onClick='gotoindex()'>SOS</button></h2>";
+	print "<h2><span class='numpaire'>Table n°$numtable</span></h2>";
 	print "<p>Est Ouest: $nameEst et $nameOuest</p>";
 	print "<h2>Première position, vous êtes en relais.</h2>";
 	print "<p>Vous devez préparer les donnes<br/>et entrer les diagrammes<br/>pour la position suivante.</p>";

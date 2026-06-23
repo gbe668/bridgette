@@ -40,6 +40,10 @@ function isEmail(email) {
   const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(email);
 }
+function getRadioValue(name, def="0") {
+	const rb = document.querySelector(`input[name="${name}"]:checked`);
+	return rb ? rb.value : def;
+}
 function verifSyntaxe() {
 	var str;
 	
@@ -56,6 +60,7 @@ function verifSyntaxe() {
 		}
 		else {
 			$("#msgerr1").text( "Adresse mail incorrecte" );
+			$("#mailcopie").focus();
 			return false;
 		}
 	}
@@ -80,6 +85,7 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Période pré-inscription incorrecte" );
+		$("#maxweeks").focus();
 		return false;
 	}
 	
@@ -89,10 +95,11 @@ function verifSyntaxe() {
 		parametres.dureedonne = parseFloat( str );
 		if ( parametres.dureedonne < 5 ) parametres.dureedonne = 5;
 		if ( parametres.dureedonne > 15 ) parametres.dureedonne = 15;
-		$("#dureeinitiale").val(parametres.dureeinitiale);
+		$("#dureedonne").val(parametres.dureedonne);
 	}
 	else {
 		$("#msgerr1").text( "Durée donne incorrecte" );
+		$("#dureedonne").focus();
 		return false;
 	}
 	
@@ -105,6 +112,7 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Durée initiale incorrecte" );
+		$("#dureeinitiale").focus();
 		return false;
 	}
 	
@@ -117,6 +125,7 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Durée diagrammes incorrecte" );
+		$("#dureediagrammes").focus();
 		return false;
 	}
 
@@ -130,34 +139,10 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Nombre de tournois non précisé" );
+		$("#maxt").focus();
 		return false;
 	}
 	
-	/*
-	str = $("#maxbj").val();
-	if ( isNumeric(str) ) {
-		maxbj = parseInt( str );
-		if (maxbj<10) maxbj=10;
-		if (maxbj>100) maxbj=100;
-		$("#maxbj").val(maxbj);
-	}
-	else {
-		$("#msgerr1").text( "Nombre de tournois non précisé" );
-		return false;
-	}
-	
-	str = $("#maxdel").val();
-	if ( isNumeric(str) ) {
-		maxdel = parseInt( str );
-		if (maxdel<10) maxdel=10;
-		if (maxdel>100) maxdel=100;
-		$("#maxdel").val(maxdel);
-	}
-	else {
-		$("#msgerr1").text( "Nombre de tournois non précisé" );
-		return false;
-	}
-	*/
 	str = $("#maxw").val();
 	if ( isNumeric(str) ) {
 		parametres.maxw = parseInt( str );
@@ -166,94 +151,50 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Largeur minimale d'écran non précisée" );
+		$("#maxw").focus();
 		return false;
 	}
 
 	str = $("#maxw2").val();
 	if ( isNumeric(str) ) {
 		parametres.maxw2 = parseInt( str );
-		if (parametres.maxw2<100) parametres.maxw=100;
+		if (parametres.maxw2<100) parametres.maxw2=100;
 		$("#maxw2").val(parametres.maxw2);
 	}
 	else {
 		$("#msgerr1").text( "Largeur minimale non précisée" );
+		$("#maxw2").focus();
+		return false;
+	}
+
+	str = $("#sizpix").val();
+	if ( isNumeric(str) ) {
+		parametres.sizpix = parseInt( str );
+		if (parametres.sizpix<20) parametres.sizpix=20;
+		if (parametres.sizpix>80) parametres.sizpix=80;
+		$("#sizpix").val(parametres.sizpix);
+	}
+	else {
+		$("#msgerr1").text( "Valeur numérique attendue" );
+		$("#sizpix").focus();
 		return false;
 	}
 
 	// fonctions optionnnelles
-	var rbs = document.querySelectorAll('input[name="checkin"]');
-	parametres.checkin = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.checkin = rb.value;
-			break;
-		}
-	}
-
-	var rbs = document.querySelectorAll('input[name="checkuser"]');
-	parametres.checkuser = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.checkuser = rb.value;
-			break;
-		}
-	}
-
-	rbs = document.querySelectorAll('input[name="affimp"]');
-	parametres.affimp = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.affimp = rb.value;
-			break;
-		}
-	}
-
-	rbs = document.querySelectorAll('input[name="affprov"]');
-	parametres.affprov = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.affprov = rb.value;
-			break;
-		}
-	}
-
-	rbs = document.querySelectorAll('input[name="back241"]');
-	parametres.back241 = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.back241 = rb.value;
-			break;
-		}
-	}
+	parametres.checkin = getRadioValue("checkin");
+	parametres.checkuser = getRadioValue("checkuser");
+	parametres.affimp = getRadioValue("affimp");
+	parametres.affposprov = getRadioValue("affposprov");
+	parametres.affprov = getRadioValue("affprov");
+	parametres.back241 = getRadioValue("back241");
 
 	// section avances
-	rbs = document.querySelectorAll('input[name="avancem"]');
-	parametres.avancem = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.avancem = rb.value;
-			break;
-		}
-	}
-	
-	rbs = document.querySelectorAll('input[name="avanceh"]');
-	parametres.avanceh = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.avanceh = rb.value;
-			break;
-		}
-	}
+	parametres.avancem = getRadioValue("avancem");
+	parametres.avanceh = getRadioValue("avanceh");
 	
 	// section performances
-	var rbs = document.querySelectorAll('input[name="affperf"]');
-	parametres.affperf = "0";		// par défaut
-	for (const rb of rbs) {
-		if (rb.checked) {
-			parametres.affperf = rb.value;
-			break;
-		}
-	}
+	parametres.affperf = getRadioValue("affperf");
+
 	str = $("#nbjperf").val();
 	if ( isNumeric(str) ) {
 		parametres.nbjperf = parseInt( str );
@@ -263,6 +204,7 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Taille du tableau non précisée" );
+		$("#nbjperf").focus();
 		return false;
 	}
 	str = $("#nbmperf").val();
@@ -274,6 +216,7 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Nombre de mois non précisé" );
+		$("#nbmperf").focus();
 		return false;
 	}
 	str = $("#minperf").val();
@@ -285,6 +228,7 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Nombre de tournois non précisé" );
+		$("#minperf").focus();
 		return false;
 	}
 	
@@ -295,6 +239,7 @@ function verifSyntaxe() {
 	}
 	else {
 		$("#msgerr1").text( "Erreur remplissage auto" );
+		$("#param1").focus();
 		return false;
 	}
 	str = $("#param2").val();
@@ -313,7 +258,7 @@ function saveparams() {
 		jsonparms = JSON.stringify( parametres );
 		console.log(jsonparms);
 		$("#msgerr1").html( "Enregistrement en cours ...");
-		$.get("saveparams.php?", {jsonparms:jsonparms}, function(strjson) {
+		$.post("saveparams.php?", {jsonparms:jsonparms}, function(strjson) {
 			$("#msgerr1").html(strjson);
 		},"text")
 		//.done( function() { $("#msgerr1").html( "Enregistrement terminé." ); } )
@@ -328,10 +273,10 @@ function saveparams() {
 	
 	<h2>Paramétrage application</h2>
 	<table border="0" style="margin:auto;"><tbody>
-	<tr><td colspan="2" style="background-color:lightgreen;">Mail en copie des résultats<td></tr>
+	<tr><td colspan="2" style="background-color:lightgreen;">Mail en copie des résultats</td></tr>
 	<tr><td colspan="2"><input type="text" id="mailcopie" name="mailcopie" value="<?php echo $parametres['mailcopie'] ?>"  placeholder="adresse mail" size="40"></td></tr>
 	
-	<tr><td colspan="2" style="background-color:lightgreen;">Ouverture du club<td></tr>
+	<tr><td colspan="2" style="background-color:lightgreen;">Ouverture du club</td></tr>
 	<tr><td colspan="2" class="defparm">
 	Lundi<input type="checkbox" id="day_1" <?php echo ($opendays['lundi']=="1")?'checked':'' ?> >&nbsp;
 	Mardi<input type="checkbox" id="day_2" <?php echo ($opendays['mardi']=="1")?'checked':'' ?> >&nbsp;
@@ -343,7 +288,7 @@ function saveparams() {
 	
 	<tr><td class="defparm">Période pour pré-inscription tournoi:</br><em>entre 1 et 13 semaines</em></td><td class="valparm"><input type="text" id="maxweeks" name="maxweeks" value="<?php echo $parametres['maxweeks'] ?>" size="2"> sem</td></tr>
 	
-	<tr><td colspan="2" style="background-color:lightgreen;">Durées de jeu<td></tr>
+	<tr><td colspan="2" style="background-color:lightgreen;">Durées de jeu</td></tr>
 	<tr><td class="defparm">Durée pour jouer une donne:</br><em>entre 5 et 15 minutes</br>7.5 minutes habituellement</em></td>
 	<td class="valparm" style="width:75px"><input type="text" id="dureedonne" name="dureedonne" value="<?php echo $parametres['dureedonne'] ?>" size="2"> mn</td></tr>
 	
@@ -351,20 +296,16 @@ function saveparams() {
 	
 	<tr><td class="defparm">Durée supplémentaire pour</br>l'entrée des diagrammes:</br><em>entre 0 et 5 minutes</em></td><td class="valparm"><input type="text" id="dureediagrammes" name="dureediagrammes" value="<?php echo $parametres['dureediagrammes'] ?>" size="2"> mn</td></tr>
 
-	<tr><td colspan="2" style="background-color:lightgreen;">Affichage<td></tr>
+	<tr><td colspan="2" style="background-color:lightgreen;">Affichage</td></tr>
 	<tr><td class="defparm">Nombre maximum de tournois</br>affichés dans la liste des</br>résultats précédents:</br><em>entre 1 et 100</em></td><td class="valparm"><input type="text" id="maxt" name="maxt" value="<?php echo $parametres['maxt'] ?>" size="2"></td></tr>
-	
-	<!--
-	<tr><td class="defparm">Taille du tableau des joueurs actifs dans la liste des joueurs du club:</br><em>entre 10 et 100</em></td><td class="valparm"><input type="text" id="maxbj" name="maxbj" value="<?php echo $parametres['maxbj'] ?>" size="2"></td></tr>
-	
-	<tr><td class="defparm">Nombre de joueurs affichés</br>dans la liste des joueurs effacés:</br><em>entre 10 et 100</em></td><td class="valparm"><input type="text" id="maxdel" name="maxdel" value="<?php echo $parametres['maxdel'] ?>" size="2"></td></tr>
-	-->
 	
 	<tr><td class="defparm">Largeur écran nécessaire pour</br>passer en affichage 2 colonnes:</br><em>défaut 700 pixels, mini 300</em></td><td class="valparm"><input type="text" id="maxw" name="maxw" value="<?php echo $parametres['maxw'] ?>" size="2"> px</td></tr>
 	
 	<tr><td class="defparm">Largeur écran nécessaire pour</br>passer en tableau réduit:</br><em>défaut 200 pixels, mini 100</em></td><td class="valparm"><input type="text" id="maxw2" name="maxw2" value="<?php echo $parametres['maxw2'] ?>" size="2"> px</td></tr>
 
-	<tr><td colspan="2" style="background-color:lightgreen;">Fonctions optionnelles<td></tr>
+	<tr><td class="defparm">Largeur chronomètre grand écran</br>exprimé en % fenêtre:</br><em>défaut 50%, min 20%, max 80%</em></td><td class="valparm"><input type="text" id="sizpix" name="sizpix" value="<?php echo $parametres['sizpix'] ?>" size="2"> %</td></tr>
+
+	<tr><td colspan="2" style="background-color:lightgreen;">Fonctions optionnelles</td></tr>
 	<tr><td class="defparm">Demande du code pour</br>rejoindre le tournoi en cours</br>pour les joueurs:</td>
 	<td class="valparm">Oui<input type="radio" id="codey" name="checkin" <?php echo ($parametres['checkin']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="coden" name="checkin" <?php echo ($parametres['checkin']==0)?'checked':'' ?> value="0"></td></tr>
 	
@@ -379,11 +320,13 @@ function saveparams() {
 
 	<tr><td class="defparm">Affichage résultats en IMP:</br><em>seulement pour les tournois de 4 ou 5 paires</em></td><td class="valparm">Oui<input type="radio" id="impy" name="affimp" <?php echo ($parametres['affimp']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="impn" name="affimp" <?php echo ($parametres['affimp']==0)?'checked':'' ?> value="0"></td></tr>
 	
+	<tr><td class="defparm">Affichage positions provisoires</br>avant le démarrage du tournoi:&nbsp;</td><td class="valparm">Oui<input type="radio" id="affposprovy" name="affposprov" <?php echo ($parametres['affposprov']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="affposprovn" name="affposprov" <?php echo ($parametres['affposprov']==0)?'checked':'' ?> value="0"></td></tr>
+	
 	<tr><td class="defparm">Affichage résultats provisoires</br>avant la fin du tournoi:&nbsp;</td><td class="valparm">Oui<input type="radio" id="affprovy" name="affprov" <?php echo ($parametres['affprov']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="affprovn" name="affprov" <?php echo ($parametres['affprov']==0)?'checked':'' ?> value="0"></td></tr>
 	
 	<tr><td class="defparm">Retour possible à la définition des paires après le démarrage du tournoi:&nbsp;</td><td class="valparm">Oui<input type="radio" id="back241yes" name="back241" <?php echo ($parametres['back241']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="back241no" name="back241" <?php echo ($parametres['back241']==0)?'checked':'' ?> value="0"></td></tr>
 	
-	<tr><td colspan="2" style="background-color:lightgreen;">Changement de position synchrone<td></tr>
+	<tr><td colspan="2" style="background-color:lightgreen;">Changement de position synchrone</td></tr>
 	<tr><td class="defparm">Mitchell:&nbsp;attente des autres tables</br>pour changer de position</td>
 	<td class="valparm">Oui<input type="radio" id="avancemyes" name="avancem" <?php echo ($parametres['avancem']==1)?'checked':'' ?> value="1">
 	</br>Non<input type="radio" id="avancemno" name="avancem" <?php echo ($parametres['avancem']==0)?'checked':'' ?> value="0"></td></tr>
@@ -391,14 +334,14 @@ function saveparams() {
 	<td class="valparm">Oui<input type="radio" id="avancehyes" name="avanceh" <?php echo ($parametres['avanceh']==1)?'checked':'' ?> value="1">
 	</br>Non<input type="radio" id="avancehno" name="avanceh" <?php echo ($parametres['avanceh']==0)?'checked':'' ?> value="0"></td></tr>
 	
-	<tr><td colspan="2" style="background-color:lightgreen;">Performances des joueurs<td></tr>
+	<tr><td colspan="2" style="background-color:lightgreen;">Performances des joueurs</td></tr>
 	<tr><td class="defparm">Affichage des performances:&nbsp;</td><td class="valparm">Oui<input type="radio" id="affperfy" name="affperf" <?php echo ($parametres['affperf']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="affperfn" name="affperf" <?php echo ($parametres['affperf']==0)?'checked':'' ?> value="0"></td></tr>
 	
 	<tr><td class="defparm">Taille tableau des performances:</br><em>entre 3 et 100 joueurs</em></td><td class="valparm"><input type="text" id="nbjperf" name="nbjperf" value="<?php echo $parametres['nbjperf'] ?>" size="2"></td></tr>
 	<tr><td class="defparm">Période considérée pour l'analyse:</br><em>entre 1 et 12 dernier mois</em></td><td class="valparm"><input type="text" id="nbmperf" name="nbmperf" value="<?php echo $parametres['nbmperf'] ?>" size="2"></td></tr>
 	<tr><td class="defparm">Nombre minimum de tournois joués sur la période considérée:</br><em>entre 4 et 100 tournois</em></td><td class="valparm"><input type="text" id="minperf" name="minperf" value="<?php echo $parametres['minperf'] ?>" size="2"></td></tr>
 	
-	<tr><td colspan="2" style="background-color:lightgreen;">Fonctions de test<td></tr>
+	<tr><td colspan="2" style="background-color:lightgreen;">Fonctions de test</td></tr>
 	<tr><td class="defparm">0 = normal<br/>1 = remplissage auto</td><td class="valparm"><input type="text" id="param1" name="param1" value="<?php echo $parametres['param1'] ?>" size="2"></td></tr>
 	</tbody></table>
 	

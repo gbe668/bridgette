@@ -14,10 +14,12 @@ $parametres = array(
 	'maxdel' => 10,		// supprimé taille tableau des joueurs effacés
 	'maxw' => 700,		// taille fenêtre pour passer en affichage 2 colonnes
 	'maxw2' => 300,		// taille fenêtre pour passer en affichage réduit
+	'sizpix'  => 50,	// Largeur texte en % largeur fenêtre pour le grand écran
 	
 	'checkin' => 0,		// check pour les joueurs
 	'checkuser' => 0,	// check ident joueur
 	'affimp'  => 0,		// Affichage IMP pour tournoi 4/5 paires: 0 %, 1 IMP
+	'affposprov' => 0,		// Affichage positions provisoires
 	'affprov' => 0,		// Affichage résultats provisoires
 	'back241' => 0,		// retour 41 après démarrage
 	'avancem' => 0,		// Mitchell: pas d'attente pour changer de position
@@ -41,6 +43,8 @@ if ( file_exists( $file_params ) ) {
 	if ( !isset($parametres['avanceh'] ) )	$parametres['avanceh'] = 1;
 	if ( !isset($parametres['opendays'] ) ) $parametres['opendays'] = $defopendays;
 	if ( !isset($parametres['maxweeks'] ) ) $parametres['maxweeks'] = 4;
+	if ( !isset($parametres['affposprov'] ) ) $parametres['affposprov'] = 1;
+	if ( !isset($parametres['sizpix'] ) ) $parametres['sizpix'] = 50;
 }
 
 //tests de qualification
@@ -2138,7 +2142,7 @@ function htmlDisplayTournoi($idt, $screenw, $displayGeneral = False) {
 	$twocols = ( $screenw > $parametres['maxw'] ) ? true : false;
 	if ( $twocols ) {
 		// affichage des tableaux côte à côte
-		$str .= "<table style='margin:auto;'><tbody><tr><td style='width:45%;'>";
+		$str .= "<table style='width:90%; margin:auto;'><tbody><tr><td style='width:45%;'>";
 	}
 	
 	// affichage 1er tableau
@@ -2427,71 +2431,128 @@ function existeDiagramme($idt,$n) {		// return diagramme, null si non trouvé
 	$dbh = null;
 	return [$diags,$dds];
 };
-function insertDiagramme($idt,$n,$diag,$dds) {
-	global $tab_diagrammes;
-	$mains = [];
-	$h =[];	// points honneurs N E S O
-	
-	$dbh = connectBDD();
-	$dbh->query("START TRANSACTION;");
-	
-	// test diagramme déjà enregistré
-	$sql = "SELECT count(*) FROM $tab_diagrammes where idtournoi = '$idt' and etui= '$n';";
-	$res = $dbh->query($sql);
-	$nbl = $res->fetchColumn();
+function insertDiagramme($idt, $n, $diag, $dds) {
+    global $tab_diagrammes;
 
-	if ( $nbl == 0 ) {
-		// diagramme inconnu, calcul des points honneur
-		$mains = explode(" ", substr( $diag, 2 ));
-		for ( $i=0;$i<4;$i++ ) {
-			$h[$i] = 4*substr_count($mains[$i],"A")+3*substr_count($mains[$i],"K")
-			+2*substr_count($mains[$i],"Q")+substr_count($mains[$i],"J");
-		}
-		$sql = "INSERT INTO $tab_diagrammes ( idtournoi, etui, dealt, h1, h2, h3, h4, dds ) VALUES ('$idt', '$n', '$diag', $h[0], $h[1], $h[2], $h[3], '$dds' );";
-		$res = $dbh->query($sql);
-		$id = $dbh->lastInsertId();
-	}
-	else {
-		// diagramme connu
-		$sql = "SELECT id FROM $tab_diagrammes where idtournoi = '$idt' and etui= '$n';";
-		$res = $dbh->query($sql);
-		$id = $res->fetchColumn();
-	}
-	$dbh->query("COMMIT;");
-	$dbh = null;
-	return $id;
-};
-function updateDiagramme($idt,$n,$diag,$dds) {
-	global $tab_diagrammes;
-	$mains = [];
-	$h =[];	// points honneurs N E S O
-	
-	$dbh = connectBDD();
-	$dbh->query("START TRANSACTION;");
-	
-	// test diagramme déjà enregistré
-	$sql = "SELECT count(*) FROM $tab_diagrammes where idtournoi = '$idt' and etui= '$n';";
-	$res = $dbh->query($sql);
+    // Calcul des points d'honneur
+    $mains = explode(" ", substr($diag, 2));
+    $h = array_map(fn($main) =>
+        4 * substr_count($main, "A") +
+        3 * substr_count($main, "K") +
+        2 * substr_count($main, "Q") +
+            substr_count($main, "J"),
+        array_slice($mains, 0, 4)
+    );
 
-	if ( $res->fetchColumn() == 1 ) {
-		// diagramme connu, recalcul des points honneur
-		$mains = explode(" ", substr( $diag, 2 ));
-		for ( $i=0;$i<4;$i++ ) {
-			$h[$i] = 4*substr_count($mains[$i],"A")+3*substr_count($mains[$i],"K")
-			+2*substr_count($mains[$i],"Q")+substr_count($mains[$i],"J");
-		};
-		$sql = "UPDATE $tab_diagrammes SET dealt='$diag', h1=$h[0], h2=$h[1], h3=$h[2], h4=$h[3], dds='$dds' where idtournoi='$idt' and etui='$n';";
-		$res = $dbh->query($sql);
-		$r = 1;
-	}
-	else {
-		// diagramme inconnu
-		$r = 0;
-	}
-	$dbh->query("COMMIT;");
-	$dbh = null;
-	return $r;
-};
+    $dbh = connectBDD();
+    $dbh->beginTransaction();
+
+    try {
+        // INSERT IGNORE : ne fait rien si (idtournoi, etui) existe déjà
+        $sql = "INSERT IGNORE INTO $tab_diagrammes
+                    (idtournoi, etui, dealt, h1, h2, h3, h4, dds)
+                VALUES
+                    (:idt, :n, :diag, :h0, :h1, :h2, :h3, :dds)";
+        $sth = $dbh->prepare($sql);
+        $sth->execute([
+            ':idt'  => $idt,  ':n'   => $n,
+            ':diag' => $diag, ':dds' => $dds,
+            ':h0'   => $h[0], ':h1'  => $h[1], ':h2' => $h[2], ':h3' => $h[3],
+        ]);
+
+        if ($sth->rowCount() === 1) {
+            // Ligne insérée
+            $id = $dbh->lastInsertId();
+        }
+		else {
+            // Ligne déjà existante : récupération de l'id
+            $sel = $dbh->prepare(
+                "SELECT id FROM $tab_diagrammes WHERE idtournoi = :idt AND etui = :n"
+            );
+            $sel->execute([':idt' => $idt, ':n' => $n]);
+            $id = $sel->fetchColumn();
+        }
+
+        $dbh->commit();
+    }
+	catch (PDOException $e) {
+        $dbh->rollBack();
+        $id = null;
+        // error_log($e->getMessage());
+    }
+	finally {
+        $dbh = null;
+    }
+
+    return $id;
+}
+function updateDiagramme($idt, $n, $diag, $dds) {
+    global $tab_diagrammes;
+
+    // Calcul des points d'honneur
+    $mains = explode(" ", substr($diag, 2));
+    $h = array_map(fn($main) =>
+        4 * substr_count($main, "A") +
+        3 * substr_count($main, "K") +
+        2 * substr_count($main, "Q") +
+            substr_count($main, "J"),
+        array_slice($mains, 0, 4)
+    );
+
+    $dbh = connectBDD();
+    $dbh->beginTransaction();
+
+    try {
+        $sql = "UPDATE $tab_diagrammes
+                SET dealt = :diag, h1 = :h0, h2 = :h1, h3 = :h2, h4 = :h3, dds = :dds
+                WHERE idtournoi = :idt AND etui = :n";
+        $sth = $dbh->prepare($sql);
+        $sth->execute([
+            ':diag' => $diag,
+            ':h0'   => $h[0], ':h1' => $h[1], ':h2' => $h[2], ':h3' => $h[3],
+            ':dds'  => $dds,
+            ':idt'  => $idt,
+            ':n'    => $n,
+        ]);
+
+        $r = $sth->rowCount(); // 0 si inconnu, 1 si mis à jour
+
+        $dbh->commit();
+    } catch (PDOException $e) {
+        $dbh->rollBack();
+        $r = 0;
+        // error_log($e->getMessage());
+    } finally {
+        $dbh = null;
+    }
+
+    return $r;
+}
+function deleteDiagramme($idt, $n) {
+    global $tab_diagrammes;
+
+    $dbh = connectBDD();
+    $dbh->beginTransaction();
+
+    try {
+        // Suppression directe sans SELECT préalable (DELETE retourne le nombre de lignes affectées)
+        $sql = "DELETE FROM $tab_diagrammes WHERE idtournoi = :idt AND etui = :n";
+        $sth = $dbh->prepare($sql);
+        $sth->execute([':idt' => $idt, ':n' => $n]);
+
+        $r = $sth->rowCount(); // 0 si inconnu, >= 1 si supprimé
+
+        $dbh->commit();
+    } catch (PDOException $e) {
+        $dbh->rollBack();
+        $r = 0;
+        // error_log($e->getMessage()); // décommenter pour le debug
+    } finally {
+        $dbh = null;
+    }
+
+    return $r;
+}
 function getPointsHonneursMoyens($idt) {
 	global $tab_diagrammes;
 	$pts = array( 'id'=>$idt, 'nord'=>'0', 'est'=>'0', 'sud'=>'0', 'ouest'=>'0', 'ns'=>'0', 'eo'=>'0' );

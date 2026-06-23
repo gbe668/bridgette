@@ -55,24 +55,26 @@ if ( $etat == $st_phase_init ) {
 	}
 	else {
 		$twocols = ( $screenw > $parametres['maxw'] ) ? true : false;
-		$str = "<div>";
+		$str = "";
 		if ( $twocols ) {
 			// affichage des tableaux côte à côte
-			$str = "<table style='margin:auto;'><tbody><tr><td style='width:45%;'>";
+			$str = '<table style="width:90%; margin:auto;"><tbody><tr><td style="width:45%;">';
 		}
 		// 1er tableau
-		$str .= '<h3>Paires NS Mitchell (provisoire)</h3>';
+		$str .= '<div><h3>Paires NS Mitchell (provisoire)</h3>';
 		$str .= displayProvisoiresNS( $idtournoi, "NS" );
+		$str .= '</div>';
 
 		if ( $twocols ) {
-			$str .= "</td><td style='width:3%;'></td><td style='width:45%;'>";
+			$str .= "</td><td style='width:3%;'></td><td>";
 		}
-		$str .= '<h3>Paires EO Mitchell (provisoire)</h3>';
+		$str .= '<div><h3>Paires EO Mitchell (provisoire)</h3>';
 		$str .= displayProvisoiresEO( $idtournoi, "EO" );
+		$str .= '</div>';
+		
 		if ( $twocols ) {
 			$str .= '</td></tr></tbody></table>';
 		}
-		$str .= "</div>";
 	}
 }
 else {

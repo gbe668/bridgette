@@ -45,11 +45,16 @@ function getlstpositions( $idtournoi, $numtable ) {
 		for ( $i=1; $i<=$ntables; $i++ ) {
 			if ( $i == $numtable ) $str .= "<td class='xTxt1 notour'>" .$positions[$i]. "</td>";
 			else {
-				if ( $positions[$i] < $positions[$numtable] ) {
-					$str .= "<td class='xTxt1 pairens'>" .$positions[$i]. "</td>";
+				if ( ($t['relais'] == $i)&&($t['pairesEO']>$t['pairesNS']) ) {
+					$str .= "<td class='xTxt1'>-</td>";
 				}
 				else {
-					$str .= "<td class='xTxt1'>" .$positions[$i]. "</td>";
+					if ( $positions[$i] < $positions[$numtable] ) {
+						$str .= "<td class='xTxt1 pairens'>" .$positions[$i]. "</td>";
+					}
+					else {
+						$str .= "<td class='xTxt1'>" .$positions[$i]. "</td>";
+					}
 				}
 			}
 		}
