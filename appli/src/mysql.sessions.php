@@ -1,140 +1,95 @@
 <?php
 
-	/*
-	Revised code by Dominick Lee
-	Original code derived from "Essential PHP Security" by Chriss Shiflett
-	Last Modified 2/27/2017
+declare(strict_types=1);
 
+class Session implements SessionHandlerInterface
+{
+    private readonly Database $db;
 
-	CREATE TABLE sessions
-	(
-		id varchar(32) NOT NULL,
-		access int(10) unsigned,
-		data text,
-		PRIMARY KEY (id)
-	);
+    public function __construct()
+    {
+        $this->db = new Database();
 
-	+--------+------------------+------+-----+---------+-------+
-	| Field  | Type             | Null | Key | Default | Extra |
-	+--------+------------------+------+-----+---------+-------+
-	| id     | varchar(32)      |      | PRI |         |       |
-	| access | int(10) unsigned | YES  |     | NULL    |       |
-	| data   | text             | YES  |     | NULL    |       |
-	+--------+------------------+------+-----+---------+-------+
+        session_set_save_handler($this, true);
+        session_start();
+    }
 
-	*/
+    public function open(string $path, string $name): bool
+    {
+        return isset($this->db);
+    }
 
+    public function close(): bool
+    {
+        return $this->db->close();
+    }
 
-class Session {
-	private $db;
+    public function read(string $id): string|false
+    {
+        $this->db->query('SELECT data FROM sessions WHERE id = :id');
+        $this->db->bind(':id', $id);
 
-	public function __construct(){
-		// Instantiate new Database object
-		$this->db = new Database;
+        if ($this->db->execute() && $this->db->rowCount() > 0) {
+            $row = $this->db->single();
+            return $row['data'] ?? '';
+        }
 
-		// Set handler to overide SESSION
-		session_set_save_handler(
-			array($this, "_open"),
-			array($this, "_close"),
-			array($this, "_read"),
-			array($this, "_write"),
-			array($this, "_destroy"),
-			array($this, "_gc")
-		);
+        return '';
+    }
 
-		// Start the session
-		session_start();
-	}
-	public function _open(){
-		// If successful
-		if($this->db)
-		{
-			// Return True
-			return true;
-		}
-		// Return False
-		return false;
-	}
-	public function _close(){
-		// Close the database connection
-		// If successful
-		if($this->db->close())
-		{
-			// Return True
-			return true;
-		}
-		// Return False
-		return false;
-	}
-	public function _read($id){
-		// Set query
-		$this->db->query('SELECT data FROM sessions WHERE id = :id');
-		// Bind the Id
-		$this->db->bind(':id', $id);
-		// Attempt execution
-		// If successful
-		if($this->db->execute())
-		{
-			if($this->db->rowCount() > 0)
-			{
-				// Save returned row
-				$row = $this->db->single();
-				// Return the data
-				return $row['data'];
-			}
-		}
-		// Return an empty string
-		return '';
-	}
-	public function _write($id, $data){
-		// Create time stamp
-		$access = time();
-		// Set query  
-		$this->db->query('REPLACE INTO sessions VALUES (:id, :access, :data)');
-		// Bind data
-		$this->db->bind(':id', $id);
-		$this->db->bind(':access', $access);  
-		$this->db->bind(':data', $data);
-		// Attempt Execution
-		// If successful
-		if($this->db->execute())
-		{
-			// Return True
-			return true;
-		}
-		// Return False
-		return false;
-	}
-	public function _destroy($id){
-		// Set query
-		$this->db->query('DELETE FROM sessions WHERE id = :id');
-		// Bind data
-		$this->db->bind(':id', $id);
-		// Attempt execution
-		// If successful
-		if($this->db->execute())
-		{
-			// Return True
-			return true;
-		}
-		// Return False
-		return false;
-	} 
-	public function _gc($max){		// $max exprimé en secondes
-		// Calculate what is to be deemed old
-		$old = time() - $max;
-		// Set query
-		$this->db->query('DELETE FROM sessions WHERE access < :old');
-		// Bind data
-		$this->db->bind(':old', $old);
-		// Attempt execution
-		if($this->db->execute())
-		{
-			// Return True
-			return true;
-		}
-		// Return False
-		return false;
-	}
+    public function write(string $id, string $data): bool
+    {
+        $access = time();
+
+        $this->db->query(
+            'REPLACE INTO sessions (id, access, data)
+             VALUES (:id, :access, :data)'
+        );
+
+        $this->db->bind(':id', $id);
+        $this->db->bind(':access', $access);
+        $this->db->bind(':data', $data);
+
+        return $this->db->execute();
+    }
+
+    public function destroy(string $id): bool
+    {
+        $this->db->query('DELETE FROM sessions WHERE id = :id');
+        $this->db->bind(':id', $id);
+
+        return $this->db->execute();
+    }
+
+    public function gc(int $max_lifetime): int|false
+    {
+        $old = time() - $max_lifetime;
+
+        $this->db->query('DELETE FROM sessions WHERE access < :old');
+        $this->db->bind(':old', $old);
+
+        if (!$this->db->execute()) {
+            return false;
+        }
+
+        return $this->db->rowCount();
+    }
+
+    /**
+     * Appelée par PHP lorsqu'il veut simplement prolonger
+     * la durée de vie d'une session sans modifier son contenu.
+     */
+    public function updateTimestamp(string $id, string $data): bool
+    {
+        $this->db->query(
+            'UPDATE sessions
+             SET access = :access
+             WHERE id = :id'
+        );
+
+        $this->db->bind(':access', time());
+        $this->db->bind(':id', $id);
+
+        return $this->db->execute();
+    }
 }
-?>
