@@ -85,7 +85,7 @@ function gotodownloadapk() {
 	<p><button class="myBigButton" onclick="goto40()">Organisation du tournoi<br>réservé directeur tournoi</button></p>
 	<p><button class="mySmallButton" onclick='gotoformation()'>Espace formation</button></p>
 	<p><button class="mySmallButton" onclick="apropos()">Mode d'emploi / A propos</button></p>
-	<p>version <?php echo $version; ?></p>
+	<p>version <a href="apropos_news.php"><?php echo $version; ?></a></p>
 	<p><button class='mButton' onclick="gotobigscreen()">Grand écran</button></p>
 	
 	<?php

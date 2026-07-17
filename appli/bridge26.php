@@ -80,6 +80,25 @@ function topwindow() {
 // paramètres de sélection date tournoi spécifique directeur: datepicker, ...
 //
 var seldate;	// format aaaa-mm-jj
+$.datepicker.regional['fr'] = {
+	dateFormat: 'yy-mm-dd',	//'dd-mm-yy',
+	closeText: 'Fermer',
+	//prevText: 'P',
+	//nextText: 'S',
+	currentText: 'Aujourd\'hui',
+	monthNames: ['Janvier','Fevrier','Mars','Avril','Mai','Juin', 'Juillet','Aout','Septembre','Octobre','Novembre','Decembre'],
+	monthNamesShort: ['Jan','Fev','Mar','Avr','Mai','Jun', 'Jul','Aou','Sep','Oct','Nov','Dec'],
+	dayNames: ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],
+	dayNamesShort: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+	dayNamesMin: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
+	weekHeader: 'Sm',
+	firstDay: 1,
+	minDate: new Date(),
+	//maxDate: '+4W',	//new Date(),	//'+12M +0D',
+	//showButtonPanel: true,
+	isRTL: false
+};
+$.datepicker.setDefaults( $.datepicker.regional['fr'] );
 $(document).ready(function() {		// sélection date tournoi
 	datetournoi = $( "#datetournoi" ).datepicker({	// initialisation
 		//var dateFormat = "mm/dd/yy",
@@ -253,9 +272,9 @@ document.addEventListener('visibilitychange', function (event) {
 	</tbody></table>
 	</div>
 
-	<h2>Pré-inscriptions</h2>
+	<p style="margin: 0";>&nbsp;</p>
 	
-	<div id="msgdatetournoi"></div>
+	<!-- <div id="msgdatetournoi"></div> -->
 	
 	<div id="section_inscription" class="framestyle" hidden>
 	<table style="width:100%;max-width:350px;margin:auto;"><tbody>
@@ -272,7 +291,7 @@ document.addEventListener('visibilitychange', function (event) {
 	</td></tr></tbody></table>
 	</div>
 	
-	<p id='msgerr'>&nbsp;</p>
+	<!-- <p id='msgerr'>&nbsp;</p> -->
 	<p><button class="mySmallButton" onclick="goto40()">Retour page direction de tournoi</button></p>
 
 	<div class="top"><img src="images/upwindow.png" style="width:40px;" onclick="topwindow()"/></div>

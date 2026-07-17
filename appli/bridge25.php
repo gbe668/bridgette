@@ -79,7 +79,7 @@ function getMyClassement($userid) {
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="<?php echo $relpgm; ?>js/jquery-3.6.0.min.js"></script>
-	<script src="<?php echo $relpgm; ?>js/jquery-ui-1.13.2.min.js"></script>
+	<!-- <script src="<?php echo $relpgm; ?>js/jquery-ui-1.13.2.min.js"></script> -->
 	<script src="<?php echo $relpgm; ?>js/bridge25.js"></script>
 	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/bridgestylesheet.css" />
 	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/jquery-ui.css">
@@ -97,16 +97,31 @@ function getMyClassement($userid) {
 .cross:hover {
 	cursor: pointer;
 }
-td.dayclose a {
-    background: none !important;
-	background-color:#FFC0CB !important;
-    color: #006633;
+/* ---- Widget calendrier n-semaines (remplace jQuery UI datepicker) ---- */
+.datepicker{
+  width:280px; background:#D8E5D0; border:1px solid #d0d5dd;
+  border-radius:10px; box-shadow:0 4px 14px rgba(0,0,0,.06); padding:12px;
+  margin:0 auto;
 }
-td.dayopen a {
-    background: none !important;
-	background-color: lightgreen !important;
-    color: #006633;
+.dp-header{ text-align:center; margin-bottom:10px; }
+.dp-title{ font-weight:600; font-size:16px; color:#1f2937; text-transform:capitalize; }
+.datepicker table{ width:100%; border-collapse:collapse; }
+.datepicker th{ font-size:12px; color:#000000; font-weight:500; padding:4px 0; }
+.datepicker td{ text-align:center; padding:2px; }
+.dp-day{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:32px; height:32px; margin:auto; border-radius:8px;
+  font-size:13px; cursor:pointer; color:#111827; position:relative;
 }
+.dp-day .dp-month-tag{ position:absolute; bottom:-2px; font-size:8px; color:#000000; }
+.dp-day:hover{ background:#f3f4f6; }
+.dp-day.today{ box-shadow: inset 0 0 0 1px #2563eb; font-weight:600; }
+.dp-day.selected{ background:#2563eb; color:#fff; font-weight:600; }
+.dp-day.selected:hover{ background:#1d4ed8; }
+.dp-day.disabled{ color:#9ca3af; background:#f3f4f6; cursor:not-allowed; }
+.dp-day.dayopen{ background-color: lightblue !important; color:#006633; }
+.dp-day.dayclose{ background-color:#FFC0CB !important; color:#006633; }
+.dp-range-note{ font-size:11px; color:#9ca3af; margin-top:8px; text-align:center; }
 </style>
 
 <script>
@@ -188,49 +203,175 @@ function okmail() {
 }
 
 //
-// paramètres de sélection date tournoi spécifique joueur: datepicker, ...
+// paramètres de sélection date tournoi spécifique joueur: calendrier n semaines
 //
-var strmaxdate = '+'+ parametres.maxweeks +'w';	// en semaines
-$(document).ready(function() {		// sélection date tournoi
-	datetournoi = $( "#datetournoi" ).datepicker({	// initialisation
-		//var dateFormat = "mm/dd/yy",
-		//defaultDate: +1,
-		//numberOfMonths: 1
-	})
-	.datepicker('setDate', 'today')
-	.datepicker( "option", "maxDate", strmaxdate )
-	.datepicker( "option", "beforeShowDay", function (date){
-		let datjour = date.getFullYear() + '-' + String((date.getMonth() + 1)).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
-		if ( datjour in calendrier ) {
-			let special = calendrier[datjour];
-			if (special.etat > 0)
-				return [ true, "dayopen", special.obs ];
-			else
-				return [ true, "dayclose", special.obs ];
+function formatISO(d) {
+	return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+class LimitedWeeksDatePicker {
+	constructor(container, options = {}) {
+		this.container = container;
+		this.weeks = options.weeks ?? 5;
+		this.onSelect = options.onSelect ?? (() => {});
+		this.locale = options.locale ?? 'fr-FR';
+		this.firstDayMonday = options.firstDayMonday ?? true;
+		this.disablePastDays = options.disablePastDays ?? true;
+		this.dayStatus = options.dayStatus ?? null;
+
+		this.today = this.#stripTime(new Date());
+		this.selectedDate = null;
+
+		this.startDate = this.#startOfWeek(this.today);
+		this.endDate = this.#addDays(this.startDate, this.weeks * 7 - 1);
+
+		this.#render();
+	}
+
+	#stripTime(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+	#addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+	#startOfWeek(d) {
+		const day = d.getDay();
+		const diff = this.firstDayMonday ? (day + 6) % 7 : day;
+		return this.#addDays(d, -diff);
+	}
+	#isSameDay(a, b) {
+		return a && b && a.getFullYear() === b.getFullYear()
+			&& a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+	}
+
+	setDate(d) {
+		this.selectedDate = this.#stripTime(d);
+		this.#render();
+	}
+
+	#render() {
+		const dayLabels = this.firstDayMonday
+			? ['Lu','Ma','Me','Je','Ve','Sa','Di']
+			: ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+
+		const startLabel = this.startDate.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
+		const endLabel = this.endDate.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
+		const title = startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
+
+		let rowsHtml = '';
+		let cursor = new Date(this.startDate);
+
+		for (let w = 0; w < this.weeks; w++) {
+			let rowCells = '';
+			for (let d = 0; d < 7; d++) {
+				const cellDate = new Date(cursor);
+				let selectable = !(this.disablePastDays && cellDate < this.today);
+				let extraClass = '';
+				let title_ = '';
+
+				if (this.dayStatus) {
+					const status = this.dayStatus(cellDate);
+					if (status) {
+						if (status.selectable === false) selectable = false;
+						if (status.className) extraClass = status.className;
+						if (status.title) title_ = status.title;
+					}
+				}
+
+				const isToday = this.#isSameDay(cellDate, this.today);
+				const isSelected = this.#isSameDay(cellDate, this.selectedDate);
+
+				const classes = ['dp-day'];
+				if (!selectable) classes.push('disabled');
+				if (extraClass) classes.push(extraClass);
+				if (isToday) classes.push('today');
+				if (isSelected) classes.push('selected');
+
+				const monthTag = cellDate.getDate() === 1
+					? `<span class="dp-month-tag">${cellDate.toLocaleDateString(this.locale, { month: 'short' })}</span>`
+					: '';
+
+				rowCells += `<td>
+					<div class="${classes.join(' ')}" data-date="${cellDate.toISOString()}" title="${title_}">
+						${cellDate.getDate()}${monthTag}
+					</div>
+				</td>`;
+
+				cursor = this.#addDays(cursor, 1);
+			}
+			rowsHtml += `<tr>${rowCells}</tr>`;
 		}
 
-		let dd = date.getDay();		// de 0 (dimanche) à 6 (samedi)
-		let jour = listeJours[dd];
-		if ( parametres.opendays[jour] == '1' )
-			return [ true, "", "Le club est ouvert" ]
-		else
-			return [ false, "", "Pas de tournoi ce jour" ]
-	})
-	.on( "change", function() {
-		$("#errdatetournoi").html( "&nbsp;" );
-		let seldate = $("#datetournoi").val();
-		console.log( "change", seldate );
-		// test club ouvert
-		if ( seldate in calendrier ) {
-			let special = calendrier[seldate];
-			$("#errdatetournoi").html( "<p style='color:red'><b>"+special.obs+"</b></p>" );
-			if (special.etat == 0) {
-				$("#section_inscription").hide();
-				return;
-			}
+		let headHtml = '<tr>';
+		for ( let i = 0; i < 7; i++ ) {
+			headHtml += '<th>'+dayLabels[i]+'</th>';
 		}
-		selectTournoi( seldate );
+		headHtml += '</tr>';
+		
+		this.container.innerHTML = `
+			<div class="datepicker">
+				<div class="dp-header"><span class="dp-title">${title}</span></div>
+				<table>
+					<thead>${headHtml}</thead>
+					<tbody>${rowsHtml}</tbody>
+				</table>
+			</div>
+		`;
+
+		this.#bindEvents();
+	}
+
+	#bindEvents() {
+		this.container.querySelectorAll('.dp-day:not(.disabled)').forEach(el => {
+			el.addEventListener('click', () => {
+				this.selectedDate = new Date(el.dataset.date);
+				this.#render();
+				this.onSelect(this.selectedDate);
+			});
+		});
+	}
+}
+
+document.addEventListener('DOMContentLoaded', function() {		// sélection date tournoi
+	const host = document.getElementById('datetournoi');
+
+	const datetournoi = new LimitedWeeksDatePicker(host, {
+		weeks: parametres.maxweeks+1,
+		dayStatus: function (date) {
+			let datjour = formatISO(date);
+			if ( datjour in calendrier ) {
+				let special = calendrier[datjour];
+				if (special.etat > 0)
+					return { selectable: true, className: "dayopen", title: special.obs };
+				else
+					return { selectable: true, className: "dayclose", title: special.obs };
+			}
+
+			let dd = date.getDay();		// de 0 (dimanche) à 6 (samedi)
+			let jour = listeJours[dd];
+			if ( parametres.opendays[jour] == '1' )
+				return { selectable: true, className: "", title: "Le club est ouvert" };
+			else
+				return { selectable: false, className: "", title: "Pas de tournoi ce jour" };
+		},
+		onSelect: function (date) {
+			let seldate = formatISO(date);
+			$("#errdatetournoi").html( "<p>&nbsp;</p>" );
+			console.log( "change", seldate );
+			// test club ouvert
+			if ( seldate in calendrier ) {
+				let special = calendrier[seldate];
+				$("#errdatetournoi").html( "<p style='color:red'><b>"+special.obs+"</b></p>" );
+				if (special.etat == 0) {
+					$("#section_inscription").hide();
+					return;
+				}
+			}
+			if ( userid > 0 )
+				selectTournoi( seldate );
+			else
+				$("#errdatetournoi").html( "<p style='color:red'>Connectez-vous !</p>" );
+		}
 	});
+
+	// sélection initiale sur aujourd'hui, comme .datepicker('setDate','today')
+	datetournoi.setDate(datetournoi.today);
 });
 
 // mécanisme détectant une page expirée
@@ -276,7 +417,7 @@ document.addEventListener('visibilitychange', function (event) {
 	</div>
 	</div>
 	<div id="errdatetournoi"></div>
-	<div id="msgdatetournoi"></div>
+	<!-- <div id="msgdatetournoi"></div> -->
 	
 	<div id="section_inscription" class="framestyle" hidden>
 	<table style="width:100%;max-width:350px;margin:auto;"><tbody>
@@ -290,8 +431,7 @@ document.addEventListener('visibilitychange', function (event) {
 	<p id="msgtabinscrits">&nbsp;</p>
 	</div>
 	
-	<?php
-	if ( $userid > 0 ) { ?>
+	<?php if ( $userid > 0 ) { ?>
 		<div id="menu_noninscrit" hidden>
 		<p>Vous n'êtes pas inscrit à ce tournoi !</p>
 		<p>Vous pouvez contacter un joueur en recherche de partenaire en cliquant sur son nom</p>
@@ -309,14 +449,14 @@ document.addEventListener('visibilitychange', function (event) {
 		<div id="section_clavier" hidden>
 		<div id="clavier">clavier</div>
 		</div>
-	
 	<?php } ?>
+	
 	</td></tr></tbody></table>
 	</div>
-	<p>&nbsp;</p>
+	<p style="margin: 0";>&nbsp;</p>
 	<div>
-	<?php
-	if ( $userid > 0 ) { ?>
+	
+	<?php if ( $userid > 0 ) { ?>
 		<h2>Annuaire des joueurs actifs</h2>
 		<div id="section_annuaire" hidden>
 		<p><button class="myButton" onclick="$('#section_annuaire').toggle();">Masque annuaire</button></p>
@@ -346,17 +486,17 @@ document.addEventListener('visibilitychange', function (event) {
 		</div>
 		<p><button class="myButton" onclick="$('#section_perso').toggle(); elmnt = document.getElementById('section_perso'); elmnt.scrollIntoView();">Affiche/Masque mes données</button></p>
 		
-		<p>&nbsp;</p>
+		<p style="margin: 0";>&nbsp;</p>
 		<p><button class="mButton" onclick="loguserout()">Se déconnecter</button></p>
 
 	<?php } else { ?>
-		
 		<p>L'accès aux informations de contact des joueurs pré-inscrits est réservé aux joueurs identifiés.</p>
 		<p>Connectez-vous pour vous identifier,</br>vous pourrez ainsi vous pré-inscrire, rechercher un partenaire, consulter l'annuaire du club ...</p>
 		<p><button class="myButton" onclick="loguserin()">Se connecter</button></p>
 	<?php } ?>
+	
 	</div>
-	<p id='msgerr'>&nbsp;</p>
+	<!-- <p id='msgerr'>&nbsp;</p> -->
 
 	<?php
 	if ( isset($_GET['noreturn']) ) {

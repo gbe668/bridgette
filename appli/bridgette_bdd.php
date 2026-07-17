@@ -383,7 +383,7 @@ class TypesTournois {
 	'6'		=>array( 6, 6, 5, 5, 0, 0, 0,$t_howell, 5,	"Howell 6 paires avec 3 tables, %np% positions, partage des donnes à la dernière position"),
 	'7'		=>array( 7, 7, 3, 7, 0, 8, 0,$t_howell, 7,	"Howell 7 paires avec 4 tables incomplètes, %np% positions, table relais variable en fonction du numéro de tour"),
 	'8'		=>array( 8, 8, 3, 7, 0, 0, 0,$t_howell, 7,  "Howell 8 paires avec 4 tables, %np% positions"),
-	'32'	=>array( 9, 9, 3, 8, 0,10, 0,$t_howell, 8,  "Howell 9 paires avec 5 tables incomplètes, %np% positions"),
+	'32'	=>array( 9, 9, 3, 9, 0,10, 0,$t_howell, 9,  "Howell 9 paires avec 5 tables incomplètes, %np% positions"),
 	'33'	=>array(10,10, 3, 9, 0, 0, 0,$t_howell, 9,  "Howell 10 paires avec 5 tables, %np% positions"),
 	'34'	=>array(11,12, 3, 9, 0,12, 0,$t_howell, 9,  "Howell 11 paires avec 6 tables incomplètes, %np% positions"),	// ajout 27/08/2025
 	'35'	=>array(12,12, 3, 9, 0, 0, 0,$t_howell, 9,  "Howell 12 paires avec 6 tables complètes, %np% positions"),	// ajout 27/08/2025
@@ -1544,7 +1544,7 @@ function createTournoi() {			// return idtournoi, 0 si erreur
 			$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat ) VALUES ( '$tt', '$code', 0, 0, '$idtype', '$st_phase_init' );";
 			if ( $dbh->query( $sql ) ) {
 				$id = $dbh->lastInsertId();
-				_logevent($dbh, "createTournoi ".$tt." id ".$id);
+				//_logevent($dbh, "createTournoi ".$tt." id ".$id);
 			}
 			else $id = 0;
 		}
@@ -1558,7 +1558,7 @@ function createTournoi() {			// return idtournoi, 0 si erreur
 function startInscriptionTournoi( $id ) { // Démarrage tournoi pré-inscription
 	global $tab_tournois, $st_phase_init;
 	$dbh = connectBDD();
-	_logevent($dbh, "startInscriptionTournoi ".$id);
+	//_logevent($dbh, "startInscriptionTournoi ".$id);
 	
 	// changement d'état du tournoi
 	$sql = "UPDATE $tab_tournois SET etat = '$st_phase_init' where id = '$id';";
@@ -1571,18 +1571,17 @@ function createInscriptionTournoi( $datetournoi ) { // Création tournoi pré-in
 	// Si un tournoi est en cours pour le même jour, on crée un nouveau tournoi de préinscription
 	// 	cas d'un marathon où les joueurs peuvent s'inscrire pour le tournoi suivant le même jour
 	// 	alors que le tournoi en cours n'est pas terminé
-	global $tab_tournois, $tab_events, $def_type_mitchell;
+	global $tab_tournois, $tab_events, $tab_pairesNS, $tab_pairesEO, $tab_joueurs, $def_type_mitchell;
 	global $st_preinscription, $st_phase_init, $st_phase_jeu, $st_phase_fini, $max_tables;
 
 	$dbh = connectBDD();
-	$dbh->query("LOCK TABLES $tab_tournois WRITE, $tab_events WRITE;");
+	$dbh->query("LOCK TABLES $tab_tournois WRITE, $tab_events WRITE, $tab_pairesNS WRITE, $tab_pairesEO WRITE, $tab_joueurs WRITE;");
 	
 	// vérification d'absence de tournoi non clos avant création effective
 	$sql = "SELECT count(*) FROM $tab_tournois where tournoi='$datetournoi' and (etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini');";
 	$nbl = $dbh->query($sql)->fetchColumn();
 	if ( $nbl > 0 ) {	// il existe un tounoi non clos en cours
 		$idt = 0;
-		$lignes = [];
 		$ret = "<p><span style='color:red'>Attention, il existe un tounoi en cours !</br>La pré-inscription est possible pour un nouveau tournoi qui ne pourra commencer qu'après la clôture du tournoi en cours !</span></p>";
 	}
 	else $ret = "";
@@ -1597,25 +1596,29 @@ function createInscriptionTournoi( $datetournoi ) { // Création tournoi pré-in
 				VALUES ( '$datetournoi', '$code', 0, 0, $def_type_mitchell, $st_preinscription );";
 			$dbh->query( $sql );
 			$idt = $dbh->lastInsertId();
-			_logevent($dbh, "createInscriptionTournoi ".$datetournoi." id ".$idt);
+			//_logevent($dbh, "createInscriptionTournoi ".$datetournoi." id ".$idt);
+			$ret .= "<p>Création tournoi pré-inscription</p>";
+			$lignes = [];
 			break;
 		}
 		case 1: {	// déjà créé
 			$sql = "SELECT id FROM $tab_tournois where tournoi='$datetournoi' AND etat = '$st_preinscription';";
 			$row = $dbh->query( $sql )->fetch(PDO::FETCH_ASSOC);
 			$idt = $row['id'];
+			$ret .= "<p>Tournoi pré-inscription déjà créé</p>";
+			// Tableau des paires pré-inscrites (paires complètes ou à compléter)
+			$lignes = _getlignes($dbh, $idt);
 			break;
 		}
 		default: {	// Erreur
 			$idt = 0;
 			$ret .= "<p>Erreur, $nbl tournois pré-inscription</p>";
+			$lignes = [];
 			break;
 		}
 	}
 	$dbh->query("UNLOCK TABLES;");
 
-	// Tableau des paires pré-inscrites (paires complètes ou à compléter)
-	$lignes = _getlignes($dbh, $idt);
 	$dbh = null;
 	return json_encode( array( 'idtournoi'=> $idt, 'ret'=>$ret, 'lignes'=>$lignes ) );
 }
@@ -1907,7 +1910,7 @@ function start_mitchell( $idt, $paquet ) {	// phase jeu
 	//$sequence = "1_".$endofseq;		// fin du 1er tour
 	
 	$dbh = connectBDD();
-	_logevent($dbh, "startmitchell ".$idt." paq=".$paquet);
+	//_logevent($dbh, "startmitchell ".$idt." paq=".$paquet);
 	
 	$sql = "UPDATE $tab_tournois SET tournoi = '$start', etat = '$st_phase_jeu', paquet = '$paquet', ndonnes = '$ndonnes', njouees = '$njouees', notour = 1, startseq = '$startseq', endofseq = '$endofseq' where id = '$idt';";
 	$res = $dbh->query($sql);
@@ -1943,7 +1946,7 @@ function start_howell( $idt, $paquet ) {	// phase jeu
 	
 	// calcul des dépendances
 	$njouees = $t[ 'npositions' ] * $paquet;
-	$ndonnes = $njouees; //($t['ndonnes']/$t['paquet']) * $paquet;	// ??????????????????????
+	$ndonnes = $ntables*$paquet;		// en circulation //($t['ndonnes']/$t['paquet']) * $paquet;	// ??????????????????????
 	
 	$firstduree = ( $paquet * ($parametres['dureedonne'] + $parametres['dureediagrammes']) + $parametres['dureeinitiale'] ) * 60;	// en secondes
 	$date = new DateTime();
@@ -1952,7 +1955,7 @@ function start_howell( $idt, $paquet ) {	// phase jeu
 	//$sequence = "1_".$endofseq;		// fin du 1er tour
 	
 	$dbh = connectBDD();
-	_logevent($dbh, "starthowell ".$idt." paq=".$paquet);
+	//_logevent($dbh, "starthowell ".$idt." paq=".$paquet);
 	
 	$sql = "UPDATE $tab_tournois SET tournoi = '$start', etat = '$st_phase_jeu', paquet = '$paquet', ndonnes = '$ndonnes', njouees = '$njouees', notour = 1, startseq = '$startseq', endofseq = '$endofseq' where id = '$idt';";
 	$res = $dbh->query($sql);
