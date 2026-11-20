@@ -5,7 +5,11 @@ declare(strict_types=1);
 /*
 Revised code by Dominick Lee
 Original code derived from "Run your own PDO PHP class" by Philip Brown
-Modernized for PHP 8.5
+Source : https://github.com/dominicklee/PHP-MySQL-Sessions
+Licence : GNU Affero General Public License, version 3 (voir ../COPYING.AGPL).
+Version adaptée par Bruno Coiffier, notamment avec l’aide de l’IA,
+pour les versions récentes de PHP et les besoins de Bridgette.
+Mention des adaptations mise à jour le 20 novembre 2026.
 */
 
 class Database

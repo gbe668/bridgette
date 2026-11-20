@@ -19,6 +19,7 @@ $_SESSION['withback'] = 0;	// retour interdit
 	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/bridge63.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -27,44 +28,7 @@ var relpgm = "<?php echo $relpgm; ?>";
 var relimg = "<?php echo $relimg; ?>";
 
 function clickValidation() {
-	$("#section_validation").addClass( "section_invisible" );
-	$("#section_suivante").removeClass( "section_invisible" );
-	
-	// Enregistrement de la donne jouée
-	var dataString = '/insertdonne.php?idtournoi=' + idtournoi + '&donne=' + realdonne.etui;
-	dataString += '&ns=' + numNS + '&eo=' + numEO;
-	dataString += '&contrat=' + encodeURI(realdonne.contrat);
-	dataString += '&jouepar=' + realdonne.declarant;
-	dataString += '&entame='  + realdonne.entame;
-	dataString += '&resultat=' + realdonne.res;
-	dataString += '&points=' + realdonne.points;
-	dataString += '&token=' + token;
-	console.log( dataString );
-	$.get(dataString, "", function(strjson) {
-		$('#validok').html( strjson.display );
-		okkk = strjson.ok;
-		if ( strjson.ok > 0 ) {
-			// affichage scores, entrée diagrammes, ...
-			setTimeout(function() { goto64() }, 500);
-		}
-		if ( strjson.ok == 0 ) {
-			// enregistrement déjà réalisé, récupération des bons compteurs
-			$.get( "/getparmtable.php", { numtable:numNS, token:token }, function(strjson) {
-				cpt = strjson.cpt;
-				donne = strjson.donne;
-				setTimeout(function() { goto64(); }, 1000);
-			},"json");
-		}
-		if ( strjson.ok < 0 ) {
-			// tournoi terminé
-			setTimeout(function() { gotoindex() }, 1000);
-		}
-	},"json")
-	.done( function() {} )
-	.fail( function( jqxhr,settings,ex ) {
-		$(validok).html('Erreur: '+ ex + "</br>" + dataString + "</br>Faire une copie d'écran pour Bruno</br><b>Rappuyez sur le bouton de validation.</b>" ); 
-		$("#section_validation").removeClass( "section_invisible" );
-	} );
+	validationDonne({ url: "/insertdonne.php", token: token, delay: 500, log: true, encodeContract: true, onResponse: function(result) { okkk = result.ok; }, errorTarget: validok });
 };
 
 function gotoindex() {
@@ -265,7 +229,7 @@ document.addEventListener('visibilitychange', function (event) {
 			if ( $teston == 2 ) print "<p><button onClick='autoValidation()'>auto</button></p>";
 		}
 		else {
-			setCnxFin( $numNS );
+			renderCnxFin( $numNS );
 			print "<p>&nbsp;</p><p>La table $numNS a terminé le tournoi.</p>";
 			print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</br>de la table</button></p>';
 		}

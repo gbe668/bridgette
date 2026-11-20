@@ -12,11 +12,12 @@ function getlastclosedtournoi() {
 	global $tab_tournois, $st_closed, $parametres;
 	global $nbl, $idtournois, $datetournois, $idtypes, $genres, $st_typetournoi;
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ?;";
+	$sqlBound = [$st_closed];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat = '$st_closed' order by tournoi desc;" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_tournois where etat = ? order by tournoi desc;", [$st_closed]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$idlast = $row[ 'id' ];
 	}
@@ -28,15 +29,20 @@ function getNbPairePreinscrites( $idt ) {
 	global $tab_pairesNS, $tab_pairesEO;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt'";
-	$nbns = $dbh->query($sql)->fetchColumn();
+	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = ?";
 	
-	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt'";
-	$nbeo = $dbh->query($sql)->fetchColumn();
+	$sqlBound = [$idt];
+	$nbns = securityQuery($dbh, $sql, $sqlBound)->fetchColumn();
+	
+	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = ?";
+	
+	$sqlBound = [$idt];
+	$nbeo = securityQuery($dbh, $sql, $sqlBound)->fetchColumn();
 
 	$dbh = null;
 	return $nbns+$nbeo;
 };
+
 ?>
 
 <!DOCTYPE HTML>
@@ -49,6 +55,7 @@ function getNbPairePreinscrites( $idt ) {
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -60,31 +67,31 @@ var genre = t_unknown;
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function logout() {
 	var nextstring = "logout.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function setpassword() {
 	var nextstring = "setpassword.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function admin() {
 	var nextstring = "logadmin.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto26() {	// tournois pré-inscriptions
 	var nextstring = "bridge26.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto30() {	// gestion joueurs
 	var nextstring = "bridge30.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto36() {	// paramétrage
 	var nextstring = "bridge36.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function createtournoi() {
 	console.log( "createtournoi" );
@@ -113,31 +120,31 @@ function effacetournoi() {
 };
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto41() {
 	var nextstring = "bridge41.php?idtournoi=" + idtournoi + "&w=" + window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto43() {		// tableau de bord
 	var nextstring = "bridge43.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto44() {		// clôture du tournoi
 	var nextstring;
 	if ( genre == t_howell ) {
 		nextstring = "howell44.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-		location.replace( nextstring );
+		bridgetteNavigate( nextstring );
 	}
 	if ( genre == t_mitchell ) {
 		nextstring = "mitch44.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-		location.replace( nextstring );
+		bridgetteNavigate( nextstring );
 	}
 };
 function goto44mails() {
 	if ( idlastclosed > 0 ) {
 		var nextstring = "bridge44mails.php?idtournoi=" + idlastclosed + "&w=" +  window.innerWidth;
-		location.replace( nextstring );
+		bridgetteNavigate( nextstring );
 	}
 	else {
 		$("#msg").text( "Il n'existe pas de tournoi précédent !" );
@@ -213,6 +220,7 @@ function clickAnnulSuppTournoi() {
 			print "<p><button class='myBigButton' onclick='startInscriptionTournoi()'>Définition des tables</button></p>";
 		}
 		else {
+			echo '<script>jQuery.ajax({url:"purgepreinscriptions.php",type:"POST"}).fail(function(){alert("Nettoyage des anciennes pré-inscriptions refusé. Rechargez la page.");});</script>';
 			print "<h2>Aujourd'hui " . strtoday() . "</h2>";
 			print '<h3>Pas de tournoi en préparation,</br>en cours ou en clôture</h2>';
 			print "<p><button class='myBigButton' onclick='createtournoi()'>Création tournoi du jour</button></p>";

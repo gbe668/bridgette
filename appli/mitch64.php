@@ -29,6 +29,7 @@ $_SESSION['back64'] = $back64;
 	<script src="js/bridge65.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -39,30 +40,30 @@ var back64 = "<?php echo $back64; ?>";
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto62() {
 	var nextstring = "mitch62.php?idtournoi=" + idtournoi + "&table=" + numNS;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto63back() {
 	var nextstring = "mitch63.php?idtournoi=" + idtournoi;
 	nextstring += '&table=' + numNS + '&back=' + base64_origine;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto63() {
 	var nextstring = "mitch63.php?idtournoi=" + idtournoi;
 	nextstring += '&table=' + numNS;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto65() {
 	var nextstring = "mitch65.php?idtournoi=" + idtournoi;
 	nextstring += '&table=' + numNS + '&donne=' + donne;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto66() {
 	var nextstring = "bridge66.php?idtournoi=" + idtournoi+ "&w=" + window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 $(document).on( "click", "td.seletui", function(event) {
 	var id = $(this).parent().attr("id");
@@ -204,7 +205,7 @@ document.addEventListener('visibilitychange', function (event) {
 			print htmlResultatPaquet($idtournoi, $numNS, $oldEO );
 			$enableswipe = 1;
 			
-			setCnxFin( $numtable );
+			renderCnxFin( $numtable );
 			print "<p>La table $numtable a terminé le tournoi.</p>";
 			print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</button></p>';
 			print "<p><button class='mySmallButton' onclick='gotoindex()'>Retour page d'accueil</button></p>";

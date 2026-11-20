@@ -18,46 +18,47 @@ if( !isDirecteur() ){
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function closetournoi() {
 	$.get( "closetournoi.php?", {idtournoi:idtournoi}, function(strjson) {
 		if ( strjson.res == st_closed ) {
 			$("#msg").text("Tournoi clôturé.");
 			var nextstring = "bridge44mails.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-			location.replace( nextstring );
+			bridgetteNavigate( nextstring );
 		}
 		else $("#msg").text("Tournoi non trouvé ! déjà supprimé ?");
 	},"json");
 };
 function reload() {
 	var nextstring = "mitch44.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto45c() {		// correction d'une donne
 	var nextstring = "mitch45c.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto45m() {		// moyenne générale
 	var nextstring = "mitch45m.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto45s() {		// suppression d'une donne
 	var nextstring = "mitch45s.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto47() {		// Entrer les résultats manquants d'une table
 	var nextstring = "bridge47.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto48() {		// Entrer les résultats manquants d'une donne
 	var nextstring = "bridge48.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function cdeplus() {
 	$("#afficheplus").addClass( "section_invisible" );

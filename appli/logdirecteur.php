@@ -1,40 +1,16 @@
 <?php
-require("configuration.php");
-require("bridgette_bdd.php");
-
-if ( isset($_POST['pseudo']) ){
-	$pseudo = stripslashes($_REQUEST['pseudo']);
-	$pseudo = htmlspecialchars($pseudo);
-	
-	$password = stripslashes($_REQUEST['password']);
-	$password = htmlspecialchars($password);
-	$encoded  = hash('sha256', $password);
-	
-	$dbh = connectBDD();
-	// test login existe
-	$sql = "SELECT count(*) FROM `$tab_directeurs` WHERE pseudo='$pseudo' and password='$encoded';";
-	$res = $dbh->query($sql);
-	if($res->fetchColumn() > 0){
-		// login connu, test fonction
-		$sql = "SELECT count(*) FROM `$tab_directeurs` WHERE pseudo='$pseudo' and password='$encoded' and droits='directeur';";
-		$res = $dbh->query($sql);
-		if($res->fetchColumn() > 0) {
-			$_SESSION['pseudo'] = $pseudo;
-			$_SESSION['fonction'] = "directeur";
-			header("Location: bridge40.php");
-			$message = "OK.";
-		}
-		else {
-			$message = "Ce n'est pas un compte de directeur de tournoi.";
-		}
-	}
-	else {
-		$message = "Le pseudo ou le mot de passe est incorrect.";
-	}
-	$dbh = null;
+require("configuration.php"); require("bridgette_bdd.php");
+if (isset($_POST['pseudo'])) {
+    $pseudo = is_string($_POST['pseudo']) ? htmlspecialchars(stripslashes($_POST['pseudo'])) : '';
+    $row = bridgettePasswordAccount(connectBDD(), $tab_directeurs, 'pseudo', $pseudo, $_POST['password'] ?? null, 'directeur');
+    if ($row) {
+        session_regenerate_id(true);
+        $_SESSION['auth_club'] = $prefix; $_SESSION['pseudo'] = $pseudo; $_SESSION['fonction'] = 'directeur';
+        
+        header('Location: bridge40.php'); $message = 'OK.';
+    } else $message = 'Le pseudo, le mot de passe ou le rôle est incorrect.';
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 
@@ -45,16 +21,17 @@ if ( isset($_POST['pseudo']) ){
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function admin() {
 	var nextstring = "logadmin.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 
@@ -68,7 +45,7 @@ function admin() {
 	if( $site == 2 ) print "<p>Site de démonstration</br>Pseudo: directeur</br>Mot de passe: bridgette</p>";
 	?>
 
-	<form action="" method="post" name="login">
+	<form action="" method="post" name="login"><?php securityCsrfField(); ?>
 	<p><input type="text" class="box-input" name="pseudo" id="pseudo" placeholder="Pseudo directeur" required ></p>
 	<p><input type="password" class="box-input" name="password" placeholder="Mot de passe" required ></p>
 	

@@ -14,9 +14,10 @@ $droits = array();
 
 $dbh = connectBDD();
 $sql = "SELECT count(*) FROM $tab_directeurs;";
-$res = $dbh->query($sql);
+$sqlBound = [];
+$res = securityQuery($dbh, $sql, $sqlBound);
 $nbl = $res->fetchColumn();
-if ( $nbl > 1 ) { 	// masque zorglub
+if ( $nbl > 0 ) {
 	$sth = $dbh->query( "SELECT * FROM $tab_directeurs;" );
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$nbl--;

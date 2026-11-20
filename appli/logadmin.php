@@ -1,30 +1,15 @@
 <?php
-require("configuration.php");
-require("bridgette_bdd.php");
-
-	if ( isset($_POST['pseudo']) ){
-		$pseudo = stripslashes($_REQUEST['pseudo']);
-		$pseudo = htmlspecialchars($pseudo);
-		
-		$password = stripslashes($_REQUEST['password']);
-		$password = htmlspecialchars($password);
-		$encoded  = hash('sha256', $password);
-		
-		$dbh = connectBDD();
-		$sql = "SELECT count(*) FROM `$tab_directeurs` WHERE pseudo='$pseudo' and password='$encoded' and droits='admin';";
-		$res = $dbh->query($sql);
-		if($res->fetchColumn() == 1){
-			$_SESSION['pseudo'] = $pseudo;
-			$_SESSION['fonction'] = "admin";
-			logevent("logadmin");
-			header("Location: admin.php");
-			$message = "OK.";
-		}
-		else {
-			$message = "Vous n'êtes pas administrateur.";
-		}
-		$dbh = null;
-	}
+require("configuration.php"); require("bridgette_bdd.php");
+if (isset($_POST['pseudo'])) {
+    $pseudo = is_string($_POST['pseudo']) ? htmlspecialchars(stripslashes($_POST['pseudo'])) : '';
+    $row = bridgettePasswordAccount(connectBDD(), $tab_directeurs, 'pseudo', $pseudo, $_POST['password'] ?? null, 'admin');
+    if ($row) {
+        session_regenerate_id(true);
+        $_SESSION['auth_club'] = $prefix; $_SESSION['pseudo'] = $pseudo; $_SESSION['fonction'] = 'admin';
+        logevent('logadmin');
+        header('Location: admin.php'); $message = 'OK.';
+    } else $message = 'Le pseudo, le mot de passe ou le rôle est incorrect.';
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -36,12 +21,13 @@ require("bridgette_bdd.php");
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 
@@ -56,7 +42,7 @@ function gotoindex() {
 	<h2>Identifiez-vous</h2>
 	<p>&nbsp;</p>
 
-	<form action="" method="post" name="login">
+	<form action="" method="post" name="login"><?php securityCsrfField(); ?>
 	<p><input type="text" class="box-input" name="pseudo" id="pseudo" placeholder="Pseudo administrateur" required ></p>
 	<p><input type="password" class="box-input" name="password" placeholder="Mot de passe" required ></p>
 	

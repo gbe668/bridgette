@@ -22,6 +22,7 @@ $screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -30,18 +31,18 @@ var idtournoi, genre;
 var t_mitchell = 1;
 var t_howell = 2;
 
-var ntables, npositions;
+var ntables, npositions, npaquets;
 var maxpaquet, paquet;
 var dureedonne, dureediagrammes, dureeinitiale;		// exprimées en secondes
 var finseq;
 
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto41() {
 	var nextstring = "bridge41.php?idtournoi="+idtournoi + "&w="+window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto43() {
 	var nextpage = "bridge43.php?idtournoi=" + idtournoi + "&w="+window.innerWidth;
@@ -49,7 +50,7 @@ function goto43() {
 		//var nextpage = "howell43.php?idtournoi=" + idtournoi + "&w="+window.innerWidth;
 		$.get( "starthowell.php", {idtournoi:idtournoi, paquet:paquet}, function() {
 			$("#msgerr").text( "Enregistrement terminé." );
-			location.replace( nextpage );
+			bridgetteNavigate( nextpage );
 		});
 	}
 	else {
@@ -57,7 +58,7 @@ function goto43() {
 		//var nextpage = "mitch43.php?idtournoi=" + idtournoi + "&w="+window.innerWidth;
 		$.get( "startmitchell.php", {idtournoi:idtournoi, paquet:paquet}, function() {
 			$("#msgerr").text( "Enregistrement terminé." );
-			location.replace( nextpage );
+			bridgetteNavigate( nextpage );
 		});
 	}
 };
@@ -71,7 +72,7 @@ function changepaquet( valeur ) {
 		paquet = newpaquet;
 		let njouees = npositions * paquet;
 		let ndonnes = ntables * paquet;
-		if ( genre == t_howell ) ndonnes = (ntables-1) * paquet;//= njouees;
+		if ( genre == t_howell ) ndonnes = npaquets * paquet;
 		
 		// recalcul heure de fin
 		firstduree	= paquet * (dureedonne + dureediagrammes) + dureeinitiale;	// en secondes
@@ -160,9 +161,11 @@ function changepaquet( valeur ) {
 	<p><button class="mySmallButton" onclick="goto40()">Retour page direction de tournoi</button></p>
 	
 	<script>
+	idtype		= parseInt( "<?php echo $idtype; ?>" );
 	idtournoi	= parseInt( "<?php echo $idtournoi; ?>" );
 	ntables		= parseInt( "<?php echo $ntables; ?>" );
 	maxpaquet	= parseInt( "<?php echo $maxpaquet; ?>" );
+	npaquets	= <?php echo (int)($tt['npaquets'] ?? 0); ?>;
 	paquet		= parseInt( "<?php echo $paquet; ?>" );
 	npositions  = parseInt( "<?php echo $npositions; ?>" );
 	genre		= "<?php echo $genre; ?>";

@@ -20,6 +20,7 @@ if( !isFormateur() ){
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<script src="js/bridge65.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -28,7 +29,7 @@ const relimg = "<?php echo $relimg; ?>";
 
 function gotoindex() {
 	var nextstring = "bridgform10.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 

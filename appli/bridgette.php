@@ -17,43 +17,44 @@ else $version = "inconnue";
         <meta name="viewport" content="width=device-width, initial-scale=1">	
         <link rel="stylesheet" href="css/bridgestylesheet.css" />
 		<link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    </head>
+    <?php securityCsrfHead(); ?>
+</head>
 <script>
 function goto20() {
 	var nextstring = "bridge20.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto25() {
 	var nextstring = "bridge25.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto60() {
 	var nextstring = "bridge60.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function gotoformation() {
 	var nextstring = "bridgform10.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function apropos() {
 	var nextstring = "apropos_bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function loguserout() {
 	var nextstring = "loguserout.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function gotobigscreen() {
 	var nextstring = "bigscreen.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 }
 function gotodownloadapk() {
 	var nextstring = "bridge01.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 }
 </script>
 
@@ -85,7 +86,7 @@ function gotodownloadapk() {
 	<p><button class="myBigButton" onclick="goto40()">Organisation du tournoi<br>réservé directeur tournoi</button></p>
 	<p><button class="mySmallButton" onclick='gotoformation()'>Espace formation</button></p>
 	<p><button class="mySmallButton" onclick="apropos()">Mode d'emploi / A propos</button></p>
-	<p>version <a href="apropos_news.php"><?php echo $version; ?></a></p>
+	<p>version <a href="version_news.php"><?php echo $version; ?></a></p>
 	<p><button class='mButton' onclick="gotobigscreen()">Grand écran</button></p>
 	
 	<?php

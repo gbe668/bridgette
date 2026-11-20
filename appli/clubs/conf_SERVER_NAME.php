@@ -1,8 +1,7 @@
 <?php
-// Define database configuration
-define("DB_HOST", "dbhost");
-define("DB_USER", "dbuser");
-define("DB_PASS", "dbpass");
-define("DB_NAME", "dbname");
-define("DB_PORT", 3306 );
-?>
+// Modèle uniquement : copier vers conf_<SERVER_NAME>.php et renseigner localement.
+define('DB_HOST', 'mysql.example.org');
+define('DB_USER', 'A_RENSEIGNER');
+define('DB_PASS', 'A_RENSEIGNER');
+define('DB_NAME', 'A_RENSEIGNER');
+define('DB_PORT', 3306);

@@ -12,11 +12,12 @@ function getclosedtournois() {
 	global $tab_tournois, $st_closed, $parametres;
 	global $nbl, $idtournois, $datetournois, $npairess, $genres, $st_typetournoi;
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ?;";
+	$sqlBound = [$st_closed];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat = '$st_closed' order by tournoi desc, id;" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_tournois where etat = ? order by tournoi desc, id;", [$st_closed]);
 		$nbl = min( $nbl, $parametres['maxt'] );
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
@@ -70,6 +71,7 @@ function displayLignesTournois() {
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="stylesheet" href="css/jquery-ui.css">
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <style>
@@ -85,12 +87,12 @@ function displayLignesTournois() {
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function seltournoi( n ) {
 	$("#msg").text("Chargement en cours ...");
 	var nextstring = "bridge21.php?idtournoi=" + n + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 }
 function existetournoi(dd) {
 	console.log( "datetournoi", dd );

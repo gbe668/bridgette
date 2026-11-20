@@ -1,16 +1,73 @@
-*** GNU General Public License ***
+BRIDG’ETTE — LICENCE ET COMPOSANTS TIERS
 
-Bridg'ette, une application conçue et réalisée pour les clubs de bridge. Bridg'ette permet d'enregistrer le déroulement et les résultats d'un tournoi de bridge de type "Mitchell" ou "Howell". A la fin d'un tournoi, l'application donne les résultats et le classement respectif des paires avec des possibilités d'arbitrage ou de correction de résultats.
+Copyright (C) 2022–2026 Bruno Coiffier
+Contact : bridgette@coiffier.org
 
-Copyright (C) 2022, 2023  Bruno Coiffier
+Dépôt public : https://github.com/gbe668/bridgette
+Ce dépôt n’a pas été actualisé récemment ; son contenu peut différer
+de la version utilisée. Ce lien ne garantit donc pas, à lui seul,
+l’accès aux sources correspondantes de cette version.
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+1. LICENCE DU CODE ORIGINAL DE BRIDG’ETTE
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+Sauf indication contraire, le code original de Bridg’ette est distribué
+sous la GNU General Public License publiée par la Free Software Foundation,
+version 3 ou, à votre choix, toute version ultérieure.
+Identifiant SPDX : GPL-3.0-or-later.
 
-You should have received a copy of the GNU General Public License along with this program. If not, see https://www.gnu.org/licenses/.
+Bridg’ette est un logiciel libre : vous pouvez le redistribuer et/ou
+le modifier dans les conditions de cette licence.
 
-Use PHPMailer, probably the world's most popular code for sending email from PHP! (sic)  PHPMailer is distributed under the [LGPL 2.1](http://www.gnu.org/licenses/lgpl-2.1.html) license.
- Please read [LICENSE](https://github.com/PHPMailer/ PHPMailer/blob/master/LICENSE)  for information on the software availability and distribution.
+Bridg’ette est distribué dans l’espoir qu’il sera utile, mais SANS AUCUNE
+GARANTIE, sans même la garantie implicite de COMMERCIALISATION ou
+D’ADÉQUATION À UN USAGE PARTICULIER. Consultez la licence pour plus de détails.
 
-Use PHP-MySQL-Sessions, the native solution to easily store PHP session data in a MySQL database. PHP-MySQL-Sessions is distributed under the GNU AFFERO GENERAL PUBLIC LICENSE Version 3, 19 November 2007
+Le texte intégral officiel figure dans le fichier COPYING joint au programme :
+https://www.gnu.org/licenses/gpl-3.0.html
+Cette notice ne remplace pas ce texte.
+
+2. COMPOSANTS TIERS
+
+Les composants tiers conservent leurs droits d’auteur, attributions et
+licences respectifs. La licence du code original de Bridg’ette ne les remplace pas.
+
+PHPMailer — envoi des courriels
+Licence : GNU Lesser General Public License, version 2.1.
+Texte intégral : LICENSE.PHPMAILER.
+Projet : https://github.com/PHPMailer/PHPMailer
+Les mentions d’auteur sont conservées dans les fichiers du composant.
+
+PHP-MySQL-Sessions — sessions en base MySQL et classe d’accès à la base
+Projet de Dominick Lee : https://github.com/dominicklee/PHP-MySQL-Sessions
+Licence : GNU Affero General Public License, version 3.
+Texte intégral : COPYING.AGPL.
+Fichiers concernés : src/mysql.sessions.php et src/database.class.php.
+Le gestionnaire initial indique une origine dans « Essential PHP Security »
+de Chris Shiflett ; la classe Database indique une origine dans
+« Run your own PDO PHP class » de Philip Brown.
+Versions modifiées par Bruno Coiffier, notamment avec l’aide de l’IA,
+pour la compatibilité PHP et les besoins de Bridg’ette.
+Les adaptations comprennent le typage, le cycle de connexion, les cookies
+et la maintenance des sessions. Mention mise à jour le 20 novembre 2026.
+
+La combinaison de code GPLv3 et AGPLv3 est prévue par leur article 13.
+Les parties conservent leurs licences respectives ; les obligations AGPL
+d’accès par réseau aux sources correspondantes s’appliquent à l’ensemble
+combiné dans les conditions de cet article. Un lien vers le seul projet
+d’origine ne remplace pas l’accès aux sources de la version modifiée.
+
+Double Dummy Solver (DDS) — analyse des donnes
+Auteurs : Bo Haglund et ses collaborateurs.
+Licence : Apache License, version 2.0.
+Texte intégral : LICENSE.APACHE-2.0.
+https://privat.bahnhof.se/wb758135/index.html
+Adaptation en WebAssembly utilisée par Bridg’ette : travaux proposés
+par Graham Hazel, https://grahamhazel.com/blog/
+Les mentions et conditions propres à cette adaptation doivent également
+être conservées avec les fichiers distribués.
+
+3. SERVICE EXTERNE ASSOCIÉ
+
+Bridge Solver Online — développé par John Goacher.
+Bridg’ette permet d’exporter des donnes pour les analyser avec ce service externe.
+https://mirgo2.co.uk/bridgesolver/

@@ -1,0 +1,8 @@
+RewriteEngine On
+# Wamp local: keep HTTP for loopback hostnames, including an explicit port.
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?$ [NC]
+# Preserve HTTPS enforcement on hosted domains. Accept Apache's native TLS
+# indicator as well as the existing hosting environment indicator.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{ENV:HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

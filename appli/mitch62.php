@@ -31,6 +31,7 @@ else {
 	<link  href="images/favicon.ico" rel="icon" type="image/x-icon">
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<script src="js/bridge62.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -41,26 +42,26 @@ var idtournoi = parseInt( "<?php echo $idtournoi; ?>" );
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function back61() {
 	var nextstring = 'mitch61.php?idtournoi=' + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto62() {
 	var nextstring = "mitch62.php?idtournoi=" + idtournoi + '&table=' + table;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto63() {
 	var nextstring = "mitch63.php?idtournoi=" + idtournoi + '&table=' + table;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function back64() {
-	location.replace( "<?php echo $back; ?>" );
+	bridgetteNavigate( "<?php echo $back; ?>" );
 };
 function goto66() {
 	var nextstring = "bridge66.php?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 
 // mécanisme détectant une page expirée
@@ -192,7 +193,7 @@ document.addEventListener('visibilitychange', function (event) {
 				print "<script>refreshPositions(".$numNS.");</script>";
 			}
 			else {
-				setCnxFin( $numNS );
+				renderCnxFin( $numNS );
 				print "<p>&nbsp;</p><p>La table $numNS a terminé le tournoi.</p>";
 				print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</br>de la table</button></p>';
 			}

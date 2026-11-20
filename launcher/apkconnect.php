@@ -1,13 +1,7 @@
 <?php
-// identification du club
-$prefix = "ttt_";	// trigramme identification du club 
-$tt = time();		// heure connexion
-// autres paramètres à venir ...
-$json = json_encode( array( 'prefix'=>$prefix, 'timex'=>$tt ) );
-$encryption = base64_encode( $json );
-
-// Transfert
-$location = "https://SERVER_NAME/";
-
-echo json_encode( array( 'token'=>$encryption, 'server'=>$location ) );
-?>
+// Exemple Android : adapter ces deux valeurs à l'installation.
+$prefix = 'ttt_';
+$location = 'https://bridge.example.org/appli';
+$token = base64_encode(json_encode(['prefix' => $prefix, 'timex' => time()]));
+header('Content-Type: application/json; charset=utf-8');
+echo json_encode(['token' => $token, 'server' => $location]);

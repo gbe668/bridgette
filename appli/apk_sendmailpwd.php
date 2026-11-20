@@ -2,41 +2,12 @@
 require("configuration.php");
 require("bridgette_bdd.php");
 require("libmailpwd.php");
-
-$login = 0;		// signale une ereur
-
-if ( isset($_GET['mailuser']) ){
-	$usermail = stripslashes($_GET['mailuser']);
-	$usermail = htmlspecialchars($usermail);
-	
-	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM `$tab_joueurs` WHERE email='$usermail';";
-	$res = $dbh->query($sql);
-	if($res->fetchColumn() == 1){
-		//Envoi du mail de réinitialisation
-		$ok = send_mailpwd( $usermail );
-		if ( $ok ) {
-			// Détruire la session.
-			session_destroy();
-			// Redirection vers la page de connexion
-			//header("Location: waitmailpwd.php");
-			$login = 0;
-			$message = "Mail de réinitialisation du mot de passe envoyé.\nConsultez votre messagerie.";
-		}
-		else {
-			$message = "Erreur: le mail n'est pas parti !!!";
-			$login = 5;
-		}
-	}
-	else {
-		$message = "Adresse mail inconnue !";
-		$login = 3;
-	}
-	$dbh = null;
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+try {
+    passwordResetRequest(connectBDD(), $prefix, $tab_joueurs, $_GET['mailuser'] ?? null, 'send_mailpwd');
+} catch (Throwable $e) {
+    error_log('Bridgette reset request failed: '.get_class($e));
 }
-else {
-	$message = "Adresse mail manquante.";
-	$login = 1;
-}
-echo json_encode( array( 'login'=>$login, 'message'=>$message ) );
-?>
+// Installed Volley clients expect these fields and accept login=0.
+echo json_encode(['login' => 0, 'message' => PASSWORD_RESET_MESSAGE]);

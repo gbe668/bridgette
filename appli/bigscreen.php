@@ -37,6 +37,7 @@ else {
 		}
 	</style>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -54,7 +55,7 @@ var sizpix = parseInt( "<?php echo $parametres['sizpix']; ?>" );			// largeur te
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 
 var audiofindonne = 0;

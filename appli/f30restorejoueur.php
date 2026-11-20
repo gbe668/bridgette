@@ -12,8 +12,9 @@ function restoreJoueur( $idj ) {
 	global $tab_joueurs;
 	if ( $idj ) {
 		$dbh = connectBDD();
-		$sql = "UPDATE $tab_joueurs SET datesupp=0 where id='$idj';";
-		$sth = $dbh->query( $sql );
+		$sql = "UPDATE $tab_joueurs SET datesupp=0 where id=?;";
+		$sqlBound = [$idj];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$result['success'] = 1;
 		$result['msg'] = "Joueur restauré.";
 		$dbh = null;

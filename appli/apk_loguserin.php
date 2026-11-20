@@ -1,64 +1,47 @@
 <?php
-require("configuration.php");
-require("bridgette_bdd.php");
-
-$login = 0;		// signale une erreur
-$userid = 0;
-$username = "anonyme";
-
-if ( isset($_GET['mailuser']) ){
-	$usermail = stripslashes($_GET['mailuser']);
-	$usermail = htmlspecialchars($usermail);
-	if ( isset($_GET['password']) ){
-		$password = stripslashes($_GET['password']);
-		$password = htmlspecialchars($password);
-		$encodpwd  = hash('sha256', $password);
-		
-		$dbh = connectBDD();
-		$sql = "SELECT count(*) FROM `$tab_joueurs` WHERE email='$usermail';";
-		$res = $dbh->query($sql);
-		$n = $res->fetchColumn();
-		if($n < 1){
-			$message = "Adresse mail inconnue !";
-			$login = 3;
-		}
-		if($n == 1){
-			// l'adresse existe et est unique
-			$sql = "SELECT count(*) FROM `$tab_joueurs` WHERE email='$usermail' and password='$encodpwd';";
-			$res = $dbh->query($sql);
-			if($res->fetchColumn() == 1){
-				// ok
-				$sql = "SELECT * FROM `$tab_joueurs` WHERE email='$usermail' and password='$encodpwd';";
-				$res = $dbh->query($sql);
-				$row = $res->fetch(PDO::FETCH_ASSOC);
-				$userid = $row['id'];
-				$username = $row['prenom'] . " " . $row['nom'];
-				$_SESSION['userid'] = $userid;
-				$_SESSION['username'] = $username;
-				$_SESSION['usermail'] = $usermail;
-				//header("Location: bridgette.php");
-				$message = "ok";
-				$login = 0;		// pas d'erreur
-			}
-			else {
-				$message = "Mot de passe incorrect !";
-				$login = 4;
-			}
-		}
-		if($n > 1){
-			$message = "Erreur: $n joueurs avec la même adresse mail !";
-			$login = 3;
-		}
-		$dbh = null;
-	}
-	else {
-		$message = "Mot de passe manquant !";
-		$login = 2;
-	}	
+require("configuration.php"); require("bridgette_bdd.php");
+// POST form body for V3; GET remains available during the installed APK migration.
+// Never fall back to URL credentials when a POST body is missing or invalid.
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if (!in_array($method, ['GET', 'POST'], true)) {
+    header('Allow: GET, POST');
+    http_response_code(405);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['login'=>1, 'message'=>'Méthode non autorisée.', 'userid'=>0, 'username'=>'anonyme', 'club'=>$titre]);
+    exit;
 }
-else {
-	$message = "Adresse mail manquante.";
-	$login = 1;
+$credentials = $method === 'POST' ? $_POST : $_GET;
+$rememberDevice = $method === 'POST' && ($credentials['remember_device'] ?? null) === '1';
+if ($rememberDevice) securityAndroidDeviceTransport();
+$deviceToken = null;
+$login = 1; $userid = 0; $username = 'anonyme'; $message = 'Adresse mail manquante.';
+if (isset($credentials['mailuser'])) {
+    $login = 2; $message = 'Mot de passe manquant !';
+    if (isset($credentials['password'])) {
+        $email = is_string($credentials['mailuser']) ? htmlspecialchars(stripslashes($credentials['mailuser'])) : '';
+        $db = connectBDD();
+        $rows = securityQuery($db, "SELECT * FROM `$tab_joueurs` WHERE datesupp = 0 AND email = ?", [$email])->fetchAll(PDO::FETCH_ASSOC);
+        $login = 3; $message = 'Adresse mail inconnue ou ambiguë !';
+        if (count($rows) === 1) {
+            $row = bridgettePasswordAccount($db, $tab_joueurs, 'email', $email, $credentials['password']);
+            $login = 4; $message = 'Mot de passe incorrect !';
+            if ($row) {
+                try {
+                    if ($rememberDevice) $deviceToken = securityAndroidDeviceIssue($db, $prefix, $row);
+                    $userid = securityAndroidIssue($db, $row['id'], $prefix);
+                    $username = $row['prenom'].' '.$row['nom'];
+                    $login = 0; $message = 'ok';
+                } catch (Throwable $error) {
+                    if (!$rememberDevice) throw $error;
+                    http_response_code(503);
+                    $deviceToken = null; $userid = 0;
+                    $login = 5; $message = 'Connexion temporairement indisponible. Réessayez.';
+                }
+            }
+        }
+    }
 }
-echo json_encode( array( 'login'=>$login, 'message'=>$message, 'userid'=>$userid, 'username'=>$username, 'club'=>$titre ) );
-?>
+header('Cache-Control: no-store'); header('Content-Type: application/json; charset=utf-8');
+$answer = ['login'=>$login,'message'=>$message,'userid'=>$userid,'username'=>$username,'club'=>$titre];
+if ($deviceToken !== null) $answer['device_token'] = $deviceToken;
+echo json_encode($answer);

@@ -19,12 +19,13 @@ if( !isDirecteur() ){
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function goto30() {	// gestion joueurs
 	var nextstring = "bridge30.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function topwindow() {
 	elmnt = document.getElementById("topwindow");
@@ -77,7 +78,7 @@ $(document).on( "click", "td.canclick", function(event) {
 	console.log( "event", event.target.id );
 	var figs = event.target.id.split('_');
 	var nextstring = "bridge35.php?id=" + figs[1];
-	if ( figs[1] > 0 ) location.replace( nextstring );
+	if ( figs[1] > 0 ) bridgetteNavigate( nextstring );
 });
 // filtre joueurs
 $(document).keydown(function(event) {

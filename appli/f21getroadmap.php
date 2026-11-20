@@ -24,12 +24,14 @@ function htmlResultatsPaire($idt, $axe, $num) {
 	$dbh = connectBDD();
 	
 	if( $axe == "ns" ) {	// ou Howell
-		$sql = "SELECT * FROM $tab_donnes where idtournoi = '$idt' and ns='$num' order by etui;";
+		$sql = "SELECT * FROM $tab_donnes where idtournoi = ? and ns=? order by etui;";
+		$sqlBound = [$idt, $num];
 		$opposite = "eo";
 		$axelabel = "% NS";
 	}
 	else {
-		$sql = "SELECT * FROM $tab_donnes where idtournoi = '$idt' and eo='$num' order by etui;";
+		$sql = "SELECT * FROM $tab_donnes where idtournoi = ? and eo=? order by etui;";
+		$sqlBound = [$idt, $num];
 		$opposite = "ns";
 		$axelabel = "% EO";
 	}
@@ -41,7 +43,7 @@ function htmlResultatsPaire($idt, $axe, $num) {
 	$k = 0;	// nombre de paires affrontées
 	$l = 0; // nombre de lignes par paire affrontée
 	$prevadv = 0;
-	foreach ($dbh->query($sql) as $row) {
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$tabns[$i] = $row['ns'];
 		$tabeo[$i] = $row['eo'];
 		$tabhw[$i] = $row['hweo'];

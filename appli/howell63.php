@@ -22,54 +22,23 @@ $_SESSION['withback'] = 0;	// retour interdit
 	<script src="js/bridge63.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 var relimg = "<?php echo $relimg; ?>";
 
 function clickValidation() {
-	$("#section_validation").addClass( "section_invisible" );
-	$("#section_suivante").removeClass( "section_invisible" );
-	
-	// Enregistrement de la donne jouée
-	var dataString = 'insertdonne.php?idtournoi=' + idtournoi + '&donne=' + realdonne.etui;
-	dataString += '&ns=' + numNS + '&eo=' + numEO;
-	dataString += '&contrat=' + realdonne.contrat;
-	dataString += '&jouepar=' + realdonne.declarant;
-	dataString += '&entame='  + realdonne.entame;
-	dataString += '&resultat=' + realdonne.res;
-	dataString += '&points=' + realdonne.points;
-	//console.log( dataString );
-	$.get(dataString, "", function(strjson) {
-		$('#validok').html( strjson.display );
-		if ( strjson.ok > 0 ) {
-			// affichage scores, entrée diagrammes, ...
-			//setTimeout(function() { goto64() }, 500);
-			goto64();
-		}
-		if ( strjson.ok == 0 ) {
-			// enregistrement déjà réalisé, délai affichage
-			setTimeout(function() { goto64(); }, 1000);
-		}
-		if ( strjson.ok < 0 ) {
-			// tournoi terminé
-			setTimeout(function() { gotoindex() }, 1000);
-		}
-	},"json")
-	.done( function() {  } )
-	.fail( function( jqxhr,settings,ex ) {
-		$('#validok').html('Erreur: '+ ex + "</br>" + dataString + "</br>Faire une copie d'écran pour Bruno</br><b>Rappuyez sur le bouton de validation.</b>" ); 
-		$("#section_validation").removeClass( "section_invisible" );
-	} );
+	validationDonne({ url: "insertdonne.php" });
 };
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto64() {
 	var nextstring = "howell64.php?idtournoi="+idtournoi + '&paire=' + numpaire + "&w="+ window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 
 // mécanisme détectant une page expirée

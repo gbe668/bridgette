@@ -17,6 +17,7 @@ if( !isFormateur() ){
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -24,19 +25,19 @@ idtournoi  = 0;
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function logout() {
 	var nextstring = "logout.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function setpassword() {
 	var nextstring = "setpassword.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function admin() {
 	var nextstring = "logadmin.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function cdeplus() {
 	$("#afficheplus").addClass( "section_invisible" );
@@ -48,7 +49,7 @@ function cdemoins() {
 }
 function gotoform11() {
 	var nextstring = "bridgform11.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 }
 </script>
 

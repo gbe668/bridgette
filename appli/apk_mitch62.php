@@ -29,6 +29,7 @@ else {
 	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/bridge62.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -202,7 +203,7 @@ document.addEventListener('visibilitychange', function (event) {
 				print "<script>refreshPositions(".$numNS.");</script>";
 			}
 			else {
-				setCnxFin( $numNS );
+				renderCnxFin( $numNS );
 				print "<p>&nbsp;</p><p>Vous avez terminé le tournoi.</p>";
 				print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</button></p>';
 			}
@@ -303,7 +304,7 @@ document.addEventListener('visibilitychange', function (event) {
 				print "<script>refreshPositions(0);</script>";
 			}
 			else {
-				setCnxFin( $numNS );
+				renderCnxFin( $numNS );
 				print "<p>&nbsp;</p><p>Vous avez terminé le tournoi.</p>";
 				print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</button></p>';
 			}

@@ -6,8 +6,9 @@ $idj = isset( $_GET['idj'] ) ? htmlspecialchars( $_GET['idj'] ) : 0;
 
 if ( $idj > 0 ) {
 	$dbh = connectBDD();
-	$sql = "SELECT id, prenom, nom, telephone, email FROM $tab_joueurs WHERE id = $idj;";
-	$res = $dbh->query($sql);
+	$sql = "SELECT id, prenom, nom, telephone, email FROM $tab_joueurs WHERE id = ?;";
+	$sqlBound = [$idj];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$row = $res->fetch(PDO::FETCH_ASSOC);
 	$dbh = null;
 }

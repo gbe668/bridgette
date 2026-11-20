@@ -23,7 +23,7 @@ for ( $i = 0; $i < $max_tables; $i++ ) {
 	$col4[$i] = $row['cpt'];
 	$col5[$i] = $row['rdy'];
 }
-$sth = $dbh->query( "SELECT MIN(rdy) FROM $tab_connexions where id<=$n;" );
+$sth = securityQuery($dbh, "SELECT MIN(rdy) FROM $tab_connexions where id<=?;", [$n]);
 $mintour = $sth->fetchColumn();
 $dbh = null;
 

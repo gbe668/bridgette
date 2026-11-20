@@ -14,6 +14,7 @@ require("lib59.php");
 	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/bridge63.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>

@@ -3,33 +3,13 @@ require("configuration.php");
 require("bridgette_bdd.php");
 require("libmailpwd.php");
 
-if ( isset($_POST['usermail']) ){
-	$usermail = stripslashes($_REQUEST['usermail']);
-	$usermail = htmlspecialchars($usermail);
-	
-	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM `$tab_joueurs` WHERE email='$usermail';";
-	$n = $dbh->query($sql)->fetchColumn();
-	if ( $n == 0 ){
-		$message = "Adresse mail inconnue !!!";
-	}
-	if ( $n == 1){
-		//Envoi du mail de réinitialisation
-		$ok = send_mailpwd( $usermail );
-		if ( $ok ) {
-			// Détruire la session.
-			session_destroy();
-			// Redirection vers la page de connexion
-			header("Location: waitmailpwd.php");
-		}
-		else {
-			$message = "Erreur: le mail n'est pas parti !!!";
-		}
-	}
-	if ( $n > 1 ){
-		$message = "Adresse mail identique pour 2 joueurs !!!";
-	}
-	$dbh = null;
+if (isset($_POST['usermail'])) {
+    try {
+        passwordResetRequest(connectBDD(), $prefix, $tab_joueurs, $_POST['usermail'], 'send_mailpwd');
+    } catch (Throwable $e) {
+        error_log('Bridgette reset request failed: '.get_class($e));
+    }
+    $message = PASSWORD_RESET_MESSAGE;
 }
 ?>
 <!DOCTYPE html>
@@ -42,16 +22,17 @@ if ( isset($_POST['usermail']) ){
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function gotoforgot() {
 	var nextstring = "sendmailpwd.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 
@@ -64,7 +45,7 @@ function gotoforgot() {
 	<h3>Réinitialisation du mot de passe</h3>
 	<p>Entrez votre adresse mail connue du serveur bridgette de votre club de bridge</p>
 	
-	<form action="" method="post" name="login">
+	<form action="" method="post" name="login"><?php securityCsrfField(); ?>
 	<p><input type="email" class="box-input" name="usermail" id="usermail" placeholder="adresse mail" required ></p>
 	
 	<p id="msgerr">

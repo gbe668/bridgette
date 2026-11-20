@@ -26,6 +26,7 @@ else $calendrier = array();
 	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/bridgestylesheet.css" />
 	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/jquery-ui.css">
 	<link rel="icon" type="image/x-icon" href="<?php echo $relpgm; ?>images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <style>
@@ -66,11 +67,11 @@ var userconnected = false;
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function topwindow() {
 	elmnt = document.getElementById("topwindow");

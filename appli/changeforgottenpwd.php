@@ -1,53 +1,38 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
-require("libmailpwd.php");
-
-$phrase1 = $_GET['phrase']; // phrase constituée du seul email
-
-if ( isset($_POST['phrase3']) ) {
-	// phrase constituée du seul email
-	$phrase3 = $_REQUEST['phrase3'];
-	$phrase4 = hex2bin( $phrase3 );
-	$usermail = safeDecrypt($phrase4, $key);
-	
-	$newpassword1 = htmlspecialchars(stripslashes($_REQUEST['newpassword1']));
-	$newpassword2 = htmlspecialchars(stripslashes($_REQUEST['newpassword2']));
-	
-	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM `$tab_joueurs` WHERE email='$usermail';";
-	$res = $dbh->query($sql);
-	if($res->fetchColumn() == 1){
-		// identification correcte, test mots de passe
-		if ($newpassword1==$newpassword2) {
-			$encpwd = hash('sha256', $newpassword1);
-			$sql = "UPDATE `$tab_joueurs` SET  password='$encpwd' WHERE email='$usermail';";
-			$res = $dbh->query($sql);
-			if($res) {
-				$message =  "Mot de passe changé avec succès.";
-				// Redirection vers la page de connexion
-
-				// ajout le 14/11/2024 pour ceux qui n'acceptent pas les cookies ?
-				//$tt = time();
-				//$json = json_encode( array( 'prefix'=>$prefix, 'timex'=>$tt ) );
-				//$token = base64_encode( $json );
-
-				header("Location: bridgette.php?token=".$token);
-			}
-			else $message =  "Erreur inconnue.";
-		}
-		else {
-			$message = "Nouveaux mots de passe différents.";
-		}
-	}
-	else {
-		$message = "Identifiant $usermail inconnu.";
-	}
-	$dbh = null;
+require_once __DIR__.'/security_password_reset.php';
+header('Cache-Control: no-store');
+// Keep the POST Origin available to the supplemental origin check, while
+// excluding the recovery secret in the URL from the Referer header.
+header('Referrer-Policy: origin');
+$phrase1 = $_POST['phrase3'] ?? ($_GET['phrase'] ?? '');
+$valid = false;
+$okchange = 0;
+$message = 'Lien invalide, expiré ou déjà utilisé. Demandez un nouveau courriel depuis la connexion du club.';
+try {
+    $dbh = connectBDD();
+    $valid = passwordResetRecord($dbh, $prefix, $phrase1) !== null;
+    if ($valid) $message = '';
+    if ($valid && isset($_POST['phrase3'])) {
+        $first = $_POST['newpassword1'] ?? null;
+        $second = $_POST['newpassword2'] ?? null;
+        if (!is_string($first) || !is_string($second) || $first === '' || strlen($first) > 1024 || $first !== $second) {
+            $message = 'Saisissez deux mots de passe identiques et non vides (maximum 1024 octets).';
+        } else {
+            $password = $first;
+            $okchange = passwordResetApply($dbh, $prefix, $tab_joueurs, $phrase1, $password) ? 1 : 0;
+            $valid = false;
+            $message = $okchange ? 'Mot de passe changé avec succès. Reconnectez-vous au club, sur le site ou dans l’application Android.' : 'Lien invalide, expiré ou déjà utilisé. Demandez un nouveau courriel.';
+        }
+    }
+} catch (Throwable $e) {
+    $valid = false;
+    $message = 'Réinitialisation indisponible. Demandez un nouveau courriel et réessayez.';
+    error_log('Bridgette reset failed: '.get_class($e));
 }
-?>
-
-<!DOCTYPE html>
+$phrase1 = is_string($phrase1) ? htmlspecialchars($phrase1, ENT_QUOTES, 'UTF-8') : '';
+?><!DOCTYPE html>
 <html>
 
 <head>
@@ -57,12 +42,13 @@ if ( isset($_POST['phrase3']) ) {
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 
@@ -70,25 +56,18 @@ function gotoindex() {
 	<div style="text-align: center">
 	<p><img src="images/bridgette.png" alt="bridge" style="width:90%; max-width:350px;" /></p>
 	<h2><?php echo $titre; ?></h2>
-	<h1>Mot de passe oublié</h1>
+	<h1>Mot de passe oublié</h1><p><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></p>
 
-	<form action="" method="post" name="login">
+	<?php if ($valid) { ?><form action="" method="post" name="login"><?php securityCsrfField(); ?>
 	<p><input type="hidden" name="phrase3" value="<?php echo $phrase1; ?>" ></p>
 	<p><input type="password" class="box-input" name="newpassword1" id="newpassword1" placeholder="Nouveau mot de passe" required ></p>
 	<p><input type="password" class="box-input" name="newpassword2" placeholder="Retapez le nouveau mot de passe" required ></p>
 	
-	<p id="msgerr">
-		<?php
-		if (! empty($message)) echo $message;
-		else	echo "&nbsp;"
-		?>
-		<script>//setTimeout(function() { $("#msgerr").html( "&nbsp;" ); }, 5000);
-		</script>
-	</p>
+
 	
 	<p><input type="submit" value="Enregistre le mot de passe" name="submit" class="mySmallButton"></p>
 	
-	</form>
+	</form><?php } ?>
 	<p>&nbsp;</p>	
 	<p><button class="mySmallButton" onclick="gotoindex()">Retour page d'accueil</button></p>
 	</div>

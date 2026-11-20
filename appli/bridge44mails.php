@@ -21,14 +21,15 @@ function compute_sizedb() {
 
 	$sql_sizedb = "SELECT table_name AS 'Table',
 		ROUND(((data_length + index_length) / 1024), 3) AS 'Size' FROM information_schema.TABLES
-		WHERE table_schema ='$db_name' AND table_name like '$prefix%'
+		WHERE table_schema =? AND table_name like ?
 		ORDER BY (data_length + index_length) DESC;";
+	$sql_sizedbBound = [$db_name, "$prefix%"];
 	$nomtables = Array();
 	$dimtables = Array();
 	$i =0;
 	$totalsize = 0;
 	$dbh = connectBDD();
-	$results = $dbh->query( $sql_sizedb );
+	$results = securityQuery($dbh, $sql_sizedb, $sql_sizedbBound);
 	while ( $ligne = $results->fetch(PDO::FETCH_ASSOC) ) {
 		$nomtables[ $i ] = $ligne[ 'Table' ];
 		$dimtables[ $i ] = $ligne[ 'Size' ];
@@ -95,12 +96,13 @@ else $msgSizeBDD = "";
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function sendresults() {
 	$("#msg").text("L'envoi des mails peut prendre quelques secondes, patientez.");
@@ -119,7 +121,7 @@ function sendresults() {
 };
 function reload() {
 	var nextstring = "bridge44mails.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 

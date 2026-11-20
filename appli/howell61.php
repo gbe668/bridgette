@@ -27,6 +27,7 @@ if( !isCheckedJoueur($idtournoi) ) {
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -50,20 +51,20 @@ function selNumPaire( place ) {
 	console.log( "Paire:", numpaire );
 
 	var nextstring = "howell62.php?idtournoi=" + idtournoi + "&paire=" + numpaire;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto66() {
 	var nextstring = "bridge66.php?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function erasecode() {
 	var nextstring = "erasecode.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 }
 function cdeplus() {
 	if ( $("#afficheplus").hasClass( "section_invisible" ) ) {
@@ -144,7 +145,8 @@ document.addEventListener('visibilitychange', function (event) {
 				$paire = $user['table'];		// position initiale
 				if ( $paire == 0 ) {
 					// joueur non trouvé
-					print "<h3>Vous ne faites pas partie des joueurs inscrits !</h3>";
+					if ($parametres['checkuser'] == 1) print "<p>Choisissez la paire du joueur qui utilise ce téléphone.</p>";
+					else print "<h3>Vous ne faites pas partie des joueurs inscrits !</h3>";
 					if ( $parametres['checkuser'] == 2 ) {
 						$okcheck = false;
 					}

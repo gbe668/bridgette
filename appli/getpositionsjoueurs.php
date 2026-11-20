@@ -2,7 +2,7 @@
 require("configuration.php");
 require("bridgette_bdd.php");
 
-$idt = htmlspecialchars( $_GET['idtournoi'] );
+$idt = securityInt('idtournoi');
 
 $dbh = connectBDD();
 $t = _readTournoi( $dbh, $idt );
@@ -24,15 +24,16 @@ switch( $etat ) {
 		$npositions = $t['npositions'];
 
 		$n = ( $t['genre'] == $t_howell )? $t['pairesNS'] : min( $t['pairesNS'], $t['pairesEO'] );
-		$res = $dbh->query( "SELECT MIN(rdy) FROM $tab_connexions where id<=$n;" );
+		$res = securityQuery($dbh, "SELECT MIN(rdy) FROM $tab_connexions where id<=?;", [$n]);
 		$tour = $res->fetchColumn();
 		
 		if ( $tour <= $t['npositions'] ) {
 			$tabj1  = array(); $tabj2  = array(); $tabj3  = array(); $tabj4  = array();
 			$fullj1 = array(); $fullj2 = array(); $fullj3 = array(); $fullj4 = array();
 			// paires NS
-			$sql = "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = '$idt' order by num;";
-			$res = $dbh->query($sql);
+			$sql = "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = ? order by num;";
+			$sqlBound = [$idt];
+			$res = securityQuery($dbh, $sql, $sqlBound);
 			for ($i = 0; $i < $pairesNS; $i++) {
 				$row = $res->fetch(PDO::FETCH_ASSOC);
 				$tabj1[$i] = $row['idj1'];
@@ -57,12 +58,13 @@ switch( $etat ) {
 					$t = $p['table'];	// numéro de table
 					$o = ($p['NS'] == 1) ? "NS" : "EO"; 		// orientation: 1=NS, 2=EO
 					$l1 = $p['last'] + 1;		// dernière donne "jouée"
-					$l2 = $p['last'] + $paquet;	
-					
+					if ( $l1 > $ndonnes ) $l1 = 1;
+					$l2 = $l1 + $paquet -1;
+
 					$q = getParmTable( $j );
 					$cpt = $q['cpt'];
 					$pos = intval( $cpt / $paquet );
-					if ( $pos == $position ) {
+					if ( ($pos == $position)&&($p['adversaire'] > 0) ) {
 						$etuis = $l1."-".$l2;
 					}
 					else {
@@ -76,8 +78,9 @@ switch( $etat ) {
 				$tab .= "</tbody></table>";
 			}
 			else { // paires EO
-				$sql = "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = '$idt' order by num;";
-				$res = $dbh->query($sql);
+				$sql = "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = ? order by num;";
+				$sqlBound = [$idt];
+				$res = securityQuery($dbh, $sql, $sqlBound);
 				for ($i = 0; $i < $pairesEO; $i++) {
 					$row = $res->fetch(PDO::FETCH_ASSOC);
 					$tabj2[$i] = $row['idj2'];
@@ -160,11 +163,11 @@ switch( $etat ) {
 	}
 	case $st_phase_fini: {
 		if ( ($t['idtype'] <= $min_type_affimp)&&($parametres['affimp']==1) ) {
-			setTournoiIMP( $idt );
+
 			$tab = htmlDisplayTournoiIMP( $idt );
 		}
 		else {
-			setTournoi($idt);
+
 			$tab = htmlDisplayTournoi( $idt, 1380 );	// sur 2 colonnes
 		}
 		break;

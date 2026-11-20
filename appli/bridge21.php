@@ -30,6 +30,7 @@ $diagrammes = getdiagrammes($idtournoi);
 	<script src="js/bridge65.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -44,29 +45,18 @@ const diagrammes = <?php echo $diagrammes; ?>;
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto20() {
 	var nextstring = "bridge20.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function reload() {
 	var nextstring = "bridge21.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 var actuel = 1;	// étui sélectionné
 var selns = seleo = 0;
-function key_select( nbr ) {
-	actuel += parseInt( nbr );
-	if ( actuel < 1 ) actuel = 1;
-	if ( actuel > ndonnes ) actuel = ndonnes;
-	$("#etui").text( actuel );
-	
-	$.get(relpgm+"f64getresultatdonne.php?", {idtournoi:idtournoi, etui:actuel, ns:selns, eo:seleo}, function(strjson) {
-		showresultat( strjson );
-	}, "json")
-	.fail( function( jqxhr, settings, ex ) { console.log('Erreur: '+ ex ); } );
-};
 $(document).ready(function() {
 	$("#etuim10").bind('click', function( event ){ key_select( -10 ); });
 	$("#etuim1").bind('click', function( event ){ key_select( -1 ); });
@@ -88,10 +78,7 @@ $(document).ready(function() {
 			seleo = figs[1];
 		}
 		
-		$.get(relpgm+"f64getresultatdonne.php?", {idtournoi:idtournoi, etui:actuel, ns:selns, eo:seleo}, function(strjson) {
-			showresultat( strjson );
-		}, "json")
-		.fail( function( jqxhr, settings, ex ) { console.log('Erreur: '+ ex ); } );
+		requestResultat21();
 		
 		$.get(relpgm+"f21getroadmap.php?", {idtournoi:idtournoi, axe:figs[0], num:figs[1]}, function(strjson) {
 			$("#team").html("Feuille de route de la paire "+strjson.ref+"</br>"+strjson.team);

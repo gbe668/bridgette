@@ -8,12 +8,14 @@ function getClassementMarathon($dd) {
 	global $tab_tournois, $st_closed, $tab_pairesNS, $tab_pairesEO, $maxjoueurs;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT count(*) FROM $tab_tournois where etat='$st_closed' and tournoi='$dd';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where etat=? and tournoi=?;";
+	
+	$sqlBound = [$st_closed, $dd];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	//print "<p>$sql $nbl</p>";
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat='$st_closed' and tournoi='$dd' order by id asc;" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_tournois where etat=? and tournoi=? order by id asc;", [$st_closed, $dd]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$minidt = $row['id'];
 		$maxidt = $minidt + $nbl;
@@ -21,12 +23,13 @@ function getClassementMarathon($dd) {
 
 		$sql = "SELECT idj, nbfois, perf FROM (
 			SELECT idj, COUNT(*) AS nbfois, AVG(noteg) AS perf FROM (
-				(SELECT idj1 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= $minidt and idtournoi < $maxidt) UNION 
-				(SELECT idj2 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= $minidt and idtournoi < $maxidt) UNION 
-				(SELECT idj4 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= $minidt and idtournoi < $maxidt) UNION 
-				(SELECT idj3 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= $minidt and idtournoi < $maxidt)
+				(SELECT idj1 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= ? and idtournoi < ?) UNION 
+				(SELECT idj2 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= ? and idtournoi < ?) UNION 
+				(SELECT idj4 AS idj, idtournoi, noteg FROM $tab_pairesEO where idtournoi >= ? and idtournoi < ?) UNION 
+				(SELECT idj3 AS idj, idtournoi, noteg FROM $tab_pairesNS where idtournoi >= ? and idtournoi < ?)
 				) T1 group by idj
 			) T2 order by perf desc;";
+		$sqlBound = [$minidt, $maxidt, $minidt, $maxidt, $minidt, $maxidt, $minidt, $maxidt];
 		//print "<p>$sql</p>";
 		$datef = strdatet( $dd );
 		$str = "<p>Résultat du marathon du $datef</p>";
@@ -36,7 +39,7 @@ function getClassementMarathon($dd) {
 		$str .= "<td class='xNum3' style='width:10%;'>N</td>";
 		$str .= "<td class='xNum3' style='width:15%;'>%</td></tr>";
 		$i=0;
-		foreach  ($dbh->query($sql) as $row) {
+		foreach  (securityQuery($dbh, $sql, $sqlBound) as $row) {
 			$j = _getJoueur( $dbh, $row['idj'] );
 			$score = sprintf( "%.1f", $row["perf"] );
 			$str .= "<tr>";

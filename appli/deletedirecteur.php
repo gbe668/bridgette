@@ -11,8 +11,9 @@ if( !isAdmin() ){
 function deleteDirecteur( $id ) {
 	global $tab_directeurs;
 	$dbh = connectBDD();
-	$sql = "DELETE from $tab_directeurs where id='$id';";
-	$dbh->query( $sql );
+	$sql = "DELETE from $tab_directeurs where id=?;";
+	$sqlBound = [$id];
+	securityQuery($dbh, $sql, $sqlBound);
 	$dbh = null;
 };
 

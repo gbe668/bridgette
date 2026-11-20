@@ -1,0 +1,17 @@
+# Données et configurations privées des installations
+/appli/clubs/*
+!/appli/clubs/README.md
+!/appli/clubs/conf_SERVER_NAME.php
+!/appli/clubs/ttt_configuration.php
+/appli/errors_*.json
+*.sql
+*.log
+.env
+.env.*
+*.pem
+*.key
+*.jks
+*.keystore
+__pycache__/
+/tests/*-tmp*/
+/outputs/

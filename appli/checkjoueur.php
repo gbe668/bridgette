@@ -33,12 +33,13 @@
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 
@@ -52,7 +53,7 @@ function gotoindex() {
 	if( $site == 2 ) print "<p>Site de démonstration:</br>voir le code affiché sur le tableau de bord</br>du directeur dr tournoi</p>";
 	?>
 
-	<form action="" method="post" name="login">
+	<form action="" method="post" name="login"><?php securityCsrfField(); ?>
 	<p><input type="text" class="box-input" name="codedujour" id="codedujour" placeholder="code" required ></p>
 	
 	<p id="msgerr">

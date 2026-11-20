@@ -30,6 +30,7 @@ else {
 	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/bridge62.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -104,6 +105,7 @@ document.addEventListener('visibilitychange', function (event) {
 	$etat = $t['etat'];
 	if ( $etat == $st_phase_jeu ) {
 		$idtype  = $t[ 'idtype' ];
+		$ndonnes  = $t['ndonnes'];
 		$njouees = $t[ 'njouees' ];
 		$ntables = $t[ 'ntables' ];
 		$paquet  = $t[ 'paquet' ];
@@ -127,6 +129,7 @@ document.addEventListener('visibilitychange', function (event) {
 			$p = getposhowell( $idtype, $paire, $notour, $paquet );	
 			$table   = $p['table'];
 			$firstdonne = $p['last'] + 1;	// 1ère donne du paquet
+			if ( $firstdonne > $ndonnes ) $firstdonne = 1;
 			$etuis = liste_etuis( $firstdonne, $paquet );
 			$adversaire = $p['adversaire'];
 
@@ -212,7 +215,7 @@ document.addEventListener('visibilitychange', function (event) {
 			print "<script>refreshPositions(".$paire.");</script>";
 		}
 		else {
-			setCnxFin( $paire );
+			renderCnxFin( $paire );
 			print "<p>&nbsp;</p><p>Vous avez terminé le tournoi</p>";
 			print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</br>de la table</button></p>';
 			// init variables
