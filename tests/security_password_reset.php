@@ -1,0 +1,78 @@
+<?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit; }
+require __DIR__.'/../appli/security.php';
+require __DIR__.'/../appli/security_password_reset.php';
+require __DIR__.'/security_password_reset_support.php';
+$cases = 0;
+function resetCheck($ok, $label) { global $cases; if (!$ok) throw new RuntimeException($label); $cases++; }
+$db = new ResetDB();
+$player = ['id' => 7, 'email' => 'player@example.org', 'password' => hash('sha256', 'old'), 'datesupp' => 0];
+$db->players['one_'] = [$player];
+$ticket = passwordResetIssue($db, 'one_', $player);
+$key = passwordResetKey('one_', 7);
+resetCheck(strlen($key) === 32 && !str_contains($db->rows[$key]['data'], $ticket), 'Only fingerprint, schema compatible');
+foreach ([null, [], '7', 'old-encrypted-link', $ticket.'x'] as $bad) resetCheck(passwordResetRecord($db, 'one_', $bad) === null, 'Malformed ticket refused');
+resetCheck(passwordResetRecord($db, 'two_', $ticket) === null, 'Other club');
+$second = passwordResetIssue($db, 'one_', $player);
+resetCheck(passwordResetRecord($db, 'one_', $ticket) === null, 'New request invalidates old');
+$db->loseClaim = true;
+resetCheck(!passwordResetApply($db, 'one_', 'one_joueurs', $second, 'new'), 'Concurrent loser cannot write');
+resetCheck($db->players['one_'][0]['password'] === $player['password'], 'Loser preserves password');
+$db->loseClaim = false;
+resetCheck(passwordResetApply($db, 'one_', 'one_joueurs', $second, 'new'), 'Valid reset');
+resetCheck(!passwordResetApply($db, 'one_', 'one_joueurs', $second, 'again'), 'Replay rejected');
+resetCheck(bridgettePasswordVerify('new', $db->players['one_'][0]['password']), 'Replay preserves changed modern password');
+$ticket = passwordResetIssue($db, 'one_', $db->players['one_'][0]);
+$data = json_decode($db->rows[$key]['data'], true); $data['expires'] = time(); $db->rows[$key]['data'] = json_encode($data);
+resetCheck(!passwordResetApply($db, 'one_', 'one_joueurs', $ticket, 'expired'), 'Expiry boundary');
+$ticket = passwordResetIssue($db, 'one_', $db->players['one_'][0]);
+$db->players['one_'][0]['password'] = hash('sha256', 'elsewhere');
+resetCheck(!passwordResetApply($db, 'one_', 'one_joueurs', $ticket, 'stale'), 'Password changed elsewhere');
+$ticket = passwordResetIssue($db, 'one_', $db->players['one_'][0]);
+$db->players['one_'][0]['datesupp'] = 1;
+resetCheck(!passwordResetApply($db, 'one_', 'one_joueurs', $ticket, 'disabled'), 'Disabled account');
+$db->players['one_'][0]['datesupp'] = 0;
+$ticket = passwordResetIssue($db, 'one_', $db->players['one_'][0]);
+$db->players['one_'][0]['email'] = 'changed@example.org';
+resetCheck(!passwordResetApply($db, 'one_', 'one_joueurs', $ticket, 'wrong'), 'Changed email');
+$db = new ResetDB(); $db->players['one_'] = [$player]; $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+$sent = [];
+$send = function($email, $ticket) use (&$sent) { $sent[] = $ticket; return true; };
+for ($i = 0; $i < 4; $i++) passwordResetRequest($db, 'one_', 'one_joueurs', $player['email'], $send);
+resetCheck(count($sent) === 3, 'Three sends per address per hour');
+passwordResetRequest($db, 'one_', 'one_joueurs', 'unknown@example.org', $send);
+passwordResetRequest($db, 'one_', 'one_joueurs', [], $send);
+resetCheck(count($sent) === 3, 'Unknown and malformed do not send');
+for ($i = 0; $i < 21; $i++) $allowed = passwordResetRate($db, 'two_', 'ip', 'shared-ip', 20);
+resetCheck(!$allowed, 'IP cap');
+resetCheck(passwordResetRate($db, 'one_', 'ip', 'shared-ip', 20), 'Club rate isolation');
+$rateKey = 'rlm_'.substr(hash('sha256', 'two_|ip|shared-ip'), 0, 28);
+$db->rows[$rateKey]['access'] = time() - 3600;
+resetCheck(passwordResetRate($db, 'two_', 'ip', 'shared-ip', 20), 'Window renewal');
+$db = new ResetDB(); $db->players['one_'] = [$player];
+passwordResetRequest($db, 'one_', 'one_joueurs', $player['email'], fn() => false);
+resetCheck(!isset($db->rows[$key]), 'Failed mail invalidates issued link');
+$db = new ResetDB(); $db->players['one_'] = [$player];
+try { passwordResetRequest($db, 'one_', 'one_joueurs', $player['email'], function() { throw new RuntimeException('SMTP unavailable'); }); }
+catch (RuntimeException $e) {}
+resetCheck(!isset($db->rows[$key]), 'Thrown mail failure invalidates issued link');
+$db = new ResetDB(); $db->players['one_'] = [$player];
+$newer = null;
+passwordResetRequest($db, 'one_', 'one_joueurs', $player['email'], function() use ($db, $player, &$newer) {
+    $newer = passwordResetIssue($db, 'one_', $player); return false;
+});
+resetCheck(passwordResetRecord($db, 'one_', $newer) !== null, 'Failed older send preserves a newer request');
+$db->changeBeforeUpdate = hash('sha256', 'concurrent');
+resetCheck(!passwordResetApply($db, 'one_', 'one_joueurs', $newer, 'attempt'), 'Concurrent password change wins over stale update');
+resetCheck($db->players['one_'][0]['password'] === hash('sha256', 'concurrent'), 'Conditional update preserves concurrent change');
+$db = new ResetDB(); $db->players['one_'] = [$player, $player];
+passwordResetRequest($db, 'one_', 'one_joueurs', $player['email'], $send);
+resetCheck(!isset($db->rows[$key]), 'Duplicate email refuses reset');
+$_SERVER = ['SERVER_NAME' => 'example.org', 'HTTP_HOST' => 'evil.example', 'SCRIPT_FILENAME' => '/var/www/apk_sendmailpwd.php', 'SCRIPT_NAME' => '/appli/apk_sendmailpwd.php/'];
+$url = passwordResetUrl('pwd1.7.test', 'a+b=');
+resetCheck($url === 'https://example.org/appli/changeforgottenpwd.php?phrase=pwd1.7.test&token=a%2Bb%3D', 'Configured hostname, subdirectory and Android PATH_INFO');
+$_SERVER['SCRIPT_NAME'] = '/apk_sendmailpwd.php';
+resetCheck(str_contains(passwordResetUrl('x', 'y'), 'example.org/changeforgottenpwd.php'), 'Root installation');
+$_SERVER['SERVER_NAME'] = 'localhost'; $_SERVER['SERVER_PORT'] = 8080;
+resetCheck(str_starts_with(passwordResetUrl('x', 'y'), 'http://localhost:8080/'), 'Local HTTP port');
+echo "$cases password reset security cases passed\n";

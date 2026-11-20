@@ -1,7 +1,6 @@
 // id tournoi
 var idTournoi;
-var idtype;
-var genre;	//
+var genre;	// Mitchell / Howell
 
 // variables affichage tableaux
 var nblignesNS;
@@ -85,7 +84,7 @@ function masquelignesEO() {
 }
 function checktableaux() {
 	$("#msgerr").html( "&nbsp;" );
-	if ( idtype < min_type_mitchell ) {
+	if ( genre == t_howell ) {
 		// type Howell
 		checktableauxHowell()
 	}
@@ -264,7 +263,7 @@ function process_touche( touche ) {
 			// nouveau joueur
 			$("#msgclavier").text( "Fonction implémentée" );
 			var nextstring = "bridge31.php";
-			location.replace( nextstring );
+			bridgetteNavigate( nextstring );
 			break;
 		}
 		case "space":

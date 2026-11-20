@@ -25,14 +25,16 @@ $nomcomplet = array();
 
 //$sql1 = "SELECT count(*) FROM $tab_joueurs where joueur like '$likename' and datesupp = 0;";
 //$sql2 = "SELECT * FROM $tab_joueurs where joueur like '$likename' and datesupp = 0 order by nom;";
-$sql1 = "SELECT count(*) FROM $tab_joueurs where (nom like '$likename' or prenom like '$likename') and datesupp = 0;";
-$sql2 = "SELECT * FROM $tab_joueurs where (nom like '$likename' or prenom like '$likename') and datesupp = 0 order by nom;";
+$sql1 = "SELECT count(*) FROM $tab_joueurs where (nom like ? or prenom like ?) and datesupp = 0;";
+$sql1Bound = [$likename, $likename];
+$sql2 = "SELECT * FROM $tab_joueurs where (nom like ? or prenom like ?) and datesupp = 0 order by nom;";
+$sql2Bound = [$likename, $likename];
 	
 $dbh = connectBDD();
-$res = $dbh->query( $sql1 );
+$res = securityQuery($dbh, $sql1, $sql1Bound);
 $nbl = $res->fetchColumn();
 if ( $nbl > 0 ) { 
-	$results = $dbh->query( $sql2 );
+	$results = securityQuery($dbh, $sql2, $sql2Bound);
 	for ( $i = 0; $i < $nbl; $i++ ) {
 		$row = $results->fetch(PDO::FETCH_ASSOC);
 		$idj[$i] = $row[ 'id' ];

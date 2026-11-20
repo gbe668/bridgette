@@ -32,6 +32,7 @@ else {
 	<link  href="images/favicon.ico" rel="icon" type="image/x-icon">
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<script src="js/bridge62.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -42,32 +43,32 @@ var paire = parseInt( "<?php echo $paire; ?>" );
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function back61() {
 	var nextstring = 'howell61.php?idtournoi=' + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto62() {
 	var nextstring = "howell62.php?idtournoi=" + idtournoi + '&paire=' + paire;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto63() {
 	var nextstring = "howell63.php?idtournoi=" + idtournoi + '&paire=' + paire;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function back64() {
-	location.replace( "<?php echo $back; ?>" );
+	bridgetteNavigate( "<?php echo $back; ?>" );
 };
 function goto64relais() {
 	$.get( "relaishowell.php", {donne:firstdonne, ns:paire, eo:0, inc:paquet, paquet:paquet}, function() {
 		var nextstring = "howell64.php?idtournoi=" + idtournoi + '&paire=' + paire;
-		location.replace( nextstring );
+		bridgetteNavigate( nextstring );
 	},"text");
 };
 function goto66() {
 	var nextstring = "bridge66.php?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 
 // mécanisme détectant une page expirée
@@ -100,11 +101,12 @@ document.addEventListener('visibilitychange', function (event) {
 	$etat = $t['etat'];
 	if ( $etat == $st_phase_jeu ) {
 		$idtype  = $t[ 'idtype' ];
+		$ndonnes  = $t['ndonnes'];
 		$njouees = $t[ 'njouees' ];
 		$ntables = $t[ 'ntables' ];
 		$paquet  = $t[ 'paquet' ];
 		$relais  = $t[ 'relais' ];
-		
+
 		$ligneP = getligneNS( $idtournoi, $paire );
 		$nameP1 = $ligneP['N']['nomcomplet'];
 		$nameP2 = $ligneP['S']['nomcomplet'];
@@ -123,6 +125,7 @@ document.addEventListener('visibilitychange', function (event) {
 			$p = getposhowell( $idtype, $paire, $notour, $paquet );	
 			$table   = $p['table'];
 			$firstdonne = $p['last'] + 1;	// 1ère donne du paquet
+			if ( $firstdonne > $ndonnes ) $firstdonne = 1;
 			$etuis = liste_etuis( $firstdonne, $paquet );
 			$adversaire = $p['adversaire'];
 
@@ -211,7 +214,7 @@ document.addEventListener('visibilitychange', function (event) {
 			print "<script>refreshPositions(".$paire.");</script>";
 		}
 		else {
-			setCnxFin( $paire );
+			renderCnxFin( $paire );
 			print "<p>&nbsp;</p><p>Vous avez terminé le tournoi</p>";
 			print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</br>de la table</button></p>';
 			// init variables

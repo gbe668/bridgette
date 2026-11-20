@@ -39,8 +39,9 @@ function countElements() {
 	$dbh = connectBDD();
 	
 	try {
-		$sql = "SELECT count(*) FROM $tab_joueurs where numero >= '$min_noclub';";
-		$sth = $dbh->query( $sql );
+		$sql = "SELECT count(*) FROM $tab_joueurs where numero >= ?;";
+		$sqlBound = [$min_noclub];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$nbjoueurs = $sth->fetchColumn();
 	}
 	catch (Exception $e) {
@@ -49,7 +50,8 @@ function countElements() {
 		
 	try {
 		$sql = "SELECT count(*) FROM $tab_tournois;";
-		$sth = $dbh->query( $sql );
+		$sqlBound = [];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$nbtournois = $sth->fetchColumn();
 	}
 	catch (Exception $e) {
@@ -58,7 +60,8 @@ function countElements() {
 		
 	try {
 		$sql = "SELECT count(*) FROM $tab_donnes;";
-		$sth = $dbh->query( $sql );
+		$sqlBound = [];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$nbdonnes = $sth->fetchColumn();
 	}
 	catch (Exception $e) {
@@ -67,7 +70,8 @@ function countElements() {
 		
 	try {
 		$sql = "SELECT count(*) FROM $tab_diagrammes;";
-		$sth = $dbh->query( $sql );
+		$sqlBound = [];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$nbdiagrammes = $sth->fetchColumn();
 	}
 	catch (Exception $e) {
@@ -94,7 +98,8 @@ function display_sizedb() {
 function getversionsql() {
 	$dbh = connectBDD();
 	$sql = "SELECT VERSION();";
-	$sth = $dbh->query( $sql );
+	$sqlBound = [];
+	$sth = securityQuery($dbh, $sql, $sqlBound);
 	$v = $sth->fetchColumn();
 	$dbh = null;
 	return $v;
@@ -104,12 +109,13 @@ function compute_sizedb() {
 	global $nomtables, $dimtables, $db_name, $prefix;
 	$sql_sizedb = "SELECT table_name AS 'Table',
 		ROUND(((data_length + index_length) / 1024), 3) AS 'Size' FROM information_schema.TABLES
-		WHERE table_schema ='$db_name' AND table_name like '$prefix%'
+		WHERE table_schema =? AND table_name like ?
 		ORDER BY (data_length + index_length) DESC;";
+	$sql_sizedbBound = [$db_name, "$prefix%"];
 	$i =0;
 	$totalsize = 0;
 	$dbh = connectBDD();
-	$results = $dbh->query( $sql_sizedb );
+	$results = securityQuery($dbh, $sql_sizedb, $sql_sizedbBound);
 	while ( $ligne = $results->fetch(PDO::FETCH_ASSOC) ) {
 		$nomtables[ $i ] = $ligne[ 'Table' ];
 		$dimtables[ $i ] = $ligne[ 'Size' ];
@@ -125,11 +131,12 @@ $firstTournoi = 0;
 function getDateFirstTournoi() {
 	global $tab_tournois, $st_closed, $firstdatet, $firstTournoi;
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ?;";
+	$sqlBound = [$st_closed];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat = '$st_closed';" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_tournois where etat = ?;", [$st_closed]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$firstdatet = $row[ 'tournoi' ];
 		$firstTournoi = strdatet( $firstdatet );
@@ -144,8 +151,9 @@ function getNbThisYear( $datet ) {
 	global $tab_tournois, $st_closed;
 	$thisy = substr($datet, 0, 4 );
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed' and tournoi like '$thisy%';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ? and tournoi like ?;";
+	$sqlBound = [$st_closed, "$thisy%"];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	$dbh = null;
 	return $nbl;
@@ -161,11 +169,13 @@ function htmlevents( $n ) {
 	global $tab_events;
 	$dbh = connectBDD();
 	$sql = "SELECT count(*) FROM $tab_events;";
-	$res = $dbh->query( $sql );
+	$sqlBound = [];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
 		$sql = "SELECT * FROM $tab_events order by id desc;";
-		$res = $dbh->query( $sql );
+		$sqlBound = [];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		if ( $n > 0 ) $nbl = min( $nbl, $n );
 		$str = "<p>Derniers événements enregistrés:</p>";
 		$str .= "<table border='1' style='margin:auto;'><tbody>";
@@ -193,6 +203,7 @@ function htmlevents( $n ) {
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -208,34 +219,34 @@ var maxlignes;
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 var errmaxadm = "Maximum deux administrateurs !";
 var errmaxdir = "Nombre maximum de directeurs / formateurs atteint !";
 function setloginadmin() {
 	if ( nbadministrateurs < maxadministrateurs )
-		location.replace( "setloginadmin.php" );
+		bridgetteNavigate( "setloginadmin.php" );
 	else
 		$("#seldir").html( errmaxadm );
 };
 function setlogindirecteur() {
 	if ( nbdirecteurs < maxdirecteurs )
-		location.replace( "setlogindirecteur.php" );
+		bridgetteNavigate( "setlogindirecteur.php" );
 	else
 		$("#seldir").html( errmaxdir );
 };
 function setloginformateur() {
 	if ( nbdirecteurs < maxdirecteurs )
-		location.replace( "setloginformateur.php" );
+		bridgetteNavigate( "setloginformateur.php" );
 	else
 		$("#seldir").html( errmaxdir );
 };
 function reload() {
-	location.replace( "admin.php" );
+	bridgetteNavigate( "admin.php" );
 };
 function setpassword() {
 	var nextstring = "setpassword.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function lstDirecteurs() {
 	$.get( "lstalldirecteurs.php", function(strjson) {

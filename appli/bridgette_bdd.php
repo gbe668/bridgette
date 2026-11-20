@@ -1,56 +1,18 @@
 <?php
-// paramètrage général
-// valeurs par défaut
-$defopendays = array( 'lundi' =>'1', 'mardi' => '1', 'mercredi' => '1', 'jeudi' => '1', 'vendredi' => '1', 'samedi' => '1', 'dimanche' => '1' );	// ouvert tous les jours par défaut
-$parametres = array(
-	'mailcopie' => "",
-	
-	'dureedonne' => 7.5,
-	'dureediagrammes' => 2,
-	'dureeinitiale' => 3,
-		
-	'maxt' => 10,		// taille tableau des anciens tournois
-	'maxbj' => 10,		// supprimé taille tableau des joueurs actifs
-	'maxdel' => 10,		// supprimé taille tableau des joueurs effacés
-	'maxw' => 700,		// taille fenêtre pour passer en affichage 2 colonnes
-	'maxw2' => 300,		// taille fenêtre pour passer en affichage réduit
-	'sizpix'  => 50,	// Largeur texte en % largeur fenêtre pour le grand écran
-	
-	'checkin' => 0,		// check pour les joueurs
-	'checkuser' => 0,	// check ident joueur
-	'affimp'  => 0,		// Affichage IMP pour tournoi 4/5 paires: 0 %, 1 IMP
-	'affposprov' => 0,		// Affichage positions provisoires
-	'affprov' => 0,		// Affichage résultats provisoires
-	'back241' => 0,		// retour 41 après démarrage
-	'avancem' => 0,		// Mitchell: pas d'attente pour changer de position
-	'avanceh' => 1,		// Howell: Changement de position synchrone
-	
-	'affperf' => 0,		// Affichage des performances
-	'nbjperf' => 10,	// taille tableau des n premiers joueurs
-	'nbmperf' => 3,		// nb de mois
-	'minperf' => 15,	// nb minimum de tournois joués
-	
-	'param1'  => 0,		// $teston
-	'param2'  => 0,		// ???
-	
-	'opendays'=> $defopendays,
-	'maxweeks'=> 4,		// période pré-inscription en semaines
-);
-// valeurs enregistrées
-if ( file_exists( $file_params ) ) {
-	$parametres = json_decode( file_get_contents( $file_params ), true );
-	if ( !isset($parametres['avancem'] ) )	$parametres['avancem'] = 0;
-	if ( !isset($parametres['avanceh'] ) )	$parametres['avanceh'] = 1;
-	if ( !isset($parametres['opendays'] ) ) $parametres['opendays'] = $defopendays;
-	if ( !isset($parametres['maxweeks'] ) ) $parametres['maxweeks'] = 4;
-	if ( !isset($parametres['affposprov'] ) ) $parametres['affposprov'] = 1;
-	if ( !isset($parametres['sizpix'] ) ) $parametres['sizpix'] = 50;
+require_once __DIR__.'/club_parameters.php';
+require_once __DIR__.'/libcalculs.php';
+try {
+    $parametres = clubParametersLoad($file_params);
+} catch (Throwable $e) {
+    http_response_code(503);
+    header('Content-Type: text/plain; charset=utf-8');
+    exit('Paramètres du club invalides ou illisibles. Contactez le responsable pour restaurer le fichier de paramètres.');
 }
 
 //tests de qualification
-// 0	// pas de test
-// 1	// remplissage aléatoires des résultats de chaque donne
-// 2	// test tournoi avec données réelles - supprimé
+// 0 : fonctionnement normal
+// 1 : test avec remplissage automatique et changement de position automatique
+// 2 : test avec remplissage automatique et changement de position manuel
 $teston = $parametres['param1'];
 
 //autres variables constantes non modifiables par le paramétrage admin
@@ -162,8 +124,9 @@ function _logevent( $dbh, $event ) {
 	global $tab_events;
 	$pseudo = $_SESSION['pseudo'];
 	$datevt = date('Y-m-d H:i:s');
-	$sql = "INSERT into $tab_events ( pseudo, datevt, event ) values ( '$pseudo', '$datevt', '$event' );";
-	$res = $dbh->query( $sql );
+	$sql = "INSERT into $tab_events ( pseudo, datevt, event ) values ( ?, ?, ? );";
+	$sqlBound = [$pseudo, $datevt, $event];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 };
 function logevent( $event ) {
 	$dbh = connectBDD();
@@ -259,41 +222,21 @@ function htmlResultat( $result ) {
 $ID_NOIDENT		= -1;
 $ID_INCORRECT	= 0;
 $ID_CORRECT		= 1;
-function setIdent( $userid ) {
-	global $parametres, $prefix, $maxdureesession;
-	$ident = array( 'ttt' => $prefix, 'userid' => $userid );
-	$jsonIdent  = json_encode($ident);
-	$cookieUser = base64_encode( $jsonIdent );
-	setcookie('bridgette_user', $cookieUser, time()+$maxdureesession);
+function setIdent($userid) {
+    global $prefix;
+    unset($_SESSION['android_ticket_hash']);
+    session_regenerate_id(true);
+    $_SESSION['player_identity'] = ['club' => $prefix, 'id' => (int)$userid, 'time' => time()];
+    securityRememberPlayer();
+    setcookie('bridgette_user', '', time() - 3600);
 }
 function getIdent() {
-	global $parametres, $prefix, $maxdureesession;
-	global $ID_NOIDENT, $ID_INCORRECT, $ID_CORRECT;
-	if ( isset($_COOKIE['bridgette_user']) ) {
-		$cookieUser = $_COOKIE['bridgette_user'];
-		$jsonIdent  = base64_decode( $cookieUser );
-		$ident = json_decode( $jsonIdent, true );
-		if ( $ident['ttt'] == $prefix ) {
-			// même club
-			$result = array( 'status' => $ID_CORRECT, 'userid' => $ident['userid'] );
-			// actualise le cookie, nouvelle date d'expiration
-			setcookie('bridgette_user', $cookieUser, time()+$maxdureesession);
-		}
-		else {
-			if ( $parametres['checkuser'] > 0 )
-				// club différent, redemande login
-				$result = array( 'status' => $ID_INCORRECT, 'userid' => 0 );
-			else
-				$result = array( 'status' => $ID_NOIDENT, 'userid' => 0 );
-		}
-	}
-	else {
-		if ( $parametres['checkuser'] > 0 )
-			$result = array( 'status' => $ID_INCORRECT, 'userid' => 0 );
-		else
-			$result = array( 'status' => $ID_NOIDENT, 'userid' => 0 );
-	}
-	return $result;
+    global $parametres, $ID_NOIDENT, $ID_INCORRECT, $ID_CORRECT;
+    $id = securityPlayerId();
+    if ($id) {
+        return ['status' => $ID_CORRECT, 'userid' => $id];
+    }
+    return ['status' => !empty($parametres['checkuser']) ? $ID_INCORRECT : $ID_NOIDENT, 'userid' => 0];
 }
 function isCheckedJoueur($idtournoi) {
 	global $parametres;
@@ -314,658 +257,27 @@ function isCheckedJoueur($idtournoi) {
 	else return true;
 }
 function isAdmin() {
-	if( isset($_SESSION["pseudo"]) ){
-		if( $_SESSION["fonction"] == "admin" ) return true;
-		return false;
-	}
-	else return false;
+	return securityRole('admin');
 }
 function isDirecteur() {
-	if( isset($_SESSION["pseudo"]) ){
-		if( $_SESSION["fonction"] == "directeur" ) return true;
-		return false;
-	}
-	else return false;
+	return securityRole('directeur');
 }
 function isFormateur() {
-	if( isset($_SESSION["pseudo"]) ){
-		if( $_SESSION["fonction"] == "formateur" ) return true;
-		return false;
-	}
-	else return false;
+	return securityRole('formateur');
 }
 
 //
-// fonctions utilisant la table typetournoi
-$t_unknown = 0;
-$t_mitchell = 1;
-$t_howell = 2;
-$st_typetournoi = [
-	$t_unknown	=> "???",
-	$t_mitchell => "Mitchell",
-	$t_howell	=> "Howell",
-];
-$def_genre = $t_howell;
-$def_type_mitchell = 10;
-$def_type_howell = 8;
-
-$min_type_howell = 4;
-$min_type_mitchell = 9;
-$min_type_affimp = 5;
-
-$min_tables_mitchell = 4;
-$min_paires_howell = 4;
-$max_paires_howell = 12;
-
-$maxetuis = 36;	// Nb max de donnes figurant sur la feuille de marque
-
-$warningPMR = "<span style='color:red'>la paire n°1 est à réserver aux joueurs à mobilité réduite.</span>";
-//
-// insertion 29 août 2025
-class TypesTournois {
-	protected array $base;
-	function __construct() {
-		global $t_unknown, $t_mitchell, $t_howell;
-		$this->base = array(
-	//'1'		=>array( 1,12,20,20, 1,20 ,0, 0, 0,"pas de tournoi","Paquet de donnes libres"),
-	//				[0]'npaires' 
-	//				 | [1]'ntables' y compris les tables relais, non compris le guéridon ou = npaires pour howell
-	//				 |  | [2]'paquet' de donnes par tables
-	//				 |  |  | [3]'npositions' nb de positions
-	//				 |  |  |  | [4]'saut' si >0 saut après la xième position
-	//				 |  |  |  |  | [5] relais si >0, Howell: n°paire manquante, Mitchell: n°table relais
-	//				 |  |  |  |  |  |  [6]guéridon si =1
-	//				 |  |  |  |  |  |  |  [7] genre tournoi
-	//				 |  |  |  |  |  |  |  |			[8] max positions
-	//				 |  |  |  |  |  |  |  |			|		[9] description
-	'4'		=>array( 4, 4, 4, 6, 0, 0, 0,$t_howell, 6,  "Equivalent Howell avec 2 tables, %np% positions, affichage en % ou IMP selon paramétrage"),
-	'5'		=>array( 5, 5, 5, 4, 0, 6, 0,$t_howell, 4,	"Howell 5 paires avec 3 tables incomplètes, %np% positions, table relais variable en fonction du numéro de tour, affichage en % ou IMP selon paramétrage"),
-	'6'		=>array( 6, 6, 5, 5, 0, 0, 0,$t_howell, 5,	"Howell 6 paires avec 3 tables, %np% positions, partage des donnes à la dernière position"),
-	'7'		=>array( 7, 7, 3, 7, 0, 8, 0,$t_howell, 7,	"Howell 7 paires avec 4 tables incomplètes, %np% positions, table relais variable en fonction du numéro de tour"),
-	'8'		=>array( 8, 8, 3, 7, 0, 0, 0,$t_howell, 7,  "Howell 8 paires avec 4 tables, %np% positions"),
-	'32'	=>array( 9, 9, 3, 9, 0,10, 0,$t_howell, 9,  "Howell 9 paires avec 5 tables incomplètes, %np% positions"),
-	'33'	=>array(10,10, 3, 9, 0, 0, 0,$t_howell, 9,  "Howell 10 paires avec 5 tables, %np% positions"),
-	'34'	=>array(11,12, 3, 9, 0,12, 0,$t_howell, 9,  "Howell 11 paires avec 6 tables incomplètes, %np% positions"),	// ajout 27/08/2025
-	'35'	=>array(12,12, 3, 9, 0, 0, 0,$t_howell, 9,  "Howell 12 paires avec 6 tables complètes, %np% positions"),	// ajout 27/08/2025
-	
-	'47'	=>array( 7, 4, 5, 4, 0, 4, 1,$t_mitchell, 4,	"Mitchell, 4 tables incomplètes, %np% positions, guéridon entre les tables 2 et 3, pas d'étuis table 4, relais EO uniquement"),
-	'48'	=>array( 8, 4, 5, 4, 0, 0, 1,$t_mitchell, 4,	"Mitchell, 4 tables complètes, %np% positions, guéridon entre les tables 2 et 3, pas d'étuis table 4, les tables 1 et 4 se partagent les étuis qui arrivent à la table 1"),
-	'9'		=>array( 9, 5, 5, 5, 0, 5, 0,$t_mitchell, 5,	"Mitchell, 5 tables incomplètes, %np% positions, relais NS variable ou relais EO table 5"),
-	'10'	=>array(10, 5, 5, 5, 0, 0, 0,$t_mitchell, 5,	"Mitchell, 5 tables complètes, %np% positions"),
-	'11'	=>array(11, 6, 4, 6, 0, 6, 1,$t_mitchell, 6,	"Mitchell, 6 tables incomplètes, %np% positions, guéridon entre les tables 3 et 4, pas d'étuis table 6, relais EO uniquement"),
-	'12'	=>array(12, 6, 4, 6, 0, 0, 1,$t_mitchell, 6,	"Mitchell, 6 tables complètes, %np% positions, guéridon entre les tables 3 et 4, pas d'étuis table 6, les tables 1 et 6 se partagent les étuis qui arrivent à la table 1"),
-	'13'	=>array(13, 7, 4, 7, 0, 7, 0,$t_mitchell, 7,	"Mitchell, 7 tables incomplètes, %np% positions, relais NS variable ou relais EO table 7"),
-	'14'	=>array(14, 7, 4, 7, 0, 0, 0,$t_mitchell, 7,	"Mitchell, 7 tables complètes, %np% positions"),
-	'15'	=>array(15, 8, 3, 8, 0, 8, 1,$t_mitchell, 8,	"Mitchell, 8 tables incomplètes, %np% positions, guéridon entre les tables 4 et 5, pas d'étuis table 8, relais EO uniquement"),
-	'16'	=>array(16, 8, 3, 8, 0, 0, 1,$t_mitchell, 8,	"Mitchell, 8 tables complètes, %np% positions, guéridon entre les tables 4 et 5, pas d'étuis table 8, les tables 1 et 8 se partagent les étuis qui arrivent à la table 1"),
-	'17'	=>array(17, 9, 3, 9, 0, 9, 0,$t_mitchell, 9,	"Mitchell, 9 tables incomplètes, %np% positions, relais NS variable ou relais EO table 9"),
-	'18'	=>array(18, 9, 3, 9, 0, 0, 0,$t_mitchell, 9,	"Mitchell, 9 tables complètes, %np% positions"),
-	'19'	=>array(19,10, 3, 9, 5,10, 0,$t_mitchell, 9,	"Mitchell, 10 tables incomplètes, %np% positions, saut après 5ème position, relais NS variable ou relais EO table 10"),
-	'20'	=>array(20,10, 3, 9, 5, 0, 0,$t_mitchell, 9,	"Mitchell, 10 tables complètes, %np% positions, saut après 5ème position"),
-	'21'	=>array(21,11, 3, 9, 0,11, 0,$t_mitchell,11,	"Mitchell, 11 tables incomplètes, %np% positions, relais NS variable ou relais EO table 11"),
-	'22'	=>array(22,11, 3, 9, 0, 0, 0,$t_mitchell,11,	"Mitchell, 11 tables complètes, %np% positions"),
-	'23'	=>array(23,12, 2,12, 0,12, 1,$t_mitchell,12,	"Mitchell, 12 tables incomplètes, %np% positions, guéridon entre les tables 6 et 7, pas d'étuis au relais EO table 12"),
-	'24'	=>array(24,12, 2,11, 6, 0, 0,$t_mitchell,11,	"Mitchell, 12 tables complètes, %np% positions, saut après 6ème position"),
-	'25'	=>array(25,13, 2,13, 0,13, 0,$t_mitchell,13,	"Mitchell, 13 tables incomplètes, %np% positions, relais NS variable ou relais EO table 13"),
-	'26'	=>array(26,13, 2,13, 0, 0, 0,$t_mitchell,13,	"Mitchell, 13 tables complètes, %np% positions"),
-	'27'	=>array(27,14, 2,13, 7,14, 0,$t_mitchell,13,	"Mitchell, 14 tables incomplètes, %np% positions, saut après 7ème position, relais NS variable ou relais EO table 14"),
-	'28'	=>array(28,14, 2,13, 7, 0, 0,$t_mitchell,13,	"Mitchell, 14 tables complètes, %np% positions, saut après 7ème position"),
-	'29'	=>array(29,15, 2,13, 0,15, 0,$t_mitchell,15,	"Mitchell, 15 tables incomplètes, %np% positions, relais NS variable ou relais EO table 15"),
-	'30'	=>array(30,15, 2,13, 0, 0, 0,$t_mitchell,15,	"Mitchell, 15 tables complètes, %np% positions")
-	//
-	//				[0]'npaires' 
-	//				 | [1]'ntables' y compris les tables relais, non compris le guéridon ou = npaires pour howell
-	//				 |  | [2]'paquet' de donnes par tables
-	//				 |  |  |  [3]'npositions' nb de positions
-	//				 |  |  |  | [4]'saut' si >0 saut après la xième position
-	//				 |  |  |  |  | [5] relais si >0, Howell: n°paire manquante, Mitchell: n°table relais
-	//				 |  |  |  |  |  |  [6]guéridon si =1
-	//				 |  |  |  |  |  |  |  [7] genre tournoi
-	//				 |  |  |  |  |  |  |  |			[8] max positions
-	//				 |  |  |  |  |  |  |  |			|		[9] description
-	);
-	}
-	protected function get_tt( $id ) {
-		global $maxetuis, $t_mitchell, $t_howell;
-		$typetournoi = $this->base[$id];
-		$tt = array(
-			'npaires' 	=> $typetournoi[0],
-			'ntables' 	=> $typetournoi[1],
-			'paquet' 	=> $typetournoi[2],		// par défaut
-			'npositions' => $typetournoi[3],
-			'saut' 		=> $typetournoi[4],
-			'relais' 	=> $typetournoi[5],
-			'gueridon'	=> $typetournoi[6],
-			'genre'	 	=> $typetournoi[7],
-			'maxpos'	=> $typetournoi[8],
-			'desc'	 	=> $typetournoi[9]
-		);
-		if( $tt['genre'] == $t_mitchell ) {
-			$tt['maxpaquet'] = intval( $maxetuis/$tt['ntables'] );
-		}
-		else {
-			$tt['maxpaquet'] = intval( $maxetuis/$tt['npositions'] );
-		}
-		return $tt;
-		}
-	function computetype( $pns, $peo ) {
-		if ( $peo == 0 ) {
-			// howell
-			if ( $pns > 8 ) {
-				return( $pns + 23 );
-			}
-			else {
-				return $pns;
-			}
-		}
-		else {
-			// mitchell
-			$np = $pns + $peo;
-			if ( $np > 8 ) {
-				return( $np );
-			}
-			else {
-				return( $np + 40 );
-			}
-		}
-	}	
-	function gettypetournoi( $id ) {
-		if ( array_key_exists( $id, $this->base ) ) {
-			$tt = $this->get_tt( $id );
-		}
-		else {
-			$tt = array(
-				'npaires' 	=> 0,
-				'ntables' 	=> 0,
-				'paquet' 	=> 0,
-				'maxpaquet'	=> 0,
-				'npositions' => 0,
-				'saut' 		=> 0,
-				'relais' 	=> 0,
-				'gueridon'	=> 0,
-				'genre'	 	=> $t_unknown,
-				'maxpos'	=> 0,
-				'desc'	 	=> "type tournoi inconnu",
-			);
-		}
-		return $tt;
-	}
-	function getnpaires( $id ) {
-		if ( array_key_exists( $id, $this->base ) ) {
-			$tt = $this->get_tt( $id );
-			return $tt['npaires'];
-		}
-		else {
-			return 0;
-		}
-	}
-	function getmaxpositions( $id ) {
-		if ( array_key_exists( $id, $this->base ) ) {
-			$tt = $this->get_tt( $id );
-			return $tt['maxpos'];
-		}
-		else {
-			return 0;
-		}
-	}
-	function gethtmltable() {
-		global $warningPMR;
-		$str = "<p>Pour les tournois de type Howell, la paire n°1 à la table 1 ne bouge pas pendant le tournoi, $warningPMR</p>";
-		$str .= '<table border="0"><tbody>';
-		$str .= '<tr>';
-		$str .= '<th class="xTypt">Nb<br/>paires</th>';
-		$str .= '<th class="xTypt">Nb<br/>étuis<br/>(*)</th>';
-		$str .= '<th style="text-align:left" class="xTypt">Description (**)</th>';
-		$str .= '</tr>';
-		foreach ( $this->base as $key => $value ) {
-			$tt = $this->get_tt( $key );
-			$str .= "<tr>";
-			$npaires	= $tt['npaires'];
-			$paquet		= $tt['paquet'];
-			$desc		= $tt['desc'];
-			$desc = str_replace("%np%", $tt['npositions'], $tt['desc']);
-
-			$str .= "<td class='xTypt'><b>$npaires</b></td>";
-			$str .= "<td class='xTypt'>$paquet</td>";
-			$str .= "<td style='text-align:left;' class='xTypt'>$desc</td>";
-			$str .= '</tr>';
-		}
-		$str .= '</tbody></table>';
-		$str .= "<p>(*): valeur par défaut, modifiable <b>avant</b> le démarrage du tournoi<br/>(**): nombre de positions modifiable <b>après</b> le démarrage du tournoi</br>Avec au maximum 36 étuis en circulation.</p>";
-		return $str;
-	}
-}
-$typestournois = new TypesTournois();
-
-function computetype($pns,$peo) { global $typestournois; return $typestournois->computetype( $pns, $peo ); }
-function htmlTableTypeTournois(){ global $typestournois; return $typestournois->gethtmltable(); }
-function getnpaires( $id )		{ global $typestournois; return $typestournois->getnpaires( $id ); }
-function getmaxpositions( $id, $paquet )	{
-	global $typestournois, $maxetuis;
-	// le nombre de positions dépends du nombre de tables, du type de tournoi et du nombre d'étuis par table
-	// Le nombre d'étui en circulation doit rester inférieur ou égale au nombre max d'étuis qui est de 36
-	$tt = $typestournois->gettypetournoi( $id );
-	$maxpos = min($tt['maxpos'], floor($maxetuis/$paquet) );
-	return $maxpos;
-}
-function gettypetournoi( $id )	{ global $typestournois; return $typestournois->gettypetournoi( $id ); }
-// fin insertion 29 août 2025
-//
-function getposhowell( $idtype, $numpaire, $notour, $paquet ) {
-	// Tableau des positions successives pour les tournois Howell
-	$posHowell = Array(		// NS/EO __ N°table
-	// Duplicate tournant 4 paires - 3 positions - 6 tours
-	//Paire n° --> 	1			2			3			4
-	//	Table_ns/eo_paquet_adversaire
-	'4_1'=>Array( '1_1_1_2', '1_2_1_1', '2_1_2_4', '2_2_2_3' ),	// Positions tour n°1
-	'4_2'=>Array( '1_1_2_2', '1_2_2_1', '2_1_1_4', '2_2_1_3' ),	// Positions tour n°2
-	'4_3'=>Array( '1_1_3_3', '2_2_4_4', '1_2_3_1', '2_1_4_2' ),	// Positions tour n°3
-	'4_4'=>Array( '1_1_4_3', '2_2_3_4', '1_2_4_1', '2_1_3_2' ),	// Positions tour n°4
-	'4_5'=>Array( '1_1_5_4', '2_1_6_3', '2_2_6_2', '1_2_5_1' ),	// Positions tour n°5
-	'4_6'=>Array( '1_1_6_4', '2_1_5_3', '2_2_5_2', '1_2_6_1' ),	// Positions tour n°6
-	
-	// Howell 5 paires - 5 positions avec la paire n°1 à la table 1 qui ne bouge pas
-	//Paire n° --> 	1			2			3			4		5 en relais
-	//	Table_position_paquet_adversaire
-	'5_1'=>Array( '1_1_1_2', '1_2_1_1', '2_2_4_0', '3_2_2_5', '3_1_2_4', '2_1_4_3' ),	// Positions tour n°1
-	'5_2'=>Array( '1_1_2_3', '2_1_4_4', '1_2_2_1', '2_2_4_2', '3_2_3_0', '3_1_3_5' ),	// Positions tour n°2
-	'5_3'=>Array( '1_1_3_4', '3_1_2_0', '2_1_1_5', '1_2_3_1', '2_2_1_3', '3_2_2_2' ),	// Positions tour n°3
-	'5_4'=>Array( '1_1_4_5', '3_2_3_3', '3_1_3_2', '2_1_1_0', '1_2_4_1', '2_2_1_4' ),	// Positions tour n°4
-	
-	// Howell 6 paires - 5 positions avec la paire n°1 à la table 1 qui ne bouge pas
-	//Paire n° --> 	1			2			3			4		5			6
-	//	Table_position_paquet_adversaire
-	'6_1'=>Array( '1_1_1_2', '1_2_1_1', '2_2_4_6', '3_2_2_5', '3_1_2_4', '2_1_4_3' ),	// Positions tour n°1
-	'6_2'=>Array( '1_1_2_3', '2_1_4_4', '1_2_2_1', '2_2_4_2', '3_2_3_6', '3_1_3_5' ),	// Positions tour n°2
-	'6_3'=>Array( '1_1_3_4', '3_1_2_6', '2_1_1_5', '1_2_3_1', '2_2_1_3', '3_2_2_2' ),	// Positions tour n°3
-	'6_4'=>Array( '1_1_4_5', '3_2_3_3', '3_1_3_2', '2_1_1_6', '1_2_4_1', '2_2_1_4' ),	// Positions tour n°4
-	'6_5'=>Array( '1_1_5_6', '2_2_5_5', '3_2_5_4', '3_1_5_3', '2_1_5_2', '1_2_5_1' ),	// Positions tour n°5, le dernier paquet est partagé entre les 3 tables
-	
-	// Howell 7 paires type anglais
-	//Paire n° --> 1			2		 	3		  4		   		5		6			 7
-	//	Table_position_paquet_adversaire 					en relais
-	'7_1'=>Array( '1_1_1_2', '1_2_1_1', '2_1_2_4', '2_2_2_3', '3_1_3_6', '3_2_3_5', '4_1_5_0', '4_2_5_7' ),	// tour n°1
-	'7_2'=>Array( '1_1_2_6', '4_1_6_5', '2_2_3_7', '3_1_4_0', '4_2_6_2', '1_2_2_1', '2_1_3_3', '3_2_4_4' ),	// tour n°2
-	'7_3'=>Array( '1_1_3_0', '2_1_4_7', '3_1_5_5', '4_2_7_6', '3_2_5_3', '4_1_7_4', '2_2_4_2', '1_2_3_1' ),	// tour n°3
-	'7_4'=>Array( '1_1_4_5', '2_2_5_6', '4_2_1_0', '3_2_6_7', '1_2_4_1', '2_1_5_2', '3_1_6_4', '4_1_1_3' ),	// tour n°4
-	'7_5'=>Array( '1_1_5_4', '3_1_7_3', '3_2_7_2', '1_2_5_1', '4_1_2_7', '2_2_6_0', '4_2_2_5', '2_1_6_6' ),	// tour n°5
-	'7_6'=>Array( '1_1_6_3', '4_2_3_4', '1_2_6_1', '4_1_3_2', '2_1_7_0', '3_1_1_7', '3_2_1_6', '2_2_7_5' ),	// tour n°6
-	'7_7'=>Array( '1_1_7_7', '3_2_2_0', '4_1_4_6', '2_1_1_5', '2_2_1_4', '4_2_4_3', '1_2_7_1', '3_1_2_2' ),	// tour n°7
-	
-	// Howell 8 paires type anglais avec la paire n°1 à la table 1 qui ne bouge pas
-	//Paire n° --> 1			2		 	3		  4		   		5		6			 7			8
-	//	Table_position_paquet_adversaire 					en relais
-	'8_1'=>Array( '1_1_1_2', '1_2_1_1', '2_1_2_4', '2_2_2_3', '3_1_3_6', '3_2_3_5', '4_1_5_8', '4_2_5_7' ),	// tour n°1
-	'8_2'=>Array( '1_1_2_6', '4_1_6_5', '2_2_3_7', '3_1_4_8', '4_2_6_2', '1_2_2_1', '2_1_3_3', '3_2_4_4' ),	// tour n°2
-	'8_3'=>Array( '1_1_3_8', '2_1_4_7', '3_1_5_5', '4_2_7_6', '3_2_5_3', '4_1_7_4', '2_2_4_2', '1_2_3_1' ),	// tour n°3
-	'8_4'=>Array( '1_1_4_5', '2_2_5_6', '4_2_1_8', '3_2_6_7', '1_2_4_1', '2_1_5_2', '3_1_6_4', '4_1_1_3' ),	// tour n°4
-	'8_5'=>Array( '1_1_5_4', '3_1_7_3', '3_2_7_2', '1_2_5_1', '4_1_2_7', '2_2_6_8', '4_2_2_5', '2_1_6_6' ),	// tour n°5
-	'8_6'=>Array( '1_1_6_3', '4_2_3_4', '1_2_6_1', '4_1_3_2', '2_1_7_8', '3_1_1_7', '3_2_1_6', '2_2_7_5' ),	// tour n°6
-	'8_7'=>Array( '1_1_7_7', '3_2_2_8', '4_1_4_6', '2_1_1_5', '2_2_1_4', '4_2_4_3', '1_2_7_1', '3_1_2_2' ),	// tour n°7
-	
-	// Howell 9 paires
-	//Paire n° --> 1			2		 	3		  4		   		5		6			 7			8			9		10
-	//	Table_position_paquet_adversaire 					en relais
-	'9_1'=>Array( '1_1_1_0', '5_1_9_5', '4_1_8_7', '3_2_3_6', '5_2_9_2', '3_1_3_4', '4_2_8_3', '2_1_2_9', '2_2_2_8', '1_2_1_1' ),	// tour n°1
-	'9_2'=>Array( '1_1_2_2', '1_2_2_1', '5_1_1_6', '4_1_9_8', '3_2_4_7', '5_2_1_3', '3_1_4_5', '4_2_9_4', '2_1_3_0', '2_2_3_9' ),	// tour n°2
-	'9_3'=>Array( '1_1_3_3', '2_2_4_0', '1_2_3_1', '5_1_2_7', '4_1_1_9', '3_2_5_8', '5_2_2_4', '3_1_5_6', '4_2_1_5', '2_1_4_2' ),	// tour n°3
-	'9_4'=>Array( '1_1_4_4', '2_1_5_3', '2_2_5_2', '1_2_4_1', '5_1_3_8', '4_1_2_0', '3_2_6_9', '5_2_3_5', '3_1_6_7', '4_2_2_6' ),	// tour n°4
-	'9_5'=>Array( '1_1_5_5', '4_2_3_7', '2_1_6_4', '2_2_6_3', '1_2_5_1', '5_1_4_9', '4_1_3_2', '3_2_7_0', '5_2_4_6', '3_1_7_8' ),	// tour n°5
-	'9_6'=>Array( '1_1_6_6', '3_1_8_9', '4_2_4_8', '2_1_7_5', '2_2_7_4', '1_2_6_1', '5_1_5_0', '4_1_4_3', '3_2_8_2', '5_2_5_7' ),	// tour n°6
-	'9_7'=>Array( '1_1_7_7', '5_2_6_8', '3_1_9_0', '4_2_5_9', '2_1_8_6', '2_2_8_5', '1_2_7_1', '5_1_6_2', '4_1_5_4', '3_2_9_3' ),	// tour n°7
-	'9_8'=>Array( '1_1_8_8', '3_2_1_4', '5_2_7_9', '3_1_1_2', '4_2_6_0', '2_1_9_7', '2_2_9_6', '1_2_8_1', '5_1_7_3', '4_1_6_5' ),	// tour n°8
-	'9_9'=>Array( '1_1_9_9', '4_1_7_6', '3_2_2_5', '5_2_8_0', '3_1_2_3', '4_2_7_2', '2_1_1_8', '2_2_1_7', '1_2_9_1', '5_1_8_4' ),	// tour n°9
-
-	// Howell 10 paires
-	//Paire n° --> 1			2		 	3		  4		   		5		6			 7			8			9		10
-	//	Table_position_paquet_adversaire 					en relais
-	'10_1'=>Array( '1_1_1_10', '5_1_9_5', '4_1_8_7', '3_2_3_6', '5_2_9_2', '3_1_3_4', '4_2_8_3', '2_1_2_9', '2_2_2_8', '1_2_1_1' ),	// tour n°1
-	'10_2'=>Array( '1_1_2_2', '1_2_2_1', '5_1_1_6', '4_1_9_8', '3_2_4_7', '5_2_1_3', '3_1_4_5', '4_2_9_4', '2_1_3_10', '2_2_3_9' ),	// tour n°2
-	'10_3'=>Array( '1_1_3_3', '2_2_4_10', '1_2_3_1', '5_1_2_7', '4_1_1_9', '3_2_5_8', '5_2_2_4', '3_1_5_6', '4_2_1_5', '2_1_4_2' ),	// tour n°3
-	'10_4'=>Array( '1_1_4_4', '2_1_5_3', '2_2_5_2', '1_2_4_1', '5_1_3_8', '4_1_2_10', '3_2_6_9', '5_2_3_5', '3_1_6_7', '4_2_2_6' ),	// tour n°4
-	'10_5'=>Array( '1_1_5_5', '4_2_3_7', '2_1_6_4', '2_2_6_3', '1_2_5_1', '5_1_4_9', '4_1_3_2', '3_2_7_10', '5_2_4_6', '3_1_7_8' ),	// tour n°5
-	'10_6'=>Array( '1_1_6_6', '3_1_8_9', '4_2_4_8', '2_1_7_5', '2_2_7_4', '1_2_6_1', '5_1_5_10', '4_1_4_3', '3_2_8_2', '5_2_5_7' ),	// tour n°6
-	'10_7'=>Array( '1_1_7_7', '5_2_6_8', '3_1_9_10', '4_2_5_9', '2_1_8_6', '2_2_8_5', '1_2_7_1', '5_1_6_2', '4_1_5_4', '3_2_9_3' ),	// tour n°7
-	'10_8'=>Array( '1_1_8_8', '3_2_1_4', '5_2_7_9', '3_1_1_2', '4_2_6_10', '2_1_9_7', '2_2_9_6', '1_2_8_1', '5_1_7_3', '4_1_6_5' ),	// tour n°8
-	'10_9'=>Array( '1_1_9_9', '4_1_7_6', '3_2_2_5', '5_2_8_10', '3_1_2_3', '4_2_7_2', '2_1_1_8', '2_2_1_7', '1_2_9_1', '5_1_8_4' ),	// tour n°9
-
-	// 27/08/2025: ajout howell 11 et 12 paires
-	// Howell 11 paires: Howell Classique à 5 tables ½, 3 étuis par tour, 9 positions jouées, max 11
-	//Paire n° --> 1			2		 	3		  4		   		5		6			 7			8			9		10			11
-	//	Table_position_paquet_adversaire	relais table 1
-	'11_1' =>Array( '1_2_1_0', '4_1_8_3', '4_2_8_2', '6_1_11_7', '3_1_7_9', '2_1_3_11', '6_2_11_4', '5_2_9_10', '3_2_7_5', '5_1_9_8', '2_2_3_6', '1_1_1_1' ), 
-	'11_2' =>Array( '2_2_4_7', '1_2_2_0', '4_1_9_4', '4_2_9_3', '6_1_1_8', '3_1_8_10', '2_1_4_1', '6_2_1_5', '5_2_10_11', '3_2_8_6', '5_1_10_9', '1_1_2_2' ), 
-	'11_3' =>Array( '5_1_11_10', '2_2_5_8', '1_2_3_0', '4_1_10_5', '4_2_10_4', '6_1_2_9', '3_1_9_11', '2_1_5_2', '6_2_2_6', '5_2_11_1', '3_2_9_7', '1_1_3_3' ), 
-	'11_4' =>Array( '3_2_10_8', '5_1_1_11', '2_2_6_9', '1_2_4_0', '4_1_11_6', '4_2_11_5', '6_1_3_10', '3_1_10_1', '2_1_6_3', '6_2_3_7', '5_2_1_2', '1_1_4_4' ),
-	'11_5' =>Array( '5_2_2_3', '3_2_11_9', '5_1_2_1', '2_2_7_10', '1_2_5_0', '4_1_1_7', '4_2_1_6', '6_1_4_11', '3_1_11_2', '2_1_7_4', '6_2_4_8', '1_1_5_5' ),
-	'11_6' =>Array( '6_2_5_9', '5_2_3_4', '3_2_1_10', '5_1_3_2', '2_2_8_11', '1_2_6_0', '4_1_2_8', '4_2_2_7', '6_1_5_1', '3_1_1_3', '2_1_8_5', '1_1_6_6' ),
-	'11_7'=>Array( '2_1_9_6', '6_2_6_10', '5_2_4_5', '3_2_2_11', '5_1_4_3', '2_2_9_1', '1_2_7_0', '4_1_3_9', '4_2_3_8', '6_1_6_2', '3_1_2_4', '1_1_7_7' ),
-	'11_8' =>Array( '3_1_3_5', '2_1_10_7', '6_2_7_11', '5_2_5_6', '3_2_3_1', '5_1_5_4', '2_2_10_2', '1_2_8_0', '4_1_4_10', '4_2_4_9', '6_1_7_3', '1_1_8_8' ),
-	'11_9' =>Array( '6_1_8_4', '3_1_4_6', '2_1_11_8', '6_2_8_1', '5_2_6_7', '3_2_4_2', '5_1_6_5', '2_2_11_3', '1_2_9_0', '4_1_5_11', '4_2_5_10', '1_1_9_9' ),
-	'11_10'=>Array( '4_2_6_11', '6_1_9_5', '3_1_5_7', '2_1_1_9', '6_2_9_2', '5_2_7_8', '3_2_5_3', '5_1_7_6', '2_2_1_4', '1_2_10_0', '4_1_6_1', '1_1_10_10' ),
-	'11_11'=>Array( '4_1_7_2', '4_2_7_1', '6_1_10_6', '3_1_6_8', '2_1_2_10', '6_2_10_3', '5_2_8_9', '3_2_6_4', '5_1_8_7', '2_2_2_5', '1_2_11_0', '1_1_11_11' ),
-
-	// Howell 12 paires: Howell Classique à 6 tables, 3 étuis par tour, 9 positions jouées, max 11
-	//Paire n° --> 		1			2		 	3		  4		   		5		6			 7			8			9		10			11			12
-	//	Table_position_paquet_adversaire
-	'12_1' =>Array( '1_2_1_12', '4_1_8_3', '4_2_8_2', '6_1_11_7', '3_1_7_9', '2_1_3_11', '6_2_11_4', '5_2_9_10', '3_2_7_5', '5_1_9_8', '2_2_3_6', '1_1_1_1' ), 
-	'12_2' =>Array( '2_2_4_7', '1_2_2_12', '4_1_9_4', '4_2_9_3', '6_1_1_8', '3_1_8_10', '2_1_4_1', '6_2_1_5', '5_2_10_11', '3_2_8_6', '5_1_10_9', '1_1_2_2' ), 
-	'12_3' =>Array( '5_1_11_10', '2_2_5_8', '1_2_3_12', '4_1_10_5', '4_2_10_4', '6_1_2_9', '3_1_9_11', '2_1_5_2', '6_2_2_6', '5_2_11_1', '3_2_9_7', '1_1_3_3' ), 
-	'12_4' =>Array( '3_2_10_8', '5_1_1_11', '2_2_6_9', '1_2_4_12', '4_1_11_6', '4_2_11_5', '6_1_3_10', '3_1_10_1', '2_1_6_3', '6_2_3_7', '5_2_1_2', '1_1_4_4' ),
-	'12_5' =>Array( '5_2_2_3', '3_2_11_9', '5_1_2_1', '2_2_7_10', '1_2_5_12', '4_1_1_7', '4_2_1_6', '6_1_4_11', '3_1_11_2', '2_1_7_4', '6_2_4_8', '1_1_5_5' ),
-	'12_6' =>Array( '6_2_5_9', '5_2_3_4', '3_2_1_10', '5_1_3_2', '2_2_8_11', '1_2_6_12', '4_1_2_8', '4_2_2_7', '6_1_5_1', '3_1_1_3', '2_1_8_5', '1_1_6_6' ),
-	'12_7'=>Array( '2_1_9_6', '6_2_6_10', '5_2_4_5', '3_2_2_11', '5_1_4_3', '2_2_9_1', '1_2_7_12', '4_1_3_9', '4_2_3_8', '6_1_6_2', '3_1_2_4', '1_1_7_7' ),
-	'12_8' =>Array( '3_1_3_5', '2_1_10_7', '6_2_7_11', '5_2_5_6', '3_2_3_1', '5_1_5_4', '2_2_10_2', '1_2_8_12', '4_1_4_10', '4_2_4_9', '6_1_7_3', '1_1_8_8' ),
-	'12_9' =>Array( '6_1_8_4', '3_1_4_6', '2_1_11_8', '6_2_8_1', '5_2_6_7', '3_2_4_2', '5_1_6_5', '2_2_11_3', '1_2_9_12', '4_1_5_11', '4_2_5_10', '1_1_9_9' ),
-	'12_10'=>Array( '4_2_6_11', '6_1_9_5', '3_1_5_7', '2_1_1_9', '6_2_9_2', '5_2_7_8', '3_2_5_3', '5_1_7_6', '2_2_1_4', '1_2_10_12', '4_1_6_1', '1_1_10_10' ),
-	'12_11'=>Array( '4_1_7_2', '4_2_7_1', '6_1_10_6', '3_1_6_8', '2_1_2_10', '6_2_10_3', '5_2_8_9', '3_2_6_4', '5_1_8_7', '2_2_2_5', '1_2_11_12', '1_1_11_11' ),
-	);
-	$npaires = getnpaires($idtype);
-	$itour = $npaires ."_".$notour;
-	$tour  = $posHowell[ $itour ];
-	$stri  = $tour[$numpaire - 1];
-	
-	$figs = explode( "_", $stri );
-	$p = array(
-		'table'	=> $figs[0],					// numéro de table
-		'NS'	=> ($figs[1] == 1) ? 1 : 2,	// orientation
-		'last'	=> ($figs[2]-1)*$paquet,		// dernière donne "jouée"
-		'adversaire'=> $figs[3],
-		);
-	return $p;
-}
-function getrelaishowell( $idtype, $notour, $paquet ) {
-	$tt = gettypetournoi( $idtype );
-	if ($tt['relais'] == 0 ) return 0;
-	$maxtour	= $tt['npositions'];
-	$maxpaires	= $tt['ntables'];
-	for ($i=1; $i<=$maxpaires; $i++) {
-		$p = getposhowell( $idtype, $i, $notour, $paquet );
-		$adversaire = intval( $p['adversaire'] );
-		if ( $adversaire == 0 ) return $i;
-	}
-}
-function getfeuillesuivihowell( $idtype, $paquet, $n ) {
-	//	$idtype: le type de tournoi de howell
-	//	$paquet = taille du paquet (choisi avant démarrage du tournoi)
-	//	$n le numéro de de la 1ère donne du paquet
-	$feuille = Array();
-	// return un tableau avec:
-	// n°tour(de 1 à maxtour) - n°paire(NS) - n°paire(EO)
-	$tt = gettypetournoi( $idtype );
-	$maxtour	= $tt['npositions'];
-	$maxpaires	= $tt['ntables'];
-	$k = 0;
-	for ($i=1; $i<=$maxtour; $i++) {
-		// recherche si donne $n jouée par une paire en NS
-		for ($j=1; $j<=$maxpaires; $j++) {
-			//getposhowell( $idtype, $numpaire, $notour, $paquet )
-			$p = getposhowell( $idtype, $j, $i, $paquet );
-			if ( $p['NS'] != 1 ) continue;
-			if ( ($p['last']+1)!= $n ) continue;
-			$adversaire = intval( $p['adversaire'] );
-			if ( $adversaire == 0 ) continue;
-			// trouvé
-			$feuille[$k]['found'] = 1;
-			$feuille[$k]['NS'] = $j;
-			$feuille[$k]['EO'] = $adversaire;
-			$k++;
-		}
-	}
-	$feuille[$k]['found'] = 0;
-	return $feuille;
-}
-function htmlPositionHowell($idtype, $pns, $npos, $paquet) {
-	$tab = "<table style='width:95%; max-width: 350px; margin:auto;'><tbody>";
-	$tab .= "<tr><th class='xNum3' colspan='4'>Tour $npos</th></tr>";
-	$tab .= "<tr><td class='xNum3'>Paire</td><td class='xNum3'>Table</td>";
-	$tab .= "<td class='xNum3'>NS/EO</td><td class='xNum3'>Donnes</td></tr>";
-	for ( $j = 1; $j <= $pns; $j++ ) {
-		//$p = getposhowell( $idtype, $numpaire, $notour, $paquet );
-		$p = getposhowell( $idtype, $j, $npos, $paquet );
-		$t = $p['table'];	// numéro de table
-		$o = ($p['NS'] == 1) ? "NS" : "EO"; 		// orientation: 1=NS, 2=EO
-		$l1 = $p['last'] + 1;		// dernière donne "jouée"
-		$l2 = $p['last'] + $paquet;	
-		$a = $p['adversaire'];
-		$tab .= "<tr><td class='xNum3'>$j</td><td class='xNum3'>$t</td><td class='xNum3'>$o</td><td class='xNum3'>$l1 à $l2</td></tr>";
-	}
-	$tab .= "</tbody></table>";
-	return $tab;
-}
-// fonctions utilisant la table etuis
-function getetui( $n ) {
-	global $st_position, $st_vulnerable;
-	$etuis = array ( array (0,0,0,0),
-	array (1,1,0,0),  array (2,2,1,0),  array (3,3,0,1),  array (4,4,1,1),
-	array (5,1,1,0),  array (6,2,0,1),  array (7,3,1,1),  array (8,4,0,0),
-	array (9,1,0,1),  array (10,2,1,1), array (11,3,0,0), array (12,4,1,0),
-	array (13,1,1,1), array (14,2,0,0), array (15,3,1,0), array (16,4,0,1),
-	array (17,1,0,0), array (18,2,1,0), array (19,3,0,1), array (20,4,1,1),
-	array (21,1,1,0), array (22,2,0,1), array (23,3,1,1), array (24,4,0,0),
-	array (25,1,0,1), array (26,2,1,1), array (27,3,0,0), array (28,4,1,0),
-	array (29,1,1,1), array (30,2,0,0), array (31,3,1,0), array (32,4,0,1),
-	array (33,1,0,0), array (34,2,1,0), array (35,3,0,1), array (36,4,1,1)
-	);
-	$etui = [
-		'n' 	=> $etuis[$n][0],
-		'donneur' => $etuis[$n][1],
-		'vulns' => $etuis[$n][2],
-		'vuleo' => $etuis[$n][3],
-		'info'	=> $st_position[ $etuis[$n][1] ] . " donneur - " . $st_vulnerable[ $etuis[$n][2] + 2*$etuis[$n][3] ],
-	];
-	return $etui;
-};
-function getinfoetui( $n ) {
-	$etui = getetui( $n );
-	return $etui['info'];
-}
-function liste_etuis( $encours, $paquet ) {
-	$first = intval(($encours-1)/$paquet)*$paquet +1;
-	$strhtml = "<table style='margin:auto;'><tbody><tr>";
-	//$strhtml .= "<td>Etuis&nbsp;</td>";
-	for ($i=0;$i<$paquet;$i++) {
-		$etui = $first + $i;
-		if ( $etui == $encours ) $bg="background-color:lightgreen;";
-		else $bg = "";
-		$strhtml .= "<td style='border:.5pt solid windowtext; min-width:30px; $bg'>$etui</td>";
-	}
-	$strhtml .= "</tr></tbody></table>";
-	return $strhtml;
-}
+require_once __DIR__.'/libmouvements.php';
 
 // fonctions utilisant la table "donnes"
-//TABLE donnes ( id INT primary key not null auto_increment,
-//    idtournoi INT, etui INT, ns INT, eo INT,
-//    contrat VARCHAR(10), jouepar VARCHAR(5), entame VARCHAR(5), resultat VARCHAR(5),
-//    points INT, rang float, note float );
-// ALTER TABLE `xydonnes` ADD `hweo` TINYINT NULL DEFAULT 0 AFTER `note`;
 $contratNJ = "N J";
-function insertDonne( $idt, $dd, $ns, $eo, $contrat, $jouepar, $entame, $resultat, $points ) {
-	global $tab_donnes, $st_phase_jeu, $st_phase_fini, $tab_connexions, $cnx_ok, $t_howell;
-	global $tab_tournois, $parametres;
-	$result = array( 'ok'=> 0, 'display'=>" ");
-	// test tournoi en cours
-	$t = readTournoi( $idt );
-	$etat  = $t['etat'];
-	if ( $etat == $st_phase_jeu ) {
-		// tournoi en cours
-		
-		$dbh = connectBDD();
-		$dbh->query("LOCK TABLES $tab_donnes WRITE, $tab_connexions WRITE, $tab_tournois WRITE;");
-		// test donne déjà enregistrée
-		$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd' and ns='$ns' and eo='$eo';";
-		$res = $dbh->query($sql);
-		if ( $res->fetchColumn() == 0 ) {
-			$hweo = 0;
-			// enregistrement de la donne
-			$sql = "INSERT into $tab_donnes ( idtournoi, etui, ns, eo, contrat, jouepar, entame, resultat, points, hweo ) values ( '$idt', '$dd', '$ns', '$eo', '$contrat', '$jouepar', '$entame', '$resultat', '$points', '$hweo' );";
-			$sth = $dbh->query( $sql );
-			$result[ 'ok' ] = 1;
-			$result[ 'display' ] = "Enregistrement terminé.";
-			
-			// calcul du rang
-			_setRang( $idt, $dd, $dbh, $hweo, $tab_donnes );
-		
-			// Incrémentation du compteur de donnes jouées/enregistrées par la paire ns
-			$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$ns'" );
-			$row = $sth->fetch(PDO::FETCH_ASSOC);
-			$cpt = $row['cpt'];
-			$cpt ++;	// donne suivante
-			
-			// test changement de position / tour pour la table concernée
-			$paquet = $t['paquet'];
-			$change = $cpt % $paquet;
-			$pos = $row['rdy'];
-			if ( $change == 0 ) $pos++;
-			$sql = "UPDATE $tab_connexions SET stconnexion='$cnx_ok', numEO='$eo', numdonne='$dd', cpt='$cpt', rdy ='$pos' where id = '$ns';";
-			$res = $dbh->query($sql);			
-			
-			// test si donne symétrique howell
-			if ( $t['genre'] == $t_howell ) {
-				$hweo = 1;
-				// enregistrement de la donne symétrique
-				$points = -$points;
-				$sql = "INSERT into $tab_donnes ( idtournoi, etui, ns, eo, contrat, jouepar, entame, resultat, points, hweo ) values ( '$idt', '$dd', '$eo', '$ns', '$contrat', '$jouepar', '$entame', '$resultat', '$points', '$hweo' );";
-				$sth = $dbh->query( $sql );
-				$result[ 'ok' ] = 1;
-				$result[ 'display' ] = "Enregistrements terminés.";
-			
-				// calcul du rang
-				_setRang( $idt, $dd, $dbh, $hweo, $tab_donnes );
-				
-				// Incrémentation du compteur de donnes jouées/enregistrées par la paire eo
-				$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$eo'" );
-				$row = $sth->fetch(PDO::FETCH_ASSOC);
-				$cpt = $row[ 'cpt' ];
-				$cpt ++;	// donne suivante
-			
-				// test changement de position / tour
-				$paquet = $t[ 'paquet' ];
-				$change = $cpt % $paquet;
-				$pos = $row[ 'rdy' ];
-				if ( $change == 0 ) $pos++;
-				$sql = "UPDATE $tab_connexions SET stconnexion='$cnx_ok', numEO='$ns', numdonne='$dd', cpt='$cpt', rdy ='$pos' where id = '$eo';";
-				$res = $dbh->query($sql);			
-			}
-			// Ajout pour tournoi Mitchell sur appli android
-			// *********************************************
-			else {
-				// Incrémentation du compteur de donnes jouées/enregistrées par la paire eo
-				$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$eo'" );
-				$row = $sth->fetch(PDO::FETCH_ASSOC);
-				$eocpt = $row['eocpt'];
-				$eocpt ++;	// donne suivante
-				$sql = "UPDATE $tab_connexions SET eonumNS='$ns', eodonne='$dd', eocpt='$eocpt' where id = '$eo';";
-				$res = $dbh->query($sql);			
-			}
-			// test position suivante sans étui (tournoi avec guéridon)
-			$gueridon = $t['gueridon'];
-			if ($gueridon > 0) {
-				// Relais NS
-				$relaisNS = 0;
-				$relaisEO = 0;
-				if ( $t['relais'] > 0 ) {
-					if ( $t['pairesNS'] > $t['pairesEO'] ) $relaisNS = $t['relais'];
-					else $relaisEO = $t['relais'];
-				}
-				// test changement de position suivante en relais
-				if ( $change==0 ) {
-					if ( $ns == $relaisEO-1 ) {	// table avant le relais
-						// Incrémentation du compteur de la paire eo en relais sans donne (guéridon)
-						$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$eo'" );
-						$row = $sth->fetch(PDO::FETCH_ASSOC);
-						$eocpt = $row['eocpt'];
-						$eocpt +=$paquet;
-
-						$sql = "UPDATE $tab_connexions SET eocpt ='$eocpt' where id = '$eo';";
-						$res = $dbh->query($sql);
-					}
-					// cas du relais NS variable à écrire
-					// *************************************
-				}
-			}
-			// Fin ajout
-			// *********
-			
-			// détection changement de position / fin du tournoi
-			$n = ( $t['genre'] == $t_howell )? $t['pairesNS'] : min( $t['pairesNS'], $t['pairesEO'] );
-			$res = $dbh->query( "SELECT MIN(rdy) FROM $tab_connexions where id<=$n;" );
-			$tour = $res->fetchColumn();
-			
-			// test dernière donne rentrée => fin du tournoi
-			if ( $tour > $t['npositions'] ) {
-				$sql = "UPDATE $tab_tournois SET etat = '$st_phase_fini' where id = '$idt';";
-				$res = $dbh->query($sql);
-			}
-			else {
-				if ( $tour > $t['notour'] ) {
-					// enregistre changement de position
-					$date = new DateTime();
-					$startseq = $date->getTimestamp();	// heure démarrage du tour
-					$endofseq = $startseq + $paquet * $parametres['dureedonne'] * 60;
-					///$sequence = $tour."_".$endofseq;
-					$sql = "UPDATE $tab_tournois SET notour = '$tour', endofseq = '$endofseq' where id = '$idt';";
-					$res = $dbh->query($sql);
-				}
-			}
-		}
-		else {
-			$result[ 'ok' ] = 0;
-			$result[ 'display' ] = "Enregistrement déjà réalisé.";
-		}
-		$dbh->query("UNLOCK TABLES;");
-		$dbh = null;
-	}
-	else {
-		// donnes validées après terminaison du tournoi
-		$result[ 'ok' ] = -1;
-		$result[ 'display' ] = "Ignoré, tournoi terminé !";
-	}
-	return $result;
-};
-//function updateDonne( $idt, $id, $contrat, $jouepar, $entame, $resultat, $points ) {
-function updateDonne( $idt, $dd, $ns, $eo, $contrat, $jouepar, $entame, $resultat, $points ) {
-	global $tab_donnes;
-	$dbh = connectBDD();
-	$dbh->query("START TRANSACTION;");
-	
-	// test donne déjà enregistrée
-	$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd' and ns='$ns' and eo='$eo' and hweo=0;";
-	$res = $dbh->query($sql);
-	if ( $res->fetchColumn() == 1 ) {
-		$sql = "UPDATE $tab_donnes SET contrat = '$contrat', jouepar = '$jouepar', entame = '$entame', resultat = '$resultat', points = '$points' where idtournoi='$idt' and etui='$dd' and ns='$ns' and eo='$eo' and hweo=0;";
-		$sth = $dbh->query( $sql );
-		_setRang( $idt, $dd, $dbh, 0, $tab_donnes );
-		
-		// test si donne symétrique howell
-		$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd' and ns='$eo' and eo='$ns' and hweo=1;";
-		$res = $dbh->query($sql);
-		if ( $res->fetchColumn() == 1 ) {
-			$points = -$points;
-			$sql = "UPDATE $tab_donnes SET contrat = '$contrat', jouepar = '$jouepar', entame = '$entame', resultat = '$resultat', points = '$points' where idtournoi='$idt' and etui='$dd' and ns='$eo' and eo='$ns' and hweo=1;";
-			$sth = $dbh->query( $sql );
-			_setRang( $idt, $dd, $dbh, 1, $tab_donnes );
-			$display_string = "Deux enregistrements mis à jour.";
-		}
-		else {
-			$display_string = "Un enregistrement mis à jour.";
-		}
-	}
-	else {
-		$display_string = "Enregistrement non trouvé.";
-	}
-	
-	$dbh->query("COMMIT;");
-	$dbh = null;
-	return $display_string;
-};
-
+require_once __DIR__.'/libdonnes.php';
 function first2play( $idt, $dd ) {
 	global $tab_donnes;
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) from $tab_donnes where idtournoi=? and etui=?;";
+	$sqlBound = [$idt, $dd];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	return $res->fetchColumn();
 }
 function testnotplayed( $idt, $ns, $eo, $dd ) {
@@ -973,13 +285,15 @@ function testnotplayed( $idt, $ns, $eo, $dd ) {
 	$dbh = connectBDD();
 	$dbh->query("START TRANSACTION;");
 	// test donne déjà enregistrée
-	$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd' and ns='$ns' and eo='$eo';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) from $tab_donnes where idtournoi=? and etui=? and ns=? and eo=?;";
+	$sqlBound = [$idt, $dd, $ns, $eo];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nb  = $res->fetchColumn();
 	if ( $nb == 0 ) {
 		// test autre orientation
-		$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd' and ns='$eo' and eo='$ns';";
-		$res = $dbh->query($sql);
+		$sql = "SELECT count(*) from $tab_donnes where idtournoi=? and etui=? and ns=? and eo=?;";
+		$sqlBound = [$idt, $dd, $eo, $ns];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		$nb  = $res->fetchColumn();
 	}
 	$dbh->query("COMMIT;");
@@ -992,19 +306,21 @@ function _setRang( $idt, $dd, $dbh, $hweo, $x_donnes ) {
 	// 28/11/2024: optimisation durée exécution
 	global $tab_donnes, $contratNJ;
 	/*
-	$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = '$idt' and etui = '$dd' and hweo = '$hweo' and contrat !='$contratNJ';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = ? and etui = ? and hweo = ? and contrat !=?;";
+	$sqlBound = [$idt, $dd, $hweo, $contratNJ];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl < 1 ) return;			// *************** manque la raz du rang et de la note
 	*/
-	$sql = "SELECT id, ns, eo, points FROM $x_donnes where idtournoi = '$idt' and etui = '$dd' and hweo = '$hweo' and contrat !='$contratNJ';";
+	$sql = "SELECT id, ns, eo, points FROM $x_donnes where idtournoi = ? and etui = ? and hweo = ? and contrat !=?;";
+	$sqlBound = [$idt, $dd, $hweo, $contratNJ];
 	$tabid = array();
 	$pns = array();
 	$peo = array();
 	$pps = array();
 	$ordre = array();
 	$j = 0;
-	foreach ($dbh->query($sql) as $row) {
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$ordre[$j] = $j;
 		$tabid[$j] = $row['id'];
 		$pns[$j] = $row['ns'];
@@ -1021,8 +337,9 @@ function _setRang( $idt, $dd, $dbh, $hweo, $x_donnes ) {
 		$id1 = $tabid[0];
 		$pns1 = $pns[0];
 		$peo1 = $peo[0];
-		$sql = "UPDATE $tab_donnes SET rang = '0', note = '50' where id = '$id1';";
-		$dbh->query($sql);
+		$sql = "UPDATE $tab_donnes SET rang = '0', note = '50' where id = ?;";
+		$sqlBound = [$id1];
+		securityQuery($dbh, $sql, $sqlBound);
 	}
 	else {
 		// tri des tableaux
@@ -1066,152 +383,15 @@ function _setRang( $idt, $dd, $dbh, $hweo, $x_donnes ) {
 		// stockage des résultats
 		for ( $jj = 0; $jj < $j; $jj++ ) {
 			$ij = $ordre[ $jj ];
-			$sql = "UPDATE $tab_donnes SET rang = '$rang[$jj]', note = '$note[$jj]' where id = '$tabid[$ij]';";
-			$dbh->query($sql);
+			$sql = "UPDATE $tab_donnes SET rang = ?, note = ? where id = ?;";
+			$sqlBound = [$rang[$jj], $note[$jj], $tabid[$ij]];
+			securityQuery($dbh, $sql, $sqlBound);
 			// print "<p>-- PaireNS: $pns[$ij] PaireEO: $peo[$ij] Points: $pps[$jj] Rg: $rang[$jj] Note: $note[$jj]%" ;
 		};
 	};
 };
 
-function htmlResultatDonne($idt, $etui, $numNS, $numEO, $ordre) {
-	global $tab_donnes, $contratNJ, $t_howell, $t_mitchell;
-	$hweo = 0;
-	$dbh = connectBDD();
-	
-	if ( ($ordre == "points")||($ordre == "pointsIMP") )
-		$sql = "SELECT * FROM $tab_donnes where idtournoi = '$idt' and etui='$etui' and hweo='$hweo' order by points desc;";
-	else
-		$sql = "SELECT * FROM $tab_donnes where idtournoi = '$idt' and etui='$etui' order by ns;";
-
-	$vulnerabilite = getinfoetui( $etui );
-	$str = '<table border="0" style="width:100%; max-width: 350px; margin:auto;" class="notranslate">';
-	$str .= "<tr><th colspan='8' style='font-size: 1.2em;'>Donne n°<span id='etui'>$etui</span></th></tr>";
-	$str .= "<tr><th colspan='8'>$vulnerabilite</th></tr>";
-	$str .= "<tr class='xtr61'><td class='xres'>NS</td><td class='xres'>EO</td><td class='xres'>cont.</td><td class='xres'>par</td><td class='xres'>ent.</td><td class='xres'>res</td><td class='xres'>pts</td>";
-	if ($ordre == "pointsIMP") {
-		$str .= "<td class='xres'>IMP</td></tr>";
-	}
-	else {
-		$str .= "<td class='xres'>% NS</td></tr>";
-	}
-	$t = _readTournoi( $dbh, $idt );
-	$genre = $t['genre'];
-	foreach ($dbh->query($sql) as $row) {
-		$r1 = $row['ns'];
-		$r2 = $row['eo'];
-		$r3 = htmlContrat( $row['contrat'] );
-		$r4 = $row['jouepar'];
-		$r5 = htmlEntame( $row['entame'] );
-		$r6 = htmlResultat( $row['resultat'] );
-		if ( $row['contrat'] == $contratNJ ) {
-			$r7 = '-';
-			$r8 = '-';
-			$r8str = '-';
-		}
-		else {
-			$r7 = $row['points'];
-			$r8 = $row['note'];
-			if ($ordre == "pointsIMP") {
-				$r8tr = intval( $r8 );
-			}
-			else {
-				$r8str = sprintf( "%.1f", $r8);
-			}
-		}
-		if ( $r1 == $numNS )
-			$str .= "<tr><td class='xres pairens'>$r1</td>";
-		else
-			$str .= "<tr><td class='xres'>$r1</td>";
-		if ( (($genre==$t_mitchell)&&($r2 == $numEO)) || (($genre==$t_howell)&&($r2 == $numNS)) )
-			$str .= "<td class='xres pairens'>$r2</td>";
-		else
-			$str .= "<td class='xres'>$r2</td>";
-		$str .= "<td class='xres'>$r3</td>";
-		$str .= "<td class='xres'>$r4</td>";
-		$str .= "<td class='xres'>$r5</td>";
-		$str .= "<td class='xres'>$r6</td>";
-		$str .= "<td class='xres'>$r7</td>";
-		if ( ($r1 == $numNS)||($r2 == $numEO) )
-			$str .= "<td class='xres pairens'>$r8str</td></tr>";
-		else
-			$str .= "<td class='xres'>$r8str</td></tr>";
-	};
-	$str .= "</tbody></table>";
-	
-	$dbh = null;
-	return $str;
-}
-function htmlResultatPaquet($idt, $ns, $eo) {
-	global $tab_donnes, $contratNJ;
-	$dbh = connectBDD();
-	
-	$sql = "SELECT * FROM $tab_donnes where idtournoi = '$idt' and ns='$ns' and eo='$eo' order by etui;";
-	
-	$i = 0;
-	$somme = 0; $nl = 0;
-	foreach ($dbh->query($sql) as $row) {
-		$tabns[$i] = $row['ns'];
-		$tabeo[$i] = $row['eo'];
-		$tabr1[$i] = $row['etui'];
-		$tabr2[$i] = htmlContrat( $row['contrat'] );
-		$tabr3[$i] = $row['jouepar'];
-		$tabr4[$i] = htmlEntame( $row['entame'] );
-		$tabr5[$i] = htmlResultat( $row['resultat'] );
-		if ( $row['contrat'] == $contratNJ ) {
-			$tabr6[$i] = '-';
-			$tabr7[$i] = '-';
-		}
-		else {
-			$tabr6[$i] = $row['points'];
-			$tabr7[$i] = sprintf( "%.1f", $row['note'] );
-			$somme += $row['note'];
-			$nl++;
-		}
-		$i++;
-	};
-	$dbh = null;
-
-	$str = '<table border="0" style="width:100%; max-width: 350px; margin:auto;" class="notranslate">';
-	$str .= "<tr><th colspan='8'>Résultats des donnes jouées</th></tr>";
-	$str .= "<tr class='xtr61'><td class='xres'>Etui</td><td class='xres'>cont.</td><td class='xres'>par</td><td class='xres'>ent.</td><td class='xres'>res</td><td class='xres'>pts</td>";
-	$str .= "<td class='xres'>% NS</td>";
-	$str .= "<td class='xres'>Moy.</td></tr>";
-
-	for ($j = 0; $j<$i; $j++) {
-		$r1 = $tabr1[$j];
-		$nr = "nr_" . $r1;
-		$r2 = $tabr2[$j];
-		$r3 = $tabr3[$j];
-		$r4 = $tabr4[$j];
-		$r5 = $tabr5[$j];
-		$r6 = $tabr6[$j];
-		$r7 = $tabr7[$j];
-		//$r7str = sprintf( "%.1f", $r7);
-		$str .= "<tr id='$nr' class='xres2'>";
-		[$diags,$dds] = existeDiagramme($idt, $r1);
-		if ( $diags == null ) {
-			$str .= "<td class='xres seletui pairens'>$r1</td>";
-		}
-		else {
-			$str .= "<td class='xres seletui'>$r1</td>";
-		}
-		$str .= "<td class='xres seletui'>$r2</td>";
-		$str .= "<td class='xres seletui'>$r3</td>";
-		$str .= "<td class='xres seletui'>$r4</td>";
-		$str .= "<td class='xres seletui'>$r5</td>";
-		$str .= "<td class='xres seletui'>$r6</td>";
-		$str .= "<td class='xres seletui'>$r7</td>";
-		if ( $j == 0 ) {
-			$r8str = ( $nl == 0 ) ? "-" : sprintf( "%.1f", $somme/$nl );
-			$str .= "<td class='xres seletui' rowspan='$i'>$r8str</td>";
-		}
-		$str .= "</tr>";
-	};
-	$str .= "</tbody></table>";
-	
-	$dbh = null;
-	return $str;
-}
+require_once __DIR__.'/libresultats.php';
 
 // fonctions utilisant la table "tournois"
 function setTournoi($idt) {
@@ -1219,8 +399,10 @@ function setTournoi($idt) {
 	global $prefix;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT * FROM $tab_tournois where id = '$idt';";
-	$sth = $dbh->query( $sql );
+	$sql = "SELECT * FROM $tab_tournois where id = ?;";
+	
+	$sqlBound = [$idt];
+	$sth = securityQuery($dbh, $sql, $sqlBound);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$pairesNS = $row['pairesNS'];
 	$pairesEO = $row['pairesEO'];
@@ -1229,9 +411,10 @@ function setTournoi($idt) {
 	// 28/11/2024	Optimisation durée d'exécution
 	// Création table temporaire regroupant les résultats des donnes jouées pendant le tournoi
 	$x_donnes = $prefix."TMP".sprintf( "%06d", rand( 1, 999999) );
-	$sql = "CREATE TABLE $x_donnes AS SELECT * FROM $tab_donnes where idtournoi = '$idt';";
+	$sql = "CREATE TABLE $x_donnes AS SELECT * FROM $tab_donnes where idtournoi = ?;";
+	$sqlBound = [$idt];
 	//print "<p>sql: $sql</p>";
-	$sth = $dbh->query( $sql );
+	$sth = securityQuery($dbh, $sql, $sqlBound);
 
 	// calcul des rangs
 	for ( $i = 1; $i <= $ndonnes; $i++) {
@@ -1246,7 +429,8 @@ function setTournoi($idt) {
 	};
 	// Suppression table temporaire
 	$sql = "DROP TABLE $x_donnes;";
-	$sth = $dbh->query( $sql );
+	$sqlBound = [];
+	$sth = securityQuery($dbh, $sql, $sqlBound);
 
 	// Calcul des notes globales NS
 	$pns = array();
@@ -1256,15 +440,17 @@ function setTournoi($idt) {
 		$notegns[$i] = 0;
 	}
 	$i = 0;
-	$sql = "SELECT ns, AVG(note) AS perf FROM $tab_donnes where idtournoi = '$idt' and contrat !='$contratNJ' GROUP BY ns ORDER by ns;";
-	foreach ($dbh->query($sql) as $row) {
+	$sql = "SELECT ns, AVG(note) AS perf FROM $tab_donnes where idtournoi = ? and contrat !=? GROUP BY ns ORDER by ns;";
+	$sqlBound = [$idt, $contratNJ];
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$pns[$i] = $row['ns'];
 		$notegns[$i] = $row['perf'];
 		$i++;
 	};
 	for ( $i = 0; $i < $pairesNS; $i++) {
-		$sql = "UPDATE $tab_pairesNS SET noteg = '$notegns[$i]' where idtournoi = '$idt' and num = '$pns[$i]';";
-		$dbh->query($sql);
+		$sql = "UPDATE $tab_pairesNS SET noteg = ? where idtournoi = ? and num = ?;";
+		$sqlBound = [$notegns[$i], $idt, $pns[$i]];
+		securityQuery($dbh, $sql, $sqlBound);
 	};
 
 	// Calcul des notes globales EO
@@ -1275,37 +461,30 @@ function setTournoi($idt) {
 		$notegeo[$i] = 0;
 	}
 	$i = 0;
-	$sql = "SELECT eo, AVG(note) AS perf FROM $tab_donnes where idtournoi = '$idt' and contrat !='$contratNJ' GROUP BY eo ORDER by eo;";
-	foreach ($dbh->query($sql) as $row) {
+	$sql = "SELECT eo, AVG(note) AS perf FROM $tab_donnes where idtournoi = ? and contrat !=? GROUP BY eo ORDER by eo;";
+	$sqlBound = [$idt, $contratNJ];
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$peo[$i] = $row['eo'];
 		$notegeo[$i] = 100 - $row['perf'];
 		$i++;
 	};
 	for ( $i = 0; $i < $pairesEO; $i++) {
-		$sql = "UPDATE $tab_pairesEO SET noteg = '$notegeo[$i]' where idtournoi = '$idt' and num = '$peo[$i]';";
+		$sql = "UPDATE $tab_pairesEO SET noteg = ? where idtournoi = ? and num = ?;";
+		$sqlBound = [$notegeo[$i], $idt, $peo[$i]];
 		// print "<p>$sql</p>";
-		$dbh->query($sql);
+		securityQuery($dbh, $sql, $sqlBound);
 	};
 	$dbh = null;
 };
-function calculIMP( $delta ) {
-	$tabimp = array( 0, 10, 40, 80, 120, 160, 210, 260, 310, 360, 420,
-		490, 590, 740, 890, 1090, 1290, 1490, 1740, 1990, 2240,
-		2490, 2990, 3490, 10000 );
-	$n = sizeof($tabimp);
-	$d = intval( $delta );
-	for ( $i = 1; $i < $n; $i++ ) {
-		$imp = $i-1;
-		if ( ($d > $tabimp[$i-1])&&($d <= $tabimp[$i]) ) break;
-	}
-	return $imp;
-};
+
 function setTournoiIMP($idt) {	// tournoi type howell de 4 paires, chaque donne jouée 2 fois
 	global $tab_tournois, $tab_donnes, $tab_pairesNS, $tab_pairesEO;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT * FROM $tab_tournois where id = '$idt';";
-	$sth = $dbh->query( $sql );
+	$sql = "SELECT * FROM $tab_tournois where id = ?;";
+	
+	$sqlBound = [$idt];
+	$sth = securityQuery($dbh, $sql, $sqlBound);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$pairesNS = $row['pairesNS'];
 	$pairesEO = $row['pairesEO'];
@@ -1313,12 +492,14 @@ function setTournoiIMP($idt) {	// tournoi type howell de 4 paires, chaque donne 
 
 	for ( $i = 1; $i <= $ndonnes; $i++) {
 		$hweo = 0;
-		$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = '$idt' and etui = '$i' and hweo = '$hweo';";
-		$res = $dbh->query($sql);
+		$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = ? and etui = ? and hweo = ?;";
+		$sqlBound = [$idt, $i, $hweo];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		$nb = $res->fetchColumn();
 		if ( $nb == 2 ) {
-			$sql = "SELECT * FROM $tab_donnes where idtournoi = '$idt' and etui = '$i' and hweo = '$hweo';";
-			$res = $dbh->query($sql);
+			$sql = "SELECT * FROM $tab_donnes where idtournoi = ? and etui = ? and hweo = ?;";
+			$sqlBound = [$idt, $i, $hweo];
+			$res = securityQuery($dbh, $sql, $sqlBound);
 			$row1 = $res->fetch(PDO::FETCH_ASSOC);
 			$row2 = $res->fetch(PDO::FETCH_ASSOC);
 			$id1 = $row1['id'];
@@ -1334,10 +515,12 @@ function setTournoiIMP($idt) {	// tournoi type howell de 4 paires, chaque donne 
 			if ( $diff < 0 ) $imp2 = calculIMP( -$diff );
 			//print( "<p>$i pts1 $pts1 pts2 $pts2 diff $diff imp1 $imp1 imp2 $imp2</p>" );
 			// stockage résultats
-			$sql = "UPDATE $tab_donnes SET note = '$imp1' where id = '$id1';";
-			$dbh->query($sql);
-			$sql = "UPDATE $tab_donnes SET note = '$imp2' where id = '$id2';";
-			$dbh->query($sql);
+			$sql = "UPDATE $tab_donnes SET note = ? where id = ?;";
+			$sqlBound = [$imp1, $id1];
+			securityQuery($dbh, $sql, $sqlBound);
+			$sql = "UPDATE $tab_donnes SET note = ? where id = ?;";
+			$sqlBound = [$imp2, $id2];
+			securityQuery($dbh, $sql, $sqlBound);
 		}
 		else {
 			// erreur
@@ -1345,12 +528,14 @@ function setTournoiIMP($idt) {	// tournoi type howell de 4 paires, chaque donne 
 	};
 	for ( $i = 1; $i <= $ndonnes; $i++) {
 		$hweo = 1;
-		$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = '$idt' and etui = '$i' and hweo = '$hweo';";
-		$res = $dbh->query($sql);
+		$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = ? and etui = ? and hweo = ?;";
+		$sqlBound = [$idt, $i, $hweo];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		$nb = $res->fetchColumn();
 		if ( $nb == 2 ) {
-			$sql = "SELECT * FROM $tab_donnes where idtournoi = '$idt' and etui = '$i' and hweo = '$hweo';";
-			$res = $dbh->query($sql);
+			$sql = "SELECT * FROM $tab_donnes where idtournoi = ? and etui = ? and hweo = ?;";
+			$sqlBound = [$idt, $i, $hweo];
+			$res = securityQuery($dbh, $sql, $sqlBound);
 			$row1 = $res->fetch(PDO::FETCH_ASSOC);
 			$row2 = $res->fetch(PDO::FETCH_ASSOC);
 			$id1 = $row1['id'];
@@ -1366,10 +551,12 @@ function setTournoiIMP($idt) {	// tournoi type howell de 4 paires, chaque donne 
 			if ( $diff < 0 ) $imp2 = calculIMP( -$diff );
 			//print( "<p>$i pts1 $pts1 pts2 $pts2 diff $diff imp1 $imp1 imp2 $imp2</p>" );
 			// stockage résultats
-			$sql = "UPDATE $tab_donnes SET note = '$imp1' where id = '$id1';";
-			$dbh->query($sql);
-			$sql = "UPDATE $tab_donnes SET note = '$imp2' where id = '$id2';";
-			$dbh->query($sql);
+			$sql = "UPDATE $tab_donnes SET note = ? where id = ?;";
+			$sqlBound = [$imp1, $id1];
+			securityQuery($dbh, $sql, $sqlBound);
+			$sql = "UPDATE $tab_donnes SET note = ? where id = ?;";
+			$sqlBound = [$imp2, $id2];
+			securityQuery($dbh, $sql, $sqlBound);
 		}
 		else {
 			// erreur
@@ -1384,16 +571,18 @@ function setTournoiIMP($idt) {	// tournoi type howell de 4 paires, chaque donne 
 		$impns[$i] = 0;
 	}
 	$i = 0;
-	$sql = "SELECT ns, SUM(note) AS perf FROM $tab_donnes where idtournoi = '$idt' GROUP BY ns ORDER by ns;";
-	foreach ($dbh->query($sql) as $row) {
+	$sql = "SELECT ns, SUM(note) AS perf FROM $tab_donnes where idtournoi = ? GROUP BY ns ORDER by ns;";
+	$sqlBound = [$idt];
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$pns[$i] = $row['ns'];
 		$impns[$i] = $row['perf'];
 		$i++;
 	};
 	for ( $i = 0; $i < $pairesNS; $i++) {
-		$sql = "UPDATE $tab_pairesNS SET noteg = '$impns[$i]' where idtournoi = '$idt' and num = '$pns[$i]';";
+		$sql = "UPDATE $tab_pairesNS SET noteg = ? where idtournoi = ? and num = ?;";
+		$sqlBound = [$impns[$i], $idt, $pns[$i]];
 		//print "<p>$sql</p>";
-		$dbh->query($sql);
+		securityQuery($dbh, $sql, $sqlBound);
 	};
 	
 	$dbh = null;
@@ -1403,11 +592,13 @@ function existeTournoiPreinscription($datetournoi) {	// return idtournoi si exis
 	global $tab_tournois, $st_preinscription;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_preinscription' and tournoi='$datetournoi';";
-	if ( $res = $dbh->query($sql)) {
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ? and tournoi=?;";
+	
+	$sqlBound = [$st_preinscription, $datetournoi];
+	if ( $res = securityQuery($dbh, $sql, $sqlBound)) {
 		$nbl = $res->fetchColumn();
 		if ( $nbl == 1 ) {
-			$sth = $dbh->query( "SELECT id FROM $tab_tournois where etat = '$st_preinscription' and tournoi='$datetournoi';" );
+			$sth = securityQuery($dbh, "SELECT id FROM $tab_tournois where etat = ? and tournoi=?;", [$st_preinscription, $datetournoi]);
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$idt = $row['id'];
 		}
@@ -1423,11 +614,13 @@ function existeTournoiVivant() {			// return idtournoi si existe, 0 si non trouv
 	global $st_phase_init, $st_phase_jeu;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_phase_init' or etat = '$st_phase_jeu';";
-	if ( $res = $dbh->query($sql)) {
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ? or etat = ?;";
+	
+	$sqlBound = [$st_phase_init, $st_phase_jeu];
+	if ( $res = securityQuery($dbh, $sql, $sqlBound)) {
 		$nbl = $res->fetchColumn();
 		if ( $nbl == 1 ) {
-			$sth = $dbh->query( "SELECT id FROM $tab_tournois where etat = '$st_phase_init' or etat = '$st_phase_jeu';" );
+			$sth = securityQuery($dbh, "SELECT id FROM $tab_tournois where etat = ? or etat = ?;", [$st_phase_init, $st_phase_jeu]);
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$idt = $row['id'];
 		}
@@ -1443,12 +636,15 @@ function existeTournoiNonClos() {			// return idtournoi si existe, 0 si non trou
 	global $st_phase_init, $st_phase_jeu, $st_phase_fini;
 	$dbh = connectBDD();
 	
-	$sql1 = "SELECT count(*) FROM $tab_tournois where etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini';";
-	$sql2 = "SELECT id FROM $tab_tournois where etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini';";
-	if ( $res = $dbh->query( $sql1 )) {
+	$sql1 = "SELECT count(*) FROM $tab_tournois where etat = ? or etat = ? or etat = ?;";
+	
+	$sql1Bound = [$st_phase_init, $st_phase_jeu, $st_phase_fini];
+	$sql2 = "SELECT id FROM $tab_tournois where etat = ? or etat = ? or etat = ?;";
+	$sql2Bound = [$st_phase_init, $st_phase_jeu, $st_phase_fini];
+	if ( $res = securityQuery($dbh, $sql1, $sql1Bound)) {
 		$nbl = $res->fetchColumn();
 		if ( $nbl > 0 ) {
-			$results = $dbh->query( $sql2 );
+			$results = securityQuery($dbh, $sql2, $sql2Bound);
 			$row = $results->fetch(PDO::FETCH_ASSOC);
 			$idt = $row['id'];
 		}
@@ -1466,12 +662,15 @@ function jsonexisteTournoiNonClos() {		// return idtournoi si existe, 0 si non t
 	
 	$dbh = connectBDD();
 	
-	$sql1 = "SELECT count(*) FROM $tab_tournois where etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini';";
-	$sql2 = "SELECT id FROM $tab_tournois where etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini';";
-	if ( $res = $dbh->query( $sql1 ) ) {
+	$sql1 = "SELECT count(*) FROM $tab_tournois where etat = ? or etat = ? or etat = ?;";
+	
+	$sql1Bound = [$st_phase_init, $st_phase_jeu, $st_phase_fini];
+	$sql2 = "SELECT id FROM $tab_tournois where etat = ? or etat = ? or etat = ?;";
+	$sql2Bound = [$st_phase_init, $st_phase_jeu, $st_phase_fini];
+	if ( $res = securityQuery($dbh, $sql1, $sql1Bound) ) {
 		$nbl = $res->fetchColumn();
 		if ( $nbl > 0 ) {
-			$results = $dbh->query( $sql2 );
+			$results = securityQuery($dbh, $sql2, $sql2Bound);
 			$row = $results->fetch(PDO::FETCH_ASSOC);
 			$idt = $row['id'];
 			$t = _readTournoi( $dbh, $idt );
@@ -1489,12 +688,14 @@ function existeTournoiClos( $datetournoi ) {// return tableau des idtournoi qui 
 	$ids = array();
 
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where etat='$st_closed' and tournoi='$datetournoi';";
-	$sth = $dbh->query( $sql );
+	$sql = "SELECT count(*) FROM $tab_tournois where etat=? and tournoi=?;";
+	$sqlBound = [$st_closed, $datetournoi];
+	$sth = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $sth->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "SELECT id FROM $tab_tournois where etat='$st_closed' and tournoi='$datetournoi';";
-		$sth = $dbh->query( $sql );
+		$sql = "SELECT id FROM $tab_tournois where etat=? and tournoi=?;";
+		$sqlBound = [$st_closed, $datetournoi];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$ids[$i] = $row[ 'id' ];
@@ -1506,11 +707,12 @@ function existeTournoiClos( $datetournoi ) {// return tableau des idtournoi qui 
 function getlastclosedtournois() {			// return idtournoi si existe, 0 si non trouvé
 	global $tab_tournois, $st_closed;
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ?;";
+	$sqlBound = [$st_closed];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat = '$st_closed' order by tournoi desc;" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_tournois where etat = ? order by tournoi desc;", [$st_closed]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$id = $row[ 'id' ];
 	}
@@ -1529,8 +731,9 @@ function createTournoi() {			// return idtournoi, 0 si erreur
 	$dbh->query("LOCK TABLES $tab_tournois WRITE, $tab_events WRITE;");
 	
 	// vérification d'absence de tournoi non clos avant création effective
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini';";
-	if ( $sth = $dbh->query($sql) ) {
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ? or etat = ? or etat = ?;";
+	$sqlBound = [$st_phase_init, $st_phase_jeu, $st_phase_fini];
+	if ( $sth = securityQuery($dbh, $sql, $sqlBound) ) {
 		$nbl = $sth->fetchColumn();
 		if ( $nbl > 0 ) {
 			// il existe au moins un tournoi non clos
@@ -1541,8 +744,9 @@ function createTournoi() {			// return idtournoi, 0 si erreur
 			$n = rand( 1, 9999);
 			$code = sprintf( "%04d", $n );
 			$idtype = ( $def_genre == $t_howell ) ? $def_type_howell : $def_type_mitchell;
-			$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat ) VALUES ( '$tt', '$code', 0, 0, '$idtype', '$st_phase_init' );";
-			if ( $dbh->query( $sql ) ) {
+			$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat ) VALUES ( ?, ?, 0, 0, ?, ? );";
+			$sqlBound = [$tt, $code, $idtype, $st_phase_init];
+			if ( securityQuery($dbh, $sql, $sqlBound) ) {
 				$id = $dbh->lastInsertId();
 				//_logevent($dbh, "createTournoi ".$tt." id ".$id);
 			}
@@ -1561,8 +765,9 @@ function startInscriptionTournoi( $id ) { // Démarrage tournoi pré-inscription
 	//_logevent($dbh, "startInscriptionTournoi ".$id);
 	
 	// changement d'état du tournoi
-	$sql = "UPDATE $tab_tournois SET etat = '$st_phase_init' where id = '$id';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET etat = ? where id = ?;";
+	$sqlBound = [$st_phase_init, $id];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 
 	$dbh = null;
 	return json_encode( array( 'idtournoi'=> $id ) );
@@ -1578,23 +783,26 @@ function createInscriptionTournoi( $datetournoi ) { // Création tournoi pré-in
 	$dbh->query("LOCK TABLES $tab_tournois WRITE, $tab_events WRITE, $tab_pairesNS WRITE, $tab_pairesEO WRITE, $tab_joueurs WRITE;");
 	
 	// vérification d'absence de tournoi non clos avant création effective
-	$sql = "SELECT count(*) FROM $tab_tournois where tournoi='$datetournoi' and (etat = '$st_phase_init' or etat = '$st_phase_jeu' or etat = '$st_phase_fini');";
-	$nbl = $dbh->query($sql)->fetchColumn();
+	$sql = "SELECT count(*) FROM $tab_tournois where tournoi=? and (etat = ? or etat = ? or etat = ?);";
+	$sqlBound = [$datetournoi, $st_phase_init, $st_phase_jeu, $st_phase_fini];
+	$nbl = securityQuery($dbh, $sql, $sqlBound)->fetchColumn();
 	if ( $nbl > 0 ) {	// il existe un tounoi non clos en cours
 		$idt = 0;
 		$ret = "<p><span style='color:red'>Attention, il existe un tounoi en cours !</br>La pré-inscription est possible pour un nouveau tournoi qui ne pourra commencer qu'après la clôture du tournoi en cours !</span></p>";
 	}
 	else $ret = "";
 	// test existence d'un tournoi de préinscription existant
-	$sql = "SELECT count(*) FROM $tab_tournois where tournoi='$datetournoi' AND etat = '$st_preinscription';";
-	$nbl = $dbh->query( $sql )->fetchColumn();
+	$sql = "SELECT count(*) FROM $tab_tournois where tournoi=? AND etat = ?;";
+	$sqlBound = [$datetournoi, $st_preinscription];
+	$nbl = securityQuery($dbh, $sql, $sqlBound)->fetchColumn();
 	switch( $nbl ) {
 		case 0: { // Pas de tournoi, création d'un tournoi en préparation de type mitchell
 			$n = rand( 1, 9999);
 			$code = sprintf( "%04d", $n );
 			$sql = "INSERT INTO $tab_tournois ( tournoi, code, pairesNS, pairesEO, idtype, etat )
-				VALUES ( '$datetournoi', '$code', 0, 0, $def_type_mitchell, $st_preinscription );";
-			$dbh->query( $sql );
+				VALUES ( ?, ?, 0, 0, ?, ? );";
+			$sqlBound = [$datetournoi, $code, $def_type_mitchell, $st_preinscription];
+			securityQuery($dbh, $sql, $sqlBound);
 			$idt = $dbh->lastInsertId();
 			//_logevent($dbh, "createInscriptionTournoi ".$datetournoi." id ".$idt);
 			$ret .= "<p>Création tournoi pré-inscription</p>";
@@ -1602,8 +810,9 @@ function createInscriptionTournoi( $datetournoi ) { // Création tournoi pré-in
 			break;
 		}
 		case 1: {	// déjà créé
-			$sql = "SELECT id FROM $tab_tournois where tournoi='$datetournoi' AND etat = '$st_preinscription';";
-			$row = $dbh->query( $sql )->fetch(PDO::FETCH_ASSOC);
+			$sql = "SELECT id FROM $tab_tournois where tournoi=? AND etat = ?;";
+			$sqlBound = [$datetournoi, $st_preinscription];
+			$row = securityQuery($dbh, $sql, $sqlBound)->fetch(PDO::FETCH_ASSOC);
 			$idt = $row['id'];
 			$ret .= "<p>Tournoi pré-inscription déjà créé</p>";
 			// Tableau des paires pré-inscrites (paires complètes ou à compléter)
@@ -1628,8 +837,8 @@ function _getlignes($dbh, $idt) {
 	if ( $idt > 0 ) {
 		$libre = array( 'id'=>0, 'nomcomplet'=>" ");
 		
-		$sqlns = "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = '$idt' and num = :indice;";
-		$sqleo = "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = '$idt' and num = :indice;";
+		$sqlns = "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = :idt and num = :indice;";
+		$sqleo = "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = :idt and num = :indice;";
 		$sthns = $dbh->prepare( $sqlns );
 		$stheo = $dbh->prepare( $sqleo );
 		
@@ -1638,7 +847,7 @@ function _getlignes($dbh, $idt) {
 		
 		for  ($i = 1; $i < $max_tables+1; $i++) {
 			// paire NS
-			$resns = $sthns->execute(array(':indice' => $i));
+			$resns = $sthns->execute(array(':indice' => $i, ':idt' => $idt));
 			if ( $sthns->rowCount() > 0 ) {		// ************* be careful with rowCount
 				$row = $sthns->fetch(PDO::FETCH_ASSOC);
 				if ( $row['idj1'] != null ) {
@@ -1671,7 +880,7 @@ function _getlignes($dbh, $idt) {
 			array_push( $lignes, $ligne );
 			
 			// paire EO
-			$reseo = $stheo->execute(array(':indice' => $i));
+			$reseo = $stheo->execute(array(':indice' => $i, ':idt' => $idt));
 			if ( $stheo->rowCount() > 0 ) {
 				$row = $stheo->fetch(PDO::FETCH_ASSOC);
 				if ( $row[ 'idj2' ] != null ) {
@@ -1708,7 +917,7 @@ function _getlignes($dbh, $idt) {
 }
 function initTournoi( $idt, $pns, $peo ) {
 	// Initialisation faite à la fin de la définition des paires
-	global $tab_tournois;
+	global $tab_tournois, $t_howell;
 	$type = computetype( $pns, $peo );
 	$tt = gettypetournoi( $type );
 	
@@ -1719,6 +928,7 @@ function initTournoi( $idt, $pns, $peo ) {
 		$paquet  = $tt['paquet'];			// valeur par défaut
 		$npositions = $tt['npositions'];	// valeur par défaut
 		$ndonnes = $ntables*$paquet;		//$tt['ndonnes'];			// en circulation
+		if ($tt['genre'] == $t_howell) $ndonnes = $tt['npaquets'] * $paquet;
 		$njouees = $npositions*$paquet;		//$tt['njouees'];			// valeur calculée !!!
 		$saut	= $tt['saut'];
 		$relais	= $tt['relais'];
@@ -1727,8 +937,9 @@ function initTournoi( $idt, $pns, $peo ) {
 		$obs	= "aa";	// provision pour texte entré par le directeur de tournoi
 	
 		$dbh = connectBDD();
-		$sql = "UPDATE $tab_tournois SET pairesNS = '$pns', pairesEO = '$peo', idtype = '$type', ntables = '$ntables', paquet = '$paquet', ndonnes = '$ndonnes', npositions = '$npositions', njouees = '$njouees', saut = '$saut', relais = '$relais', gueridon = '$gueridon', obs = '$obs' where id = '$idt';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_tournois SET pairesNS = ?, pairesEO = ?, idtype = ?, ntables = ?, paquet = ?, ndonnes = ?, npositions = ?, njouees = ?, saut = ?, relais = ?, gueridon = ?, obs = ? where id = ?;";
+		$sqlBound = [$pns, $peo, $type, $ntables, $paquet, $ndonnes, $npositions, $njouees, $saut, $relais, $gueridon, $obs, $idt];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		$dbh = null;
 	}
 	return $ok;
@@ -1742,71 +953,83 @@ function purge_Tournoi($idt) {
 	$indices = array();
 	// suppression diagrammes éventuels
 	//$sql = "DELETE from $tab_diagrammes where id ='$id'";	// n'est pas accepté en mode safe, faut utiliser la primary key
-	$sql = "select count(*) from $tab_diagrammes where idtournoi ='$idt';";
-	$res = $dbh->query($sql);
+	$sql = "select count(*) from $tab_diagrammes where idtournoi =?;";
+	$sqlBound = [$idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "select id from $tab_diagrammes where idtournoi ='$idt';";
-		$sth = $dbh->query( $sql );
+		$sql = "select id from $tab_diagrammes where idtournoi =?;";
+		$sqlBound = [$idt];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$indices[$i] = $row['id'];
 		}
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$ii = $indices[$i];
-			$sql = "DELETE from $tab_diagrammes where id ='$ii';";
-			$res = $dbh->query($sql);
+			$sql = "DELETE from $tab_diagrammes where id =?;";
+			$sqlBound = [$ii];
+			$res = securityQuery($dbh, $sql, $sqlBound);
 		}
 	}
 	// suppression donnes
-	$sql = "select count(*) from $tab_donnes where idtournoi ='$idt';";
-	$res = $dbh->query($sql);
+	$sql = "select count(*) from $tab_donnes where idtournoi =?;";
+	$sqlBound = [$idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "select id from $tab_donnes where idtournoi ='$idt';";
-		$sth = $dbh->query( $sql );
+		$sql = "select id from $tab_donnes where idtournoi =?;";
+		$sqlBound = [$idt];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$indices[$i] = $row['id'];
 		}
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$ii = $indices[$i];
-			$sql = "DELETE from $tab_donnes where id ='$ii';";
-			$res = $dbh->query($sql);
+			$sql = "DELETE from $tab_donnes where id =?;";
+			$sqlBound = [$ii];
+			$res = securityQuery($dbh, $sql, $sqlBound);
 		}
 	}
 	// suppression paires NS
-	$sql = "select count(*) from $tab_pairesNS where idtournoi ='$idt';";
-	$res = $dbh->query($sql);
+	$sql = "select count(*) from $tab_pairesNS where idtournoi =?;";
+	$sqlBound = [$idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "select id from $tab_pairesNS where idtournoi ='$idt';";
-		$sth = $dbh->query( $sql );
+		$sql = "select id from $tab_pairesNS where idtournoi =?;";
+		$sqlBound = [$idt];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$indices[$i] = $row['id'];
 		}
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$ii = $indices[$i];
-			$sql = "DELETE from $tab_pairesNS where id ='$ii';";
-			$res = $dbh->query($sql);
+			$sql = "DELETE from $tab_pairesNS where id =?;";
+			$sqlBound = [$ii];
+			$res = securityQuery($dbh, $sql, $sqlBound);
 		}
 	}
 	// suppression paires EO
-	$sql = "select count(*) from $tab_pairesEO where idtournoi ='$idt';";
-	$res = $dbh->query($sql);
+	$sql = "select count(*) from $tab_pairesEO where idtournoi =?;";
+	$sqlBound = [$idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "select id from $tab_pairesEO where idtournoi ='$idt';";
-		$sth = $dbh->query( $sql );
+		$sql = "select id from $tab_pairesEO where idtournoi =?;";
+		$sqlBound = [$idt];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$indices[$i] = $row['id'];
 		}
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$ii = $indices[$i];
-			$sql = "DELETE from $tab_pairesEO where id ='$ii';";
-			$res = $dbh->query($sql);
+			$sql = "DELETE from $tab_pairesEO where id =?;";
+			$sqlBound = [$ii];
+			$res = securityQuery($dbh, $sql, $sqlBound);
 		}
 	}
 	$dbh = null;
@@ -1816,8 +1039,9 @@ function eraseTournoi($id) {			// true si OK, false sinon
 	purge_Tournoi($id);
 	
 	$dbh = connectBDD();
-	$sql = "DELETE from $tab_tournois where id ='$id';";
-	if ( $res = $dbh->query($sql)) {
+	$sql = "DELETE from $tab_tournois where id =?;";
+	$sqlBound = [$id];
+	if ( $res = securityQuery($dbh, $sql, $sqlBound)) {
 		$dbh = null;
 		return true;
 	}
@@ -1830,12 +1054,14 @@ function eraseTournoi($id) {			// true si OK, false sinon
 function set_etat( $id, $etat ) {	// return etat
 	global $tab_tournois, $st_notfound;
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where id = '$id';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where id = ?;";
+	$sqlBound = [$id];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "UPDATE $tab_tournois SET etat = '$etat' where id = '$id';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_tournois SET etat = ? where id = ?;";
+		$sqlBound = [$etat, $id];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	else $etat = $st_notfound;
 	$dbh = null;
@@ -1844,32 +1070,36 @@ function set_etat( $id, $etat ) {	// return etat
 function set_pairesNS( $idt, $pns ) {	// return $pns
 	global $tab_tournois;
 	$dbh = connectBDD();
-	$sql = "UPDATE $tab_tournois SET pairesNS = '$pns' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET pairesNS = ? where id = ?;";
+	$sqlBound = [$pns, $idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$dbh = null;
 	return $pns;
 };
 function set_pairesEO( $idt, $peo ) {	// return $peo
 	global $tab_tournois;
 	$dbh = connectBDD();
-	$sql = "UPDATE $tab_tournois SET pairesEO = '$peo' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET pairesEO = ? where id = ?;";
+	$sqlBound = [$peo, $idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$dbh = null;
 	return $peo;
 };
 function set_typetournoi( $idt, $type ) {	// return typetournoi
 	global $tab_tournois;
 	$dbh = connectBDD();
-	$sql = "UPDATE $tab_tournois SET idtype = '$type' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET idtype = ? where id = ?;";
+	$sqlBound = [$type, $idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$dbh = null;
 	return $type;
 };
 function set_ndonnes( $idt, $nb ) {	// return $nb
 	global $tab_tournois;
 	$dbh = connectBDD();
-	$sql = "UPDATE $tab_tournois SET ndonnes = '$nb' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET ndonnes = ? where id = ?;";
+	$sqlBound = [$nb, $idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$dbh = null;
 	return $nb;
 };
@@ -1881,8 +1111,10 @@ function set_npositions( $idt, $npositions ) {	// phase jeu
 	// calcul des dépendances
 	$njouees = $t[ 'paquet' ] * $npositions;
 	
-	$sql = "UPDATE $tab_tournois SET npositions = '$npositions', njouees = '$njouees' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET npositions = ?, njouees = ? where id = ?;";
+	
+	$sqlBound = [$npositions, $njouees, $idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$t = _readTournoi( $dbh, $idt );
 	$dbh = null;
 	return $t['desc'];
@@ -1912,8 +1144,10 @@ function start_mitchell( $idt, $paquet ) {	// phase jeu
 	$dbh = connectBDD();
 	//_logevent($dbh, "startmitchell ".$idt." paq=".$paquet);
 	
-	$sql = "UPDATE $tab_tournois SET tournoi = '$start', etat = '$st_phase_jeu', paquet = '$paquet', ndonnes = '$ndonnes', njouees = '$njouees', notour = 1, startseq = '$startseq', endofseq = '$endofseq' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET tournoi = ?, etat = ?, paquet = ?, ndonnes = ?, njouees = ?, notour = 1, startseq = ?, endofseq = ? where id = ?;";
+	
+	$sqlBound = [$start, $st_phase_jeu, $paquet, $ndonnes, $njouees, $startseq, $endofseq, $idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	
 	for ( $i = 1; $i <= $ntables; $i++ ) {
 		$donne = ($i-1)*$paquet;
@@ -1924,30 +1158,36 @@ function start_mitchell( $idt, $paquet ) {	// phase jeu
 			$eocpt = $paquet;
 		else
 			$eocpt = 0;
-		$sql = "UPDATE $tab_connexions SET stconnexion='$cnx_ko', numEO=0, numdonne='$donne', cpt=0, rdy=1, eocpt='$eocpt', eonumNS=0, eodonne='$donne' where id='$i';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_connexions SET stconnexion=?, numEO=0, numdonne=?, cpt=0, rdy=1, eocpt=?, eonumNS=0, eodonne=? where id=?;";
+		$sqlBound = [$cnx_ko, $donne, $eocpt, $donne, $i];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	for ( $i = $ntables+1; $i <= $max_tables; $i++ ) {
-		$sql = "UPDATE $tab_connexions SET stconnexion='$cnx_ko', numEO=0, numdonne=0, cpt=0, rdy=0, eocpt=0, eonumNS=0, eodonne=0 where id='$i';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_connexions SET stconnexion=?, numEO=0, numdonne=0, cpt=0, rdy=0, eocpt=0, eonumNS=0, eodonne=0 where id=?;";
+		$sqlBound = [$cnx_ko, $i];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	$dbh = null;
 };
 function start_howell( $idt, $paquet ) {	// phase jeu
-	global $tab_tournois, $tab_connexions;
+	global $tab_tournois, $tab_connexions, $t_howell;
 	global $parametres, $st_phase_jeu, $max_tables, $cnx_ko;
 	
 	$start = date('Y-m-d');	// date de démarrage
 	
 	$t = readTournoi( $idt );
-	$idtype  = $t[ 'idtype' ];
-	$ntables = $t[ 'ntables' ];
+	$idtype   = $t[ 'idtype' ];
+	$genre    = $t[ 'genre' ];
+	$ntables  = $t[ 'ntables' ];
 	$pairesNS = $t[ 'pairesNS' ];
 	
-	// calcul des dépendances
+	// Stock d'étuis propre au mouvement, y compris en présence d'un relais.
 	$njouees = $t[ 'npositions' ] * $paquet;
-	$ndonnes = $ntables*$paquet;		// en circulation //($t['ndonnes']/$t['paquet']) * $paquet;	// ??????????????????????
-	
+	$tt = gettypetournoi($idtype);
+	if ($paquet < 1 || $paquet != (int)$paquet || $paquet > $tt['maxpaquet']) {
+		throw new InvalidArgumentException('Taille de paquet Howell invalide.');
+	}
+	$ndonnes = $tt['npaquets'] * $paquet;
 	$firstduree = ( $paquet * ($parametres['dureedonne'] + $parametres['dureediagrammes']) + $parametres['dureeinitiale'] ) * 60;	// en secondes
 	$date = new DateTime();
 	$startseq = $date->getTimestamp();
@@ -1957,28 +1197,35 @@ function start_howell( $idt, $paquet ) {	// phase jeu
 	$dbh = connectBDD();
 	//_logevent($dbh, "starthowell ".$idt." paq=".$paquet);
 	
-	$sql = "UPDATE $tab_tournois SET tournoi = '$start', etat = '$st_phase_jeu', paquet = '$paquet', ndonnes = '$ndonnes', njouees = '$njouees', notour = 1, startseq = '$startseq', endofseq = '$endofseq' where id = '$idt';";
-	$res = $dbh->query($sql);
+	$sql = "UPDATE $tab_tournois SET tournoi = ?, etat = ?, paquet = ?, ndonnes = ?, njouees = ?, notour = 1, startseq = ?, endofseq = ? where id = ?;";
+	
+	$sqlBound = [$start, $st_phase_jeu, $paquet, $ndonnes, $njouees, $startseq, $endofseq, $idt];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	
 	for ( $i = 1; $i <= $ntables; $i++ ) {
 		$p = getposhowell( $idtype, $i, 1, $paquet );	
 		$lastdonne = $p['last'];
 		$numEO = $p['adversaire'];
 		
-		$sql = "UPDATE $tab_connexions SET stconnexion ='$cnx_ko', numEO ='$numEO', numdonne ='$lastdonne', cpt = 0, rdy = 1 where id = '$i';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_connexions SET stconnexion =?, numEO =?, numdonne =?, cpt = 0, rdy = 1 where id = ?;";
+		
+		$sqlBound = [$cnx_ko, $numEO, $lastdonne, $i];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	for ( $i = $ntables+1; $i <= $max_tables; $i++ ) {
-		$sql = "UPDATE $tab_connexions SET stconnexion = '$cnx_ko', numEO = 0, numdonne = 0, cpt = 0, rdy = 0 where id = '$i';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_connexions SET stconnexion = ?, numEO = 0, numdonne = 0, cpt = 0, rdy = 0 where id = ?;";
+		$sqlBound = [$cnx_ko, $i];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	$dbh = null;
 };
 function _readTournoi( $dbh, $idt ) {
-	global $tab_tournois, $type_mitchell, $type_howell, $t_mitchell;
+	global $tab_tournois, $type_mitchell, $t_howell, $t_mitchell;
 	global $st_notfound, $st_phase_jeu, $st_phase_fini, $st_closed;
-	$sql = "SELECT * FROM $tab_tournois where id = '$idt';";
-	$sth = $dbh->query( $sql );
+	
+	$sql = "SELECT * FROM $tab_tournois WHERE id = :idt;";
+	$sth = $dbh->prepare($sql);
+	$sth->execute([':idt' => $idt]);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	if ( $row ) {
 		$datet = $row[ 'tournoi' ];
@@ -2039,227 +1286,16 @@ function readTournoi( $idt ) {
 	$dbh = null;
 	return $t;
 }
-function elabClassement( $paires, $notes ) {
-	$exaequo = "ex";
-	$result = array();
-	$suffix = array();
-	$result[0] = 1;		// le premier
-	$suffix[0] = "";	// le premier
-	for ($i = 1; $i < $paires; $i++) {
-		if ($notes[$i] == $notes[$i-1] ) {
-			$result[$i] = $result[$i-1];
-			$suffix[$i-1] = $exaequo;
-			$suffix[$i] = $exaequo;
-		}
-		else {
-			$result[$i] = $i+1;
-			$suffix[$i] = "";
-		}
-	}
-	for ($i = 0; $i < $paires; $i++) {
-		$result[$i] .= $suffix[$i];
-	}
-	return $result;
-};
-function htmlDisplayTournoi($idt, $screenw, $displayGeneral = False) {
-	global $tab_tournois, $tab_pairesNS, $tab_pairesEO;
-	global $parametres, $t_mitchell, $t_howell;
-	$dbh = connectBDD();
-	
-	$t = _readTournoi( $dbh, $idt );
-	$pairesNS = $t['pairesNS'];
-	$pairesEO = $t['pairesEO'];
-	$njouees = $t['njouees'];
-	$ndonnes = $t['ndonnes'];
-	$datet = $t[ 'tournoi' ];
-	$datef = strdatet( $datet );
-	
-	// Lecture des notes globales NS
-	$pns = array();
-	$notegns = array();
-	$tabj1 = array();
-	$tabj3 = array();
-	$i = 0;
-	$sql = "SELECT num, idj1, idj3, noteg FROM $tab_pairesNS where idtournoi = '$idt' order by noteg desc;";
-	foreach ($dbh->query($sql) as $row) {
-		$pns[$i] = $row['num'];
-		$tabj1[$i] = $row['idj1'];
-		$tabj3[$i] = $row['idj3'];
-		$notegns[$i] = $row['noteg'];
-		$i++;
-	};
-	$nomj1 = array();
-	$nomj3 = array();
-	$fullj1 = array();
-	$fullj3 = array();
-	for ( $i = 0; $i < $pairesNS; $i++) {
-		$joueur = _getJoueur( $dbh, $tabj1[$i] );
-		$nomj1[$i] = $joueur['joueur'];
-		$fullj1[$i] = $joueur['nomcomplet'];
-		
-		$joueur = _getJoueur( $dbh, $tabj3[$i] );
-		$nomj3[$i] = $joueur['joueur'];
-		$fullj3[$i] = $joueur['nomcomplet'];
-	};
-	
-	if ( $t['genre'] == $t_mitchell ) {
-		// Lecture des notes globales EO
-		$peo = array();
-		$notegeo = array();
-		$tabj2 = array();
-		$tabj4 = array();
-		$i = 0;
-		$sql = "SELECT num, idj2, idj4, noteg FROM $tab_pairesEO where idtournoi = '$idt' order by noteg desc;";
-		foreach ($dbh->query($sql) as $row) {
-			$peo[$i] = $row['num'];
-			$tabj2[$i] = $row['idj2'];
-			$tabj4[$i] = $row['idj4'];
-			$notegeo[$i] = $row['noteg'];
-			$i++;
-		};
-		$nomj2 = array();
-		$nomj4 = array();
-		$fullj2 = array();
-		$fullj4 = array();
-		for ( $i = 0; $i < $pairesEO; $i++) {
-			$joueur = _getJoueur( $dbh, $tabj2[$i] );
-			$nomj2[$i] = $joueur['joueur'];
-			$fullj2[$i] = $joueur['nomcomplet'];
-		
-			$joueur = _getJoueur( $dbh, $tabj4[$i] );
-			$nomj4[$i] = $joueur['joueur'];
-			$fullj4[$i] = $joueur['nomcomplet'];
-		};
-	}
 
-	// affichage des tableaux
-	if ( $t['genre'] == $t_mitchell )
-		$str = "<h2>Résultats tournoi du $datef</h2><p>$pairesNS paires Nord-Sud, $pairesEO paires Est-Ouest</br>$njouees donnes jouées / $ndonnes en circulation</p>";
-	else
-		$str = "<h2>Résultats tournoi du $datef</h2><p>$pairesNS paires Howell</br>$njouees donnes jouées / $ndonnes en circulation</p>";
-
-	if ( $t['genre'] == $t_howell ) {
-		// forçage une colonne
-		$screenw = 0;
-	}
-	$twocols = ( $screenw > $parametres['maxw'] ) ? true : false;
-	if ( $twocols ) {
-		// affichage des tableaux côte à côte
-		$str .= "<table style='width:90%; margin:auto;'><tbody><tr><td style='width:45%;'>";
-	}
-	
-	// affichage 1er tableau
-	$str .= "<table style='margin:auto;'><tbody><tr><td class='xNum3' style='width:10%;'>Rg</td><td class='xNum3' style='width:10%;'>NS</td><td class='xNum3'>Paire</td><td class='xNum3' style='width:15%;'>%</td></tr>";
-	
-	// élab classement avec recherche d'ex-aequos
-	$classement = elabClassement( $pairesNS, $notegns );
-	for ($i = 0; $i < $pairesNS; $i++) {
-		$idpaire = "ns_".$pns[$i];
-		$score = sprintf( "%.1f", $notegns[$i]);
-		$str .= "<tr><td class='xNum3'>$classement[$i]</td>";
-		$str .= "<td class='xNum3'>$pns[$i]</td>";
-		$str .= "<td class='xNum3 select' id='".$idpaire."'>$fullj1[$i]<br />$fullj3[$i]</td>";
-		//$str .= "<td class='xNum3'>$notegns[$i] %</td>";
-		$str .= "<td class='xNum3'>$score</td>";
-		$str .= "</tr>";
-		}
-	$str .= "</tbody></table>";
-
-	if ( $twocols ) {
-		$str .= "</td><td style='width:3%;'></td><td style='width:45%;'>";
-	}
-	else {
-		$str .= "<p>&nbsp;</p>";
-	}
-	
-	if ( $t['genre'] == $t_mitchell ) {
-		// affichage 2ème tableau
-		$str .= "<table style='margin:auto;'><tbody><tr><td class='xNum3' style='width:10%;'>Rg</td><td class='xNum3' style='width:10%;'>EO</td><td class='xNum3'>Paire</td><td class='xNum3' style='width:15%;'>%</td></tr>";
-	
-		// élab classement avec recherche d'ex-aequos
-		$classement = elabClassement( $pairesEO, $notegeo );
-		for  ($i = 0; $i < $pairesEO; $i++) {
-			$idpaire = "eo_".$peo[$i];
-			$score = sprintf( "%.1f", $notegeo[$i]);
-			$str .= "<tr><td class='xNum3'>$classement[$i]</td>";
-			$str .= "<td class='xNum3'>$peo[$i]</td>";
-			$str .= "<td class='xNum3 select' id='".$idpaire."'>$fullj2[$i]<br />$fullj4[$i]</td>";
-			$str .= "<td class='xNum3'>$score</td>";
-			$str .= "</tr>";
-			}
-		$str .= "</tbody></table>";		
-	}
-	
-	if ( $twocols ) {
-		$str .= '</td></tr></tbody></table>';
-	}
-	
-	// élab classement général toutes paires avec recherche d'ex-aequos pour les tournois Mitchell
-	if ( ($t['genre'] == $t_mitchell)&&($displayGeneral == True) ) {
-		// Lecture des notes globales NS & EO
-		$paires = array();
-		$sens = array();
-		$notes = array();
-		$tabj1 = array();
-		$tabj3 = array();
-		$i = 0;
-		$sql = "SELECT num, j1, j2, noteg, sens FROM (
-			(SELECT 'NS' as sens, num, idj1 as j1, idj3 as j2, noteg FROM $tab_pairesNS where idtournoi = '$idt')
-			UNION
-			(SELECT 'EO' as sens, num, idj2 as j1, idj4 as j2, noteg FROM $tab_pairesEO where idtournoi = '$idt')
-			) T1 order by noteg desc;";
-		foreach ($dbh->query($sql) as $row) {
-			$paires[$i] = $row['num'];
-			$sens[$i] = $row['sens'];
-			$tab1[$i] = $row['j1'];
-			$tab2[$i] = $row['j2'];
-			$notes[$i] = $row['noteg'];
-			$i++;
-		};
-		$nom1 = array();
-		$nom2 = array();
-		$full1 = array();
-		$full2 = array();
-		for ( $i = 0; $i < count($paires); $i++) {
-			$joueur = _getJoueur( $dbh, $tab1[$i] );
-			$nom1[$i]  = $joueur['joueur'];
-			$full1[$i] = $joueur['nomcomplet'];
-			
-			$joueur = _getJoueur( $dbh, $tab2[$i] );
-			$nom2[$i]  = $joueur['joueur'];
-			$full2[$i] = $joueur['nomcomplet'];
-		};
-		// élab classement avec recherche d'ex-aequos
-		$classement = elabClassement( count($paires), $notes );
-		$str .= "<div id='section_general' hidden>";
-		$str .= "<p><button class='myButton' onclick='$(`#section_general`).toggle()';>Classement général</button></p>";
-		$str .= "<table style='margin:auto;'><tbody><tr><td class='xNum3' style='width:10%;'>Rg</td><td class='xNum3' style='width:10%;'>N°</td><td class='xNum3'>Paire</td><td class='xNum3' style='width:15%;'>%</td></tr>";
-		for ($i = 0; $i < count($paires); $i++) {
-			$idpaire = strtolower($sens[$i])."_".$paires[$i];
-			$numpaire = $sens[$i].$paires[$i];
-			$score = sprintf( "%.1f", $notes[$i]);
-			$str .= "<tr><td class='xNum3'>$classement[$i]</td>";
-			$str .= "<td class='xNum3'>$numpaire</td>";
-			$str .= "<td class='xNum3 select' id='".$idpaire."'>$full1[$i]<br />$full2[$i]</td>";
-			//$str .= "<td class='xNum3'>$notegns[$i] %</td>";
-			$str .= "<td class='xNum3'>$score</td>";
-			$str .= "</tr>";
-			}
-		$str .= "</tbody></table>";
-		$str .= "</div>";
-		$str .= "<p><button class='myButton' onclick='$(`#section_general`).toggle()';>Classement général</button></p>";
-	}
-	$dbh = null;
-	return $str;
-};
 function buildDestinatairesResultats($idt) {
 	global $tab_tournois, $tab_pairesNS, $tab_pairesEO;
 	$dbh = connectBDD();
 	
 	$stack = [];
 
-	$sql = "SELECT * FROM $tab_tournois where id = '$idt';";
-	foreach ($dbh->query($sql) as $row) {
+	$sql = "SELECT * FROM $tab_tournois where id = ?;";
+	$sqlBound = [$idt];
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$pairesNS = $row['pairesNS'];
 		$pairesEO = $row['pairesEO'];
 		}
@@ -2268,8 +1304,9 @@ function buildDestinatairesResultats($idt) {
 	$tabj1 = array();
 	$tabj3 = array();
 	$i = 0;
-	$sql = "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = '$idt';";
-	foreach ($dbh->query($sql) as $row) {
+	$sql = "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = ?;";
+	$sqlBound = [$idt];
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$tabj1[$i] = $row['idj1'];
 		$tabj3[$i] = $row['idj3'];
 		$i++;
@@ -2292,8 +1329,9 @@ function buildDestinatairesResultats($idt) {
 	$tabj2 = array();
 	$tabj4 = array();
 	$i = 0;
-	$sql = "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = '$idt';";
-	foreach ($dbh->query($sql) as $row) {
+	$sql = "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = ?;";
+	$sqlBound = [$idt];
+	foreach (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$tabj2[$i] = $row['idj2'];
 		$tabj4[$i] = $row['idj4'];
 		$i++;
@@ -2317,70 +1355,6 @@ function buildDestinatairesResultats($idt) {
 };
 function displayTournoi($idt, $screenw) {
 	print htmlDisplayTournoi($idt, $screenw);
-};
-function htmlDisplayTournoiIMP($idt) {
-	global $tab_tournois, $tab_pairesNS;
-	global $parametres, $t_mitchell, $t_howell;
-	$dbh = connectBDD();
-	
-	$t = _readTournoi( $dbh, $idt );
-	$pairesNS = $t['pairesNS'];
-	$pairesEO = $t['pairesEO'];
-	$njouees = $t['njouees'];
-	$ndonnes = $t['ndonnes'];
-	$datet = $t[ 'tournoi' ];
-	$datef = strdatet( $datet );
-	
-	$str = "<h2>Résultats tournoi du $datef</h2><p>$pairesNS paires (résultats en IMP)</br>$njouees donnes jouées / $ndonnes en circulation</p>";
-
-	// Lecture des notes globales NS
-	$pns = array();
-	$notegns = array();
-	$tabj1 = array();
-	$tabj3 = array();
-	$i = 0;
-	$sql = "SELECT num, idj1, idj3, noteg FROM $tab_pairesNS where idtournoi = '$idt' order by noteg desc;";
-	foreach ($dbh->query($sql) as $row) {
-		$pns[$i] = $row['num'];
-		$tabj1[$i] = $row['idj1'];
-		$tabj3[$i] = $row['idj3'];
-		$notegns[$i] = $row['noteg'];
-		$i++;
-	};
-	$nomj1 = array();
-	$nomj3 = array();
-	$fullj1 = array();
-	$fullj3 = array();
-	for ( $i = 0; $i < $pairesNS; $i++) {
-		$joueur = _getJoueur( $dbh, $tabj1[$i] );
-		$nomj1[$i] = $joueur['joueur'];
-		$fullj1[$i] = $joueur['nomcomplet'];
-		
-		$joueur = _getJoueur( $dbh, $tabj3[$i] );
-		$nomj3[$i] = $joueur['joueur'];
-		$fullj3[$i] = $joueur['nomcomplet'];
-	};
-	
-	$dbh = null;
-
-	// affichage des tableaux
-	$str .= "<table border='1' style='width:100%; max-width: 350px; margin:auto;'>";
-	$str .= "<tbody><tr><td class='xNum3' style='width:10%;'>Rg</td><td class='xNum3' style='width:10%;'>N°</br>paire</td><td class='xNum3'>Paire</td><td class='xNum3' style='width:15%;'>IMP</td></tr>";
-	
-	// élab classement avec recherche d'ex-aequos
-	$classement = elabClassement( $pairesNS, $notegns );
-	for ($i = 0; $i < $pairesNS; $i++) {
-		$idpaire = "ns_".$pns[$i];
-		$score = intval( $notegns[$i] );
-		$str .= "<tr><td class='xNum3'>$classement[$i]</td>";
-		$str .= "<td class='xNum3'>$pns[$i]</td>";
-		$str .= "<td class='xNum3 select' id='".$idpaire."'>$fullj1[$i]<br />$fullj3[$i]</td>";
-		$str .= "<td class='xNum3'>$score</td>";
-		$str .= "</tr>";
-		}
-	$str .= "</tbody></table>";
-
-	return $str;
 };
 function displayTournoiIMP($idt) {
 	print htmlDisplayTournoiIMP($idt);
@@ -2407,32 +1381,30 @@ function htmlDisplayResultatsTournoi($idt, $screenw, $displayGeneral = False) {
 };
 
 // fonctions utilisant la table des diagrammes
+// optimisées avec chatgpt le 04/08/2026
 function existeDiagramme($idt,$n) {		// return diagramme, null si non trouvé
 	global $tab_diagrammes;
 	$dbh = connectBDD();
 	
-	$sql = "SELECT count(*) FROM $tab_diagrammes where idtournoi = '$idt' and etui= '$n';";
-	if ( $res = $dbh->query($sql)) {
-		$nbl = $res->fetchColumn();
-		if ( $nbl > 0 ) {
-			// on lit la première ligne
-			$sth = $dbh->query( "SELECT * FROM $tab_diagrammes where idtournoi = '$idt' and etui= '$n';" );
-			$row = $sth->fetch(PDO::FETCH_ASSOC);
-			$diags = $row['dealt'];
-			$dds   = $row['dds'];
-		}
-		else {
-			$diags = null;
-			$dds   = null;
-		}
-	}
-	else {
-		$diags = null;
-		$dds   = null;
-	}
-	
-	$dbh = null;
-	return [$diags,$dds];
+    $sql = "SELECT dealt, dds
+            FROM $tab_diagrammes
+            WHERE idtournoi = :idt AND etui = :etui
+            LIMIT 1";
+
+    $stmt = $dbh->prepare($sql);
+    $stmt->execute([
+        ':idt'  => $idt,
+        ':etui' => $n
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $dbh = null;
+
+    if ($row) {
+        return [$row['dealt'], $row['dds']];
+    }
+    return [null, null];
 };
 function insertDiagramme($idt, $n, $diag, $dds) {
     global $tab_diagrammes;
@@ -2561,19 +1533,19 @@ function getPointsHonneursMoyens($idt) {
 	$pts = array( 'id'=>$idt, 'nord'=>'0', 'est'=>'0', 'sud'=>'0', 'ouest'=>'0', 'ns'=>'0', 'eo'=>'0' );
 	$dbh = connectBDD();
 	
-	$res = $dbh->query( "SELECT AVG(h1) FROM $tab_diagrammes where idtournoi = '$idt';" );
+	$res = securityQuery($dbh, "SELECT AVG(h1) FROM $tab_diagrammes where idtournoi = ?;", [$idt]);
 	$pn = $res->fetchColumn();
 	$pts['nord'] = sprintf( "%.2f", $pn );
 	
-	$res = $dbh->query( "SELECT AVG(h2) FROM $tab_diagrammes where idtournoi = '$idt';" );
+	$res = securityQuery($dbh, "SELECT AVG(h2) FROM $tab_diagrammes where idtournoi = ?;", [$idt]);
 	$pe = $res->fetchColumn();
 	$pts['est'] = sprintf( "%.2f", $pe );
 	
-	$res = $dbh->query( "SELECT AVG(h3) FROM $tab_diagrammes where idtournoi = '$idt';" );
+	$res = securityQuery($dbh, "SELECT AVG(h3) FROM $tab_diagrammes where idtournoi = ?;", [$idt]);
 	$ps = $res->fetchColumn();
 	$pts['sud'] = sprintf( "%.2f", $ps );
 	
-	$res = $dbh->query( "SELECT AVG(h4) FROM $tab_diagrammes where idtournoi = '$idt';" );
+	$res = securityQuery($dbh, "SELECT AVG(h4) FROM $tab_diagrammes where idtournoi = ?;", [$idt]);
 	$po = $res->fetchColumn();
 	$pts['ouest'] = sprintf( "%.2f", $po );
 	
@@ -2587,18 +1559,21 @@ function getdiagrammes($idt) {
 	global $tab_diagrammes;
 	
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_diagrammes where idtournoi = '$idt';";
-	$res = $dbh->query($sql);
-	$nb = $res->fetchColumn();
-	$diags = Array();
-	if ( $nb > 0 ) {
-		$sql = "SELECT etui, dealt FROM $tab_diagrammes where idtournoi = '$idt' order by etui;";
-		$res = $dbh->query($sql);
-		for ( $i = 0; $i < $nb; $i++ ) {
-			$row = $res->fetch(PDO::FETCH_ASSOC);
-			array_push( $diags, array( 'etui'=>$row['etui'], 'deal'=>$row['dealt'] ) );
-		}
-	}
+    $sql = "SELECT etui, dealt
+            FROM $tab_diagrammes
+            WHERE idtournoi = :idt
+            ORDER BY etui";
+
+    $stmt = $dbh->prepare($sql);
+    $stmt->execute([':idt' => $idt]);
+
+    $diags = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $diags[] = [
+            'etui' => $row['etui'],
+            'deal' => $row['dealt']
+        ];
+    }
 	$dbh = null;
 	return json_encode( $diags );
 };
@@ -2606,27 +1581,19 @@ function getdiagrammes($idt) {
 // fonctions utilisant les tables des paires NS et EO
 function _maxNumPaireNS( $dbh, $idt ) {		// return max(numtable), 0 sinon
 	global $tab_pairesNS;
-	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt'";
-	$res = $dbh->query($sql);
-	$nb = $res->fetchColumn();
-	if ( $nb > 0 ) {
-		$sql = "SELECT max(num) FROM $tab_pairesNS where idtournoi = '$idt'";
-		$res = $dbh->query($sql);
-		$nb = $res->fetchColumn();
-	}
-	return $nb;
+    $sql = "SELECT MAX(num) FROM $tab_pairesNS WHERE idtournoi = :idt";
+    $stmt = $dbh->prepare($sql);
+    $stmt->execute([ ':idt' => $idt ]);
+    $max = $stmt->fetchColumn();
+    return $max !== false && $max !== null ? (int)$max : 0;
 };
 function _maxNumPaireEO( $dbh, $idt ) {
 	global $tab_pairesEO;
-	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt'";
-	$res = $dbh->query($sql);
-	$nb = $res->fetchColumn();
-	if ( $nb > 0 ) {
-		$sql = "SELECT max(num) FROM $tab_pairesEO where idtournoi = '$idt'";
-		$res = $dbh->query($sql);
-		$nb = $res->fetchColumn();
-	}
-	return $nb;
+    $sql = "SELECT MAX(num) FROM $tab_pairesEO WHERE idtournoi = :idt";
+    $stmt = $dbh->prepare($sql);
+    $stmt->execute([ ':idt' => $idt ]);
+    $max = $stmt->fetchColumn();
+    return $max !== false && $max !== null ? (int)$max : 0;
 };
 function maxNumPaireNS( $idt ) {		// return max(numtable), 0 sinon
 	$dbh = connectBDD();
@@ -2644,10 +1611,11 @@ function maxNumPaireEO( $idt ) {
 function _getligneNS( $dbh, $idt, $numpaire ) {
 	global $tab_pairesNS;
 	$libre = array( 'id'=>0, 'numero'=>0, 'joueur'=>" ", 'nomcomplet'=>" ");
-	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and num = '$numpaire'";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = ? and num = ?";
+	$sqlBound = [$idt, $numpaire];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	if ( $res->fetchColumn() == 1 ) {
-		$sth = $dbh->query( "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = '$idt' and num = '$numpaire'" );
+		$sth = securityQuery($dbh, "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = ? and num = ?", [$idt, $numpaire]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		if ( $row[ 'idj1' ] != null )	$ligne['N'] = _getJoueur( $dbh, $row[ 'idj1' ] );
 		else	$ligne['N'] = $libre;
@@ -2664,10 +1632,11 @@ function _getligneNS( $dbh, $idt, $numpaire ) {
 function _getligneEO( $dbh, $idt, $numpaire ) {
 	global $tab_pairesEO;
 	$libre = array( 'id'=>0, 'numero'=>0, 'joueur'=>" ", 'nomcomplet'=>" ");
-	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and num = '$numpaire'";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = ? and num = ?";
+	$sqlBound = [$idt, $numpaire];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	if ( $res->fetchColumn() == 1 ) {
-		$sth = $dbh->query( "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = '$idt' and num = '$numpaire'" );
+		$sth = securityQuery($dbh, "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = ? and num = ?", [$idt, $numpaire]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		if ( $row[ 'idj2' ] != null ) $ligne['E'] = _getJoueur( $dbh, $row[ 'idj2' ] );
 		else 	$ligne['E'] = $libre;
@@ -2697,16 +1666,19 @@ function setligneNS( $idt, $numpaire, $id1, $id2 ) {
 	// effacement ligne NS si existe
 	global $tab_pairesNS;
 	$dbh = connectBDD();
-	$sql = "select count(*) from $tab_pairesNS where idtournoi ='$idt' and num = '$numpaire';";
-	$res = $dbh->query($sql);
+	$sql = "select count(*) from $tab_pairesNS where idtournoi =? and num = ?;";
+	$sqlBound = [$idt, $numpaire];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "select id from $tab_pairesNS where idtournoi ='$idt' and num = '$numpaire';";
-		$sth = $dbh->query( $sql );
+		$sql = "select id from $tab_pairesNS where idtournoi =? and num = ?;";
+		$sqlBound = [$idt, $numpaire];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$indice = $row['id'];
-		$sql = "DELETE from $tab_pairesNS where id ='$indice';";
-		$res = $dbh->query($sql);
+		$sql = "DELETE from $tab_pairesNS where id =?;";
+		$sqlBound = [$indice];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	$dbh = null;
 	
@@ -2719,16 +1691,19 @@ function setligneEO( $idt, $numpaire, $id1, $id2 ) {
 	// effacement ligne EO si existe
 	global $tab_pairesEO;
 	$dbh = connectBDD();
-	$sql = "select count(*) from $tab_pairesEO where idtournoi ='$idt' and num = '$numpaire';";
-	$res = $dbh->query($sql);
+	$sql = "select count(*) from $tab_pairesEO where idtournoi =? and num = ?;";
+	$sqlBound = [$idt, $numpaire];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sql = "select id from $tab_pairesEO where idtournoi ='$idt' and num = '$numpaire';";
-		$sth = $dbh->query( $sql );
+		$sql = "select id from $tab_pairesEO where idtournoi =? and num = ?;";
+		$sqlBound = [$idt, $numpaire];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$indice = $row['id'];
-		$sql = "DELETE from $tab_pairesEO where id ='$indice';";
-		$res = $dbh->query($sql);
+		$sql = "DELETE from $tab_pairesEO where id =?;";
+		$sqlBound = [$indice];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	$dbh = null;
 	
@@ -2746,11 +1721,11 @@ function testlignescompletesNS( $idt ) {
 	if ( $nb > 0 ) {
 		for ( $i = 1; $i <= $nb; $i++ ) {
 			// test paire existe ?
-			$res = $dbh->query( "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and num = '$i'");
+			$res = securityQuery($dbh, "SELECT count(*) FROM $tab_pairesNS where idtournoi = ? and num = ?", [$idt, $i]);
 			$n = $res->fetchColumn();
 			if ( $n == 0 ) { $nb = -1; break; }
 			// test paire complète
-			$sth = $dbh->query( "SELECT * FROM $tab_pairesNS where idtournoi = '$idt' and num = '$i'");
+			$sth = securityQuery($dbh, "SELECT * FROM $tab_pairesNS where idtournoi = ? and num = ?", [$idt, $i]);
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			if ( $row[ 'idj1' ] == null ) { $nb = -1; break; }
 			if ( $row[ 'idj3' ] == null ) { $nb = -1; break; }
@@ -2767,11 +1742,11 @@ function testlignescompletesEO( $idt ) {
 	if ( $nb > 0 ) {
 		for ( $i = 1; $i <= $nb; $i++ ) {
 			// test paire existe ?
-			$res = $dbh->query( "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and num = '$i'");
+			$res = securityQuery($dbh, "SELECT count(*) FROM $tab_pairesEO where idtournoi = ? and num = ?", [$idt, $i]);
 			$n = $res->fetchColumn();
 			if ( $n == 0 ) { $nb = -1; break; }
 			// test paire complète
-			$sth = $dbh->query( "SELECT * FROM $tab_pairesEO where idtournoi = '$idt' and num = '$i'");
+			$sth = securityQuery($dbh, "SELECT * FROM $tab_pairesEO where idtournoi = ? and num = ?", [$idt, $i]);
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			if ( $row[ 'idj2' ] == null ) { $nb = -1; break; }
 			if ( $row[ 'idj4' ] == null ) { $nb = -1; break; }
@@ -2788,92 +1763,154 @@ function testlignescompletes2( $idt ) {
 
 function _set_joueurNord( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesNS;
-	// recherche si ligne NS déjà utilisé
-	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and num = '$paire';";
-	$res = $dbh->query($sql);
-	$nbl = $res->fetchColumn();
-	if ( $nbl == 0 ) { // pas encore utilisé
-		if ( $idj > 0 ) {
-			$sql = "INSERT $tab_pairesNS ( idtournoi, num, idj1 ) VALUES ( '$idt', '$paire', '$idj' );";
-			$res = $dbh->query($sql);
-		};
-	};
-	if ( $nbl == 1 ) { // déja utilisé par sud
-		if ( $idj == 0 ) {
-			$sql = "UPDATE $tab_pairesNS SET idj1 = 'null' where idtournoi = '$idt' and num = '$paire';";
-		} else {
-			$sql = "UPDATE $tab_pairesNS SET idj1 = '$idj' where idtournoi = '$idt' and num = '$paire';";
-		};
-		$res = $dbh->query($sql);
-	};
+	try {
+		$dbh->beginTransaction();
+
+		// recherche si ligne NS déjà utilisée (verrouillée pour éviter la concurrence)
+		$sql = "SELECT count(*) FROM $tab_pairesNS WHERE idtournoi = :idt AND num = :paire FOR UPDATE";
+		$sth = $dbh->prepare( $sql );
+		$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+		$nbl = (int) $sth->fetchColumn();
+
+		if ( $nbl == 0 ) { // pas encore utilisé
+			if ( $idj > 0 ) {
+				$sql = "INSERT INTO $tab_pairesNS ( idtournoi, num, idj1 ) VALUES ( :idt, :paire, :idj )";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+		elseif ( $nbl == 1 ) { // déjà utilisé par sud
+			if ( $idj == 0 ) {
+				$sql = "UPDATE $tab_pairesNS SET idj1 = NULL WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+			} else {
+				$sql = "UPDATE $tab_pairesNS SET idj1 = :idj WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+
+		$dbh->commit();
+	}
+	catch ( PDOException $e ) {
+		$dbh->rollBack();
+		throw $e;
+	}
 	return $idj;
 };
 function _set_joueurSud( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesNS;
-	// recherche si ligne NS déjà utilisé
-	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and num = '$paire';";
-	$res = $dbh->query($sql);
-	$nbl = $res->fetchColumn();
-	if ( $nbl == 0 ) { // pas encore utilisé
-		if ( $idj > 0 ) {
-			$sql = "INSERT $tab_pairesNS ( idtournoi, num, idj3 ) VALUES ( '$idt', '$paire', '$idj' );";
-			$res = $dbh->query($sql);
-		};
-	};
-	if ( $nbl == 1 ) { // déja utilisé par nord
-		if ( $idj == 0 ) {
-			$sql = "UPDATE $tab_pairesNS SET idj3 = 'null' where idtournoi = '$idt' and num = '$paire';";
-		} else {
-			$sql = "UPDATE $tab_pairesNS SET idj3 = '$idj' where idtournoi = '$idt' and num = '$paire';";
-		};
-		$res = $dbh->query($sql);
-	};
+	try {
+		$dbh->beginTransaction();
+
+		$sql = "SELECT count(*) FROM $tab_pairesNS WHERE idtournoi = :idt AND num = :paire FOR UPDATE";
+		$sth = $dbh->prepare( $sql );
+		$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+		$nbl = (int) $sth->fetchColumn();
+
+		if ( $nbl == 0 ) { // pas encore utilisé
+			if ( $idj > 0 ) {
+				$sql = "INSERT INTO $tab_pairesNS ( idtournoi, num, idj3 ) VALUES ( :idt, :paire, :idj )";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+		elseif ( $nbl == 1 ) { // déjà utilisé par nord
+			if ( $idj == 0 ) {
+				$sql = "UPDATE $tab_pairesNS SET idj3 = NULL WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+			} else {
+				$sql = "UPDATE $tab_pairesNS SET idj3 = :idj WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+
+		$dbh->commit();
+	}
+	catch ( PDOException $e ) {
+		$dbh->rollBack();
+		throw $e;
+	}
 	return $idj;
 };
 function _set_joueurEst( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesEO;
-	// recherche si ligne EO déjà utilisé
-	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and num = '$paire';";
-	$res = $dbh->query($sql);
-	$nbl = $res->fetchColumn();
-	if ( $nbl == 0 ) { // pas encore utilisé
-		if ( $idj > 0 ) {
-			$sql = "INSERT $tab_pairesEO ( idtournoi, num, idj2 ) VALUES ( '$idt', '$paire', '$idj' );";
-			$res = $dbh->query($sql);
-		};
-	};
-	if ( $nbl == 1 ) { // déja utilisé par ouest
-		if ( $idj == 0 ) {
-			$sql = "UPDATE $tab_pairesEO SET idj2 = 'null' where idtournoi = '$idt' and num = '$paire';";
-		} else {
-			$sql = "UPDATE $tab_pairesEO SET idj2 = '$idj' where idtournoi = '$idt' and num = '$paire';";
-		};
-		$res = $dbh->query($sql);
-	};
+	try {
+		$dbh->beginTransaction();
+
+		$sql = "SELECT count(*) FROM $tab_pairesEO WHERE idtournoi = :idt AND num = :paire FOR UPDATE";
+		$sth = $dbh->prepare( $sql );
+		$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+		$nbl = (int) $sth->fetchColumn();
+
+		if ( $nbl == 0 ) { // pas encore utilisé
+			if ( $idj > 0 ) {
+				$sql = "INSERT INTO $tab_pairesEO ( idtournoi, num, idj2 ) VALUES ( :idt, :paire, :idj )";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+		elseif ( $nbl == 1 ) { // déjà utilisé par ouest
+			if ( $idj == 0 ) {
+				$sql = "UPDATE $tab_pairesEO SET idj2 = NULL WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+			} else {
+				$sql = "UPDATE $tab_pairesEO SET idj2 = :idj WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+
+		$dbh->commit();
+	}
+	catch ( PDOException $e ) {
+		$dbh->rollBack();
+		throw $e;
+	}
 	return $idj;
 };
 function _set_joueurOuest( $dbh, $idt, $paire, $idj ) {
 	global $tab_pairesEO;
-	// recherche si ligne EO déjà utilisé
-	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and num = '$paire';";
-	$res = $dbh->query($sql);
-	$nbl = $res->fetchColumn();
-	if ( $nbl == 0 ) { // pas encore utilisé
-		if ( $idj > 0 ) {
-			$sql = "INSERT $tab_pairesEO ( idtournoi, num, idj4 ) VALUES ( '$idt', '$paire', '$idj' );";
-			$res = $dbh->query($sql);
-		};
-	};
-	if ( $nbl == 1 ) { // déja utilisé par est
-		if ( $idj == 0 ) {
-			$sql = "UPDATE $tab_pairesEO SET idj4 = 'null' where idtournoi = '$idt' and num = '$paire';";
-		} else {
-			$sql = "UPDATE $tab_pairesEO SET idj4 = '$idj' where idtournoi = '$idt' and num = '$paire';";
-		};
-		$res = $dbh->query($sql);
-	};
+	try {
+		$dbh->beginTransaction();
+
+		$sql = "SELECT count(*) FROM $tab_pairesEO WHERE idtournoi = :idt AND num = :paire FOR UPDATE";
+		$sth = $dbh->prepare( $sql );
+		$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+		$nbl = (int) $sth->fetchColumn();
+
+		if ( $nbl == 0 ) { // pas encore utilisé
+			if ( $idj > 0 ) {
+				$sql = "INSERT INTO $tab_pairesEO ( idtournoi, num, idj4 ) VALUES ( :idt, :paire, :idj )";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+		elseif ( $nbl == 1 ) { // déjà utilisé par est
+			if ( $idj == 0 ) {
+				$sql = "UPDATE $tab_pairesEO SET idj4 = NULL WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire ) );
+			} else {
+				$sql = "UPDATE $tab_pairesEO SET idj4 = :idj WHERE idtournoi = :idt AND num = :paire";
+				$sth = $dbh->prepare( $sql );
+				$sth->execute( array( ':idt' => $idt, ':paire' => $paire, ':idj' => $idj ) );
+			}
+		}
+
+		$dbh->commit();
+	}
+	catch ( PDOException $e ) {
+		$dbh->rollBack();
+		throw $e;
+	}
 	return $idj;
 };
+
 function set_joueurNord( $idt, $paire, $idj ) {
 	$dbh = connectBDD();
 	$idj = _set_joueurNord( $dbh, $idt, $paire, $idj );
@@ -2901,83 +1938,95 @@ function set_joueurOuest( $idt, $paire, $idj ) {
 
 function efface_joueur( $idt, $idj ) {	// id tournoi, id joueur
 	global $tab_pairesNS, $tab_pairesEO;
-	$oldposition = array( 'paire'=> 0, 'position'=> 0 ); 	// ( numéro paire, position )
-	if ( $idj > 0 ) {
-		$dbh1 = connectBDD();
-		$dbh2 = connectBDD();
+	$oldposition = array( 'paire' => 0, 'position' => 0 ); 	// ( numéro paire, position )
 
-		// recherche si joueur déjà placé
-		$nn = 0; //compteur de position trouvée
-		for ( $i = 1; $i < 5; $i++ ) {
-			if ( $i == 1 ) { // Nord
-				$sql1 = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";
-				$sql2 = "SELECT id, num, idj3 FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";				
-			} elseif ( $i == 2 ) {// Est
-				$sql1 = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
-				$sql2 = "SELECT id, num, idj4 FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
-			} elseif ( $i == 3 ) { // Sud
-				$sql1 = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
-				$sql2 = "SELECT id, num, idj1 FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
-			} elseif ( $i == 4 ) { // Ouest
-				$sql1 = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
-				$sql2 = "SELECT id, num, idj2 FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
-			};
-			$res = $dbh1->query($sql1);
-			$nbl = $res->fetchColumn();
-			if ( $nbl > 1 ) {	// bug: le même joueur référencé plusieurs fois dans une même position
-				echo 'Erreur : joueur référencé plusieurs fois';
-				die();
-			};
-			if ( $nbl == 1 ) {
-				$nn++;
-				
-				// effacement joueur sur l'emplacement trouvé
-				$sth = $dbh1->query( $sql2 );
-				$row = $sth->fetch(PDO::FETCH_ASSOC);
-				$idpaire = $row['id'];
-				
-				// mémorise ancienne position
-				$oldposition[ 'paire' ] = $row['num'];
-				$oldposition[ 'position' ] = $i;
-				
-				$idpartenaire = 0;
-				
-				if ( $i == 1 ) { // Nord
-					$idpartenaire = $row['idj3'];
-					$sql3 = "DELETE FROM $tab_pairesNS where idtournoi = '$idt' and id = '$idpaire';";
-					$sql4 = "UPDATE $tab_pairesNS SET idj1 = null where idtournoi = '$idt' and id = '$idpaire';";
-				} elseif ( $i == 2 ) {// Est
-						$idpartenaire = $row['idj4'];
-						$sql3 = "DELETE FROM $tab_pairesEO where idtournoi = '$idt' and id = '$idpaire';";
-						$sql4 = "UPDATE $tab_pairesEO SET idj2 = null where idtournoi = '$idt' and id = '$idpaire';";
-				} elseif ( $i == 3 ) { // Sud
-						$idpartenaire = $row['idj1'];
-						$sql3 = "DELETE FROM $tab_pairesNS where idtournoi = '$idt' and id = '$idpaire';";
-						$sql4 = "UPDATE $tab_pairesNS SET idj3 = null where idtournoi = '$idt' and id = '$idpaire';";
-				} elseif ( $i == 4 ) { // Ouest
-						$idpartenaire = $row['idj2'];
-						$sql3 = "DELETE FROM $tab_pairesEO where idtournoi = '$idt' and id = '$idpaire';";
-						$sql4 = "UPDATE $tab_pairesEO SET idj4 = null where idtournoi = '$idt' and id = '$idpaire';";
-				};
-					
-				if ( $idpartenaire > 0 ) {
-					// effacement joueur dans la paire
-					$res3 = $dbh2->query($sql4);
-				} else {
-					// suppression paire
-					$res3 = $dbh2->query($sql3);
-				};
-			};
-		};
-		if ( $nn > 1 ) {	// bug non critique: le même joueur référencé plusieurs fois dans différentes positions
-			echo 'Erreur : joueur référencé plusieurs fois';
-			//die();
-		};
-		$dbh1 = null;
-		$dbh2 = null;
+	if ( $idj <= 0 ) {
+		return $oldposition;
 	}
+
+	$dbh = connectBDD();
+	$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+	// définition des 4 positions à vérifier : table, colonne du joueur, colonne du partenaire
+	$positions = array(
+		1 => array( 'table' => $tab_pairesNS, 'col_j' => 'idj1', 'col_partenaire' => 'idj3' ), // Nord
+		2 => array( 'table' => $tab_pairesEO, 'col_j' => 'idj2', 'col_partenaire' => 'idj4' ), // Est
+		3 => array( 'table' => $tab_pairesNS, 'col_j' => 'idj3', 'col_partenaire' => 'idj1' ), // Sud
+		4 => array( 'table' => $tab_pairesEO, 'col_j' => 'idj4', 'col_partenaire' => 'idj2' ), // Ouest
+	);
+
+	$nn = 0; // compteur de position trouvée
+
+	try {
+		$dbh->beginTransaction();
+
+		foreach ( $positions as $i => $p ) {
+			$table = $p['table'];
+			$col_j = $p['col_j'];
+			$col_partenaire = $p['col_partenaire'];
+
+			// recherche si joueur déjà placé à cette position
+			$sql1 = "SELECT count(*) FROM $table WHERE idtournoi = :idt AND $col_j = :idj";
+			$sth1 = $dbh->prepare( $sql1 );
+			$sth1->execute( array( ':idt' => $idt, ':idj' => $idj ) );
+			$nbl = (int) $sth1->fetchColumn();
+
+			if ( $nbl > 1 ) {	// bug: le même joueur référencé plusieurs fois dans une même position
+				throw new RuntimeException( "Joueur référencé plusieurs fois (position $i) pour idj=$idj" );
+			}
+
+			if ( $nbl === 1 ) {
+				$nn++;
+
+				$sql2 = "SELECT id, num, $col_partenaire AS idpartenaire FROM $table WHERE idtournoi = :idt AND $col_j = :idj";
+				$sth2 = $dbh->prepare( $sql2 );
+				$sth2->execute( array( ':idt' => $idt, ':idj' => $idj ) );
+				$row = $sth2->fetch( PDO::FETCH_ASSOC );
+
+				if ( $row === false ) {
+					throw new RuntimeException( "Incohérence : ligne attendue introuvable (position $i) pour idj=$idj" );
+				}
+
+				$idpaire = $row['id'];
+
+				// mémorise ancienne position
+				$oldposition['paire'] = $row['num'];
+				$oldposition['position'] = $i;
+
+				$idpartenaire = $row['idpartenaire'];
+
+				if ( $idpartenaire > 0 ) {
+					// effacement joueur dans la paire (le partenaire reste)
+					$sql4 = "UPDATE $table SET $col_j = null WHERE idtournoi = :idt AND id = :idpaire";
+					$sth4 = $dbh->prepare( $sql4 );
+					$sth4->execute( array( ':idt' => $idt, ':idpaire' => $idpaire ) );
+				} else {
+					// suppression paire (plus personne dedans)
+					$sql3 = "DELETE FROM $table WHERE idtournoi = :idt AND id = :idpaire";
+					$sth3 = $dbh->prepare( $sql3 );
+					$sth3->execute( array( ':idt' => $idt, ':idpaire' => $idpaire ) );
+				}
+			}
+		}
+
+		if ( $nn > 1 ) {	// bug non critique: le même joueur référencé plusieurs fois dans différentes positions
+			// on ne bloque pas, mais on trace l'anomalie
+			error_log( "Anomalie : joueur idj=$idj référencé $nn fois dans le tournoi idt=$idt" );
+		}
+
+		$dbh->commit();
+
+	} catch ( Exception $e ) {
+		if ( $dbh->inTransaction() ) {
+			$dbh->rollBack();
+		}
+		throw $e; // propage à l'appelant, qui décide comment réagir (log, réponse JSON, etc.)
+	} finally {
+		$dbh = null;
+	}
+
 	return $oldposition;
-};
+}
 function recherche_joueur( $idt, $idj ) {
 	global $tab_pairesNS, $tab_pairesEO;
 	global $pos_indefini, $pos_Nord, $pos_Est, $pos_Sud, $pos_Ouest, $maxtableslibres;
@@ -2987,23 +2036,31 @@ function recherche_joueur( $idt, $idj ) {
 	$emplacement = [ 'table'=>0, 'place'=>$pos_indefini, 'nplaces'=>0 ];
 	for ( $i = 1; $i < 5; $i++ ) {
 		if ( $i == $pos_Nord ) { // Nord
-			$sql  = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";
-			$sql2 = "SELECT id, num  FROM $tab_pairesNS where idtournoi = '$idt' and idj1 = '$idj';";				
+			$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = ? and idj1 = ?;";
+			$sqlBound = [$idt, $idj];
+			$sql2 = "SELECT id, num  FROM $tab_pairesNS where idtournoi = ? and idj1 = ?;";
+			$sql2Bound = [$idt, $idj];				
 		} elseif ( $i == $pos_Est ) { // Est
-			$sql  = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
-			$sql2 = "SELECT id, num  FROM $tab_pairesEO where idtournoi = '$idt' and idj2 = '$idj';";
+			$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = ? and idj2 = ?;";
+			$sqlBound = [$idt, $idj];
+			$sql2 = "SELECT id, num  FROM $tab_pairesEO where idtournoi = ? and idj2 = ?;";
+			$sql2Bound = [$idt, $idj];
 		} elseif ( $i == $pos_Sud ) { // Sud
-			$sql  = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
-			$sql2 = "SELECT id, num  FROM $tab_pairesNS where idtournoi = '$idt' and idj3 = '$idj';";
+			$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = ? and idj3 = ?;";
+			$sqlBound = [$idt, $idj];
+			$sql2 = "SELECT id, num  FROM $tab_pairesNS where idtournoi = ? and idj3 = ?;";
+			$sql2Bound = [$idt, $idj];
 		} elseif ( $i == $pos_Ouest ) { // Ouest
-			$sql  = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
-			$sql2 = "SELECT id, num  FROM $tab_pairesEO where idtournoi = '$idt' and idj4 = '$idj';";
+			$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = ? and idj4 = ?;";
+			$sqlBound = [$idt, $idj];
+			$sql2 = "SELECT id, num  FROM $tab_pairesEO where idtournoi = ? and idj4 = ?;";
+			$sql2Bound = [$idt, $idj];
 		};
-		if ( $res = $dbh->query($sql) ) {
+		if ( $res = securityQuery($dbh, $sql, $sqlBound) ) {
 			$nb = $res->fetchColumn();
 			if ( $nb > 0 ) {	// joueur trouvé
 				// numéro de table
-				$sth = $dbh->query( $sql2 );
+				$sth = securityQuery($dbh, $sql2, $sql2Bound);
 				$row = $sth->fetch(PDO::FETCH_ASSOC);
 				$emplacement['table'] = $row['num'];	// numéro de table
 				$emplacement['place'] = $i;				// position joueur sur la table
@@ -3019,21 +2076,24 @@ function recherche_joueur( $idt, $idj ) {
 function _testtablecomplete( $dbh, $idt, $numpaire ) {
 	global $tab_pairesNS, $tab_pairesEO;
 	$nbj = 0;
-	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = '$idt' and num = '$numpaire'";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_pairesNS where idtournoi = ? and num = ?";
+	$sqlBound = [$idt, $numpaire];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nb = $res->fetchColumn();
 	if ( $nb > 0 ) {
-		$sth = $dbh->query( "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = '$idt' and num = '$numpaire'" );
+		$sth = securityQuery($dbh, "SELECT idj1, idj3 FROM $tab_pairesNS where idtournoi = ? and num = ?", [$idt, $numpaire]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		if ( $row[ 'idj1' ] != null ) $nbj++;
 		if ( $row[ 'idj3' ] != null ) $nbj++;
 	}
 		
-	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = '$idt' and num = '$numpaire'";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_pairesEO where idtournoi = ? and num = ?";
+		
+	$sqlBound = [$idt, $numpaire];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nb = $res->fetchColumn();
 	if ( $nb > 0 ) {
-		$sth = $dbh->query( "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = '$idt' and num = '$numpaire'" );
+		$sth = securityQuery($dbh, "SELECT idj2, idj4 FROM $tab_pairesEO where idtournoi = ? and num = ?", [$idt, $numpaire]);
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		if ( $row[ 'idj2' ] != null ) $nbj++;
 		if ( $row[ 'idj4' ] != null ) $nbj++;
@@ -3051,11 +2111,12 @@ function testtablecomplete( $idt, $numpaire ) {
 function _getJoueur( $dbh, $id ) {
 	global $tab_joueurs;
 	$joueur = array( 'id'=>0, 'numero'=>0, 'joueur'=>" ", 'genre'=>" ", 'prenom'=>" ", 'nom'=>" ", 'nomcomplet'=>" ", 'email'=>"");
-	$sql = "SELECT count(*) FROM $tab_joueurs where id = '$id';";
-	if ( $res = $dbh->query($sql) ) {
+	$sql = "SELECT count(*) FROM $tab_joueurs where id = ?;";
+	$sqlBound = [$id];
+	if ( $res = securityQuery($dbh, $sql, $sqlBound) ) {
 		$nbl = $res->fetchColumn();
 		if ( $nbl == 1 ) {
-			$sth = $dbh->query( "SELECT * FROM $tab_joueurs where id = '$id';" );
+			$sth = securityQuery($dbh, "SELECT * FROM $tab_joueurs where id = ?;", [$id]);
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			// nouvelle implémentation
 			$joueur['id'] = $row[ 'id' ];
@@ -3087,8 +2148,9 @@ function getClassement() {
 	$dbh = connectBDD();
 	
 	// recherche du 1er tournoi avec une date >= date du jour - $nbm mois
-	$sql = "SELECT count(*) FROM $tab_tournois WHERE tournoi >=(DATE_SUB(curdate(), INTERVAL $nbm MONTH)) order by id asc;";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois WHERE tournoi >=(DATE_SUB(curdate(), INTERVAL ? MONTH)) order by id asc;";
+	$sqlBound = [$nbm];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	//print "<p>$sql $nbl</p>";
 	if ( $nbl > 0 ) {
@@ -3097,26 +2159,27 @@ function getClassement() {
 		SELECT idj, COUNT(*) AS nbfois, AVG(noteg) AS perf, MIN(tournoi) AS depuis FROM (
 			(SELECT idj1 AS idj, tournoi, noteg FROM $tab_pairesNS
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesNS.idtournoi 
-			WHERE etat = $st_closed 
-			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) ) UNION 
+			WHERE etat = ? 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH)) ) UNION 
 			
 			(SELECT idj2 AS idj, tournoi, noteg FROM $tab_pairesEO
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesEO.idtournoi 
-			WHERE etat = $st_closed 
-			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) ) UNION 
+			WHERE etat = ? 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH)) ) UNION 
 			
 			(SELECT idj3 AS idj, tournoi, noteg FROM $tab_pairesNS
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesNS.idtournoi 
-			WHERE etat = $st_closed 
-			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) ) UNION 
+			WHERE etat = ? 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH)) ) UNION 
 			
 			(SELECT idj4 AS idj, tournoi, noteg FROM $tab_pairesEO
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesEO.idtournoi 
-			WHERE etat = $st_closed 
-			AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH)) )
+			WHERE etat = ? 
+			AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH)) )
 			
 			) T1 group by idj
-		) T2 where nbfois > '$min' order by perf desc;";
+		) T2 where nbfois > ? order by perf desc;";
+		$sqlBound = [$st_closed, $nbm, $st_closed, $nbm, $st_closed, $nbm, $st_closed, $nbm, $min];
 		//print "<p>$sql</p>";
 
 		print "<p>Performance moyenne des joueurs sur les $nbm derniers mois avec au moins $min tournois joués</p>";
@@ -3125,7 +2188,7 @@ function getClassement() {
 		print "<td class='xNum3'>Joueur</td>";
 		print "<td class='xNum3' style='width:10%;'>N</td>";
 		print "<td class='xNum3' style='width:15%;'>%</td></tr>";
-		foreach  ($dbh->query($sql) as $row) {
+		foreach  (securityQuery($dbh, $sql, $sqlBound) as $row) {
 			if ( ++$i > $nbj ) break;
 			$j = _getJoueur( $dbh, $row['idj'] );
 			$score = sprintf( "%.1f", $row["perf"] );
@@ -3153,11 +2216,11 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	if ( $ordre == "tournoi") {
 		$selordre = "tournoi desc, nom";
 	}
-	else $selordre = $ordre;
+	else $selordre = ['nom' => 'nom', 'nbfois' => 'nbfois'][$ordre] ?? 'nom';
 	
 	if ( strlen($filtre) > 0) {
 		$likename = $filtre . "%";
-		$filtrage = "and nom like '$likename'";
+		$filtrage = "and nom like ?";
 	}
 	else $filtrage = "";
 	
@@ -3171,7 +2234,9 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 					(SELECT idj4 AS idj, idtournoi FROM $tab_pairesEO) ) T1
 				group by idj ) T2 ON T2.idj = $tab_joueurs.id
 			LEFT JOIN $tab_tournois ON T2.maxid = $tab_tournois.id 
-			WHERE numero >= $min_noclub $groupe $filtrage ORDER BY $selordre;";
+			WHERE numero >= ? $groupe $filtrage ORDER BY $selordre;";
+	
+	$sqlBound = array_merge([$min_noclub], strlen($filtre) > 0 ? [$likename] : []);
 	
 	//$str = "<p>$sql</p>";
 	$str = '<table border="1" style="margin:auto;"><tbody>';
@@ -3180,7 +2245,7 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	$str .= "<th class='xTxt1 selordre' id='ordre_tournoi'>dernier</br>tournoi</th>";
 	$str .= "<th class='xTxt1 selordre' id='ordre_nbfois'>N</th>";
 	$str .= "</tr>";
-	foreach  ($dbh->query($sql) as $row) {
+	foreach  (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$nr = "nr_" . $row['id'];
 		$str .= "<tr>";
 		if ($row['datesupp']>0) {
@@ -3203,24 +2268,28 @@ function getListeJoueurs($liste, $ordre, $filtre) {
 	$dbh = null;
 	return $str;
 };
-function htmlAnnuaire() {
+function htmlAnnuaire($avecEmail = false) {
 	global $tab_joueurs, $min_noclub;
 	$groupe = "and datesupp = 0";	// uniquement les actifs
 	$dbh = connectBDD();
 	
-	$sql = "SELECT id, prenom, nom, telephone
+	$champEmail = $avecEmail ? ', email' : '';
+	$sql = "SELECT id, prenom, nom, telephone$champEmail
 			FROM $tab_joueurs
-			WHERE numero >= $min_noclub $groupe ORDER BY nom;";
+			WHERE numero >= ? $groupe ORDER BY nom;";
+	
+	$sqlBound = [$min_noclub];
 	
 	$str = "<table border='1' style='margin:auto;'><tbody>";
 	$str .= "<tr>";
 	$str .= "<th class='xTxt1'>Joueur</th>";
 	$str .= "<th class='xTxt1'>Téléphone</th>";
 	$str .= "</tr>";
-	foreach  ($dbh->query($sql) as $row) {
+	foreach  (securityQuery($dbh, $sql, $sqlBound) as $row) {
 		$str .= "<tr>";
 		$str .= "<td class='xTxt1'>" . $row['prenom'] ." ". $row['nom'] . "</td>";
-		$str .= "<td class='xTxt1'>" . $row['telephone'] . "</td>";
+		$emailAttr = $avecEmail ? ' data-email="' . htmlspecialchars((string)($row['email'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"' : '';
+		$str .= "<td class='xTxt1'" . $emailAttr . ">" . $row['telephone'] . "</td>";
 		$str .= "</tr>";
 	}
 	$str .= "</tbody></table>";
@@ -3233,8 +2302,9 @@ function _razCnxTables( $dbh ) {
 	global $tab_connexions, $cnx_ko;
 	global $max_tables;
 	for  ($i = 1; $i < $max_tables+1; $i++) {
-		$sql = "UPDATE $tab_connexions SET stconnexion='$cnx_ko', numEO=0, numdonne=0, cpt=0, rdy=0, eocpt=0, eonumNS=0, eodonne=0 where id='$i';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_connexions SET stconnexion=?, numEO=0, numdonne=0, cpt=0, rdy=0, eocpt=0, eonumNS=0, eodonne=0 where id=?;";
+		$sqlBound = [$cnx_ko, $i];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	};
 };
 function getdonnesjouees() {
@@ -3316,7 +2386,7 @@ function getParmTable( $k ) {
 	global $tab_connexions;
 	$dbh = connectBDD();
 	
-	$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$k'" );
+	$sth = securityQuery($dbh, "SELECT * FROM $tab_connexions where id=?", [$k]);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$stconn = $row[ 'stconnexion' ];
 	$numeo  = $row[ 'numEO' ];
@@ -3332,7 +2402,7 @@ function getParmTableEO( $k ) {
 	global $tab_connexions;
 	$dbh = connectBDD();
 	
-	$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$k'" );
+	$sth = securityQuery($dbh, "SELECT * FROM $tab_connexions where id=?", [$k]);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$table  = $row[ 'eonumNS' ];
 	$numdonne = $row[ 'eodonne' ];
@@ -3342,17 +2412,28 @@ function getParmTableEO( $k ) {
 	$result = array( 'numdonne' => $numdonne, 'cpt' => $cpt, 'table' => $table );
 	return $result;
 }
-function setCnxFin( $table ) {
-	global $tab_connexions, $cnx_fin;
-	$dbh = connectBDD();
-	$sql = "UPDATE $tab_connexions SET stconnexion = '$cnx_fin' where id = '$table';";
-	$dbh->query($sql);
-	$dbh = null;
+function renderCnxFin($table) {
+    echo '<script>bridgetteFinish('.json_encode((int)($_GET['idtournoi'] ?? 0)).','.
+        json_encode((int)$table).');</script>';
+}
+function setCnxFin($table) {
+    securityCsrfRequire();
+    global $tab_connexions, $tab_pairesNS, $cnx_fin;
+    // Honor the tournament's Non/M/P policy, including a borrowed member's phone.
+    $id = filter_var($_GET['idtournoi'] ?? null, FILTER_VALIDATE_INT);
+    $table = filter_var($table, FILTER_VALIDATE_INT);
+    if (!$id || !$table) return;
+    $t = readTournoi($id);
+    if (!$t) return;
+    // Marking the connection finished remains valid after the final score ends play.
+    securityTournament($id, $table, null, true);
+    $db = connectBDD();
+    securityQuery($db, "UPDATE $tab_connexions SET stconnexion=? WHERE id=? AND rdy>?", [$cnx_fin, $table, $t['npositions']]);
 }
 function getMinTour( $n ) {
 	global $tab_connexions;
 	$dbh = connectBDD();
-	$res = $dbh->query( "SELECT MIN(rdy) FROM $tab_connexions where id<=$n;" );
+	$res = securityQuery($dbh, "SELECT MIN(rdy) FROM $tab_connexions where id<=?;", [$n]);
 	$nb  = $res->fetchColumn();
 	$dbh = null;
 	return $nb;
@@ -3361,7 +2442,7 @@ function incrementCompteurRelaisEO( $dd, $ns, $eo, $inc, $paquet ) {
 	global $tab_connexions, $cnx_ok;
 	$dbh = connectBDD();
 	// Incrémentation du compteur de donnes jouées/enregistrées par la paire ns
-	$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$ns'" );
+	$sth = securityQuery($dbh, "SELECT * FROM $tab_connexions where id=?", [$ns]);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$cpt = $row['cpt'];
 	$cpt = $cpt + $inc;
@@ -3372,15 +2453,16 @@ function incrementCompteurRelaisEO( $dd, $ns, $eo, $inc, $paquet ) {
 	$change = $cpt % $paquet;
 	if ( $change == 0 ) $pos++;
 
-	$sql = "UPDATE $tab_connexions SET stconnexion='$cnx_ok', numEO = '$eo', numdonne = '$dd', cpt ='$cpt', rdy ='$pos' where id = '$ns';";
-	$res = $dbh->query($sql);			
+	$sql = "UPDATE $tab_connexions SET stconnexion=?, numEO = ?, numdonne = ?, cpt =?, rdy =? where id = ?;";
+	$sqlBound = [$cnx_ok, $eo, $dd, $cpt, $pos, $ns];
+	$res = securityQuery($dbh, $sql, $sqlBound);			
 	$dbh = null;
 }
 function incrementCompteurRelaisNS( $dd, $ns, $eo, $paquet ) {
 	global $tab_connexions, $cnx_ok;
 	$dbh = connectBDD();
 	// Incrémentation du compteur de donnes jouées/enregistrées par la paire ns
-	$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$ns'" );
+	$sth = securityQuery($dbh, "SELECT * FROM $tab_connexions where id=?", [$ns]);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$cpt = $row['cpt'];
 	$cpt++;
@@ -3390,22 +2472,25 @@ function incrementCompteurRelaisNS( $dd, $ns, $eo, $paquet ) {
 	$change = $cpt % $paquet;
 	if ( $change == 0 ) $pos++;
 
-	$sql = "UPDATE $tab_connexions SET stconnexion='$cnx_ok', numEO = '$eo', numdonne = '$dd', cpt ='$cpt', rdy ='$pos' where id = '$ns';";
-	$res = $dbh->query($sql);			
+	$sql = "UPDATE $tab_connexions SET stconnexion=?, numEO = ?, numdonne = ?, cpt =?, rdy =? where id = ?;";
+	$sqlBound = [$cnx_ok, $eo, $dd, $cpt, $pos, $ns];
+	$res = securityQuery($dbh, $sql, $sqlBound);			
 	$dbh = null;
 }
 function incrementCompteurEO( $eo, $paquet ) {
 	global $tab_connexions;
 	$dbh = connectBDD();
 	// Incrémentation du compteur de la paire eo en relais sans donne (guéridon)
-	$sth = $dbh->query( "SELECT * FROM $tab_connexions where id='$eo'" );
+	$sth = securityQuery($dbh, "SELECT * FROM $tab_connexions where id=?", [$eo]);
 	$row = $sth->fetch(PDO::FETCH_ASSOC);
 	$eocpt = $row['eocpt'];
 	$eocpt +=$paquet;
 
-	$sql = "UPDATE $tab_connexions SET eocpt ='$eocpt' where id = '$eo';";
-	$res = $dbh->query($sql);			
+	$sql = "UPDATE $tab_connexions SET eocpt =? where id = ?;";
+	$sqlBound = [$eocpt, $eo];
+	$res = securityQuery($dbh, $sql, $sqlBound);			
 	$dbh = null;
 	return $eocpt;
 }
-?>
+
+require_once __DIR__.'/security_routes.php';

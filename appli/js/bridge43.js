@@ -22,14 +22,14 @@ var audiofinposition = 0;
 
 function masquelignesconnexions() {
 	for ( i = 1; i < max_tables+1; i++ ) {
-		nr = "#row_" + i;
+		let nr = "#row_" + i;
 		$(nr).addClass( "xtr_invisible" );
 	}
 }
 
 function affichelignesconnexions() {
 	for ( i = 1; i < ntables+1; i++ ) {
-		nr = "#row_" + i;
+		let nr = "#row_" + i;
 		$(nr).removeClass( "xtr_invisible" );
 	}
 }
@@ -37,12 +37,12 @@ function affichelignesconnexions() {
 function afficheconnexions() {
 	let donnesjouees = 0;
 	for  ( i = 1; i < max_tables+1; i++ ) {
-		rowi = "#row_" + i ;
-		case_0 = rowi + "_0";
-		case_1 = rowi + "_1";
-		case_2 = rowi + "_2";
-		case_3 = rowi + "_3";
-		case_4 = rowi + "_4";
+		let rowi = "#row_" + i ;
+		let case_0 = rowi + "_0";
+		let case_1 = rowi + "_1";
+		let case_2 = rowi + "_2";
+		let case_3 = rowi + "_3";
+		let case_4 = rowi + "_4";
 		
 		// raz
 		$(case_0).removeClass( "xCnxtel" );
@@ -96,8 +96,9 @@ function lstConnexions() {
 	}, "json");
 };
 function changenpositions( valeur ) {
-	newpositions = npositions + valeur;
-	if ( (newpositions > maxpositions ) || (newpositions < (maxpositions - 2) ) ) {
+	let newpositions = npositions + valeur;
+	//if ( (newpositions > maxpositions ) || (newpositions < (maxpositions - 2) ) ) {
+	if ( (newpositions > maxpositions ) || (newpositions < maxpositions/2 ) ) {
 		$("#msgerr").text( "Non autorisé ..." );
 		setTimeout(function() { $("#msgerr").html( "" ); }, 1500);
 	}
@@ -115,24 +116,15 @@ function changenpositions( valeur ) {
 		$("#msgerr").text( "Enregistrement en cours ..." );
 		$.get("setnpositions.php", {idtournoi:idtournoi, npositions:npositions}, function(texte) {
 			$("#msgerr").text( "Enregistrement terminé." );
-			//$("#msgerr").text( texte );
+			$("#desc").text( texte );
 			setTimeout(function() { $("#msgerr").html( "" ); }, 1500);
 		},"text");
 	}
 };
 function sel_etui( nbr ) {
-	actuel = parseInt( $("#etui").text() );
+	let actuel = parseInt( $("#etui").text() );
 	actuel += parseInt( nbr );
 	if ( actuel < 1 ) actuel = 1;
 	if ( actuel > ndonnes ) actuel = ndonnes;
 	$("#etui").text( actuel );
 };
-$(document).ready(function() {
-	$("#signemoins").bind('click', function( event ){ changenpositions( -1 ); });
-	$("#signeplus").bind('click', function( event ){ changenpositions( 1 ); });
-	
-	$("#etuim10").bind('click', function( event ){ sel_etui( -10 ); });
-	$("#etuim1").bind('click', function( event ){ sel_etui( -1 ); });
-	$("#etuip1").bind('click', function( event ){ sel_etui( 1 ); });
-	$("#etuip10").bind('click', function( event ){ sel_etui( 10 ); });
-});

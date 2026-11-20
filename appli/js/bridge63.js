@@ -612,8 +612,16 @@ class Donnejouee {
 			}
 			else {
 				this.calculpoints();
-				html += imgPos(this.pos)+": "+this.shortContrat()+" "+this.shortResultat()+"</b></span>";
-				html += "<br/>Points NS: " + this.points + "";
+				if ( this.etui > 0 ) {
+					html += imgPos(this.pos)+": "+this.shortContrat()+" "+this.shortResultat()+"</b></span>";
+					html += "<br/>Points NS: " + this.points + "";
+				}
+				else {
+					// calcul de la marque
+					let v = (this.vulns == 1) ? "Vul." : "Non vul.";
+					html += "Contrat: "+this.shortContrat()+" "+this.shortResultat()+" "+v+"</b></span></p>";
+					html += "<p><span class='xDigit'>Points: " + this.points + "</span></p>";
+				}
 			}
 			$("#section_validation").removeClass( "section_invisible" );
 			$("#textePoints").html( html );
@@ -720,3 +728,32 @@ function autoValidation() {
 	realdonne.calculpoints();
 	clickValidation();
 };
+
+// Validation commune aux parcours Howell et Mitchell (état 63).
+// La page conserve les paramètres et les transitions propres au web ou à Android.
+function validationDonne(options) {
+    $('#section_validation').addClass('section_invisible');
+    $('#section_suivante').removeClass('section_invisible');
+    var dataString = options.url + '?idtournoi=' + idtournoi + '&donne=' + realdonne.etui;
+    dataString += '&ns=' + numNS + '&eo=' + numEO;
+    dataString += '&contrat=' + (options.encodeContract ? encodeURI(realdonne.contrat) : realdonne.contrat);
+    dataString += '&jouepar=' + realdonne.declarant;
+    dataString += '&entame=' + realdonne.entame;
+    dataString += '&resultat=' + realdonne.res;
+    dataString += '&points=' + realdonne.points;
+    if (options.token !== undefined) dataString += '&token=' + options.token;
+    if (options.log) console.log(dataString);
+    $.get(dataString, '', function(result) {
+        $('#validok').html(result.display);
+        if (options.onResponse) options.onResponse(result);
+        if (result.ok > 0) {
+            if (options.delay) setTimeout(function() { goto64(); }, options.delay);
+            else goto64();
+        }
+        if (result.ok == 0) setTimeout(function() { goto64(); }, 1000);
+        if (result.ok < 0) setTimeout(function() { gotoindex(); }, 1000);
+    }, 'json').done(function() {}).fail(function(jqxhr, settings, ex) {
+        $(options.errorTarget || '#validok').html('Erreur: ' + ex + '</br>' + dataString + "</br>Faire une copie d'écran pour Bruno</br><b>Rappuyez sur le bouton de validation.</b>");
+        $('#section_validation').removeClass('section_invisible');
+    });
+}

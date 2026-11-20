@@ -17,32 +17,15 @@ function strdatet( d ) {	// d au format aaaa-mm-jj
 	return( j+" "+mm+" "+a );
 };
 var tournoi, idtournoi;
-$.datepicker.regional['fr'] = {
-	dateFormat: 'yy-mm-dd',	//'dd-mm-yy',
-	closeText: 'Fermer',
-	//prevText: 'P',
-	//nextText: 'S',
-	currentText: 'Aujourd\'hui',
-	monthNames: ['Janvier','Fevrier','Mars','Avril','Mai','Juin', 'Juillet','Aout','Septembre','Octobre','Novembre','Decembre'],
-	monthNamesShort: ['Jan','Fev','Mar','Avr','Mai','Jun', 'Jul','Aou','Sep','Oct','Nov','Dec'],
-	dayNames: ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],
-	dayNamesShort: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
-	dayNamesMin: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
-	weekHeader: 'Sm',
-	firstDay: 1,
-	minDate: new Date(),
-	//maxDate: '+4W',	//new Date(),	//'+12M +0D',
-	//showButtonPanel: true,
-	isRTL: false
-};
-$.datepicker.setDefaults( $.datepicker.regional['fr'] );
 function selectTournoi( tournoi ) {
-	tournoi = $("#datetournoi").val();
+	//tournoi = $("#datetournoi").val();
+	$("#datetournoi").val(tournoi);
 	$.get( relpgm+"inscriptiontournoi.php", { datetournoi:tournoi }, function(strjson) {
 		console.log( "id", strjson.idtournoi, "ret", strjson.ret, "lignes", strjson.lignes );
 		idtournoi = strjson.idtournoi;
 		$("#tabdujour").text( strdatet(tournoi) );
-		$("#msgdatetournoi").html( strjson.ret );
+		//$("#msgdatetournoi").html( strjson.ret );
+		console.log( "inscriptiontournoi.php ok", tournoi, strjson.ret );
 		if ( idtournoi > 0 ) {
 			updateTabInscrits( strjson.lignes );
 			$("#section_tableau").show();
@@ -51,9 +34,10 @@ function selectTournoi( tournoi ) {
 	},"json")
 	.fail( function( jqxhr,settings,ex ) {
 		$("#msgtabinscrits").html('Erreur: '+ ex );
-		console.log( "inscriptiontournoi.php fail", tournoi );
+		console.log( "inscriptiontournoi.php fail", tournoi, ex );
 	} );
 }
+
 //
 // affichage tableau des inscrits pour le tournoi sélectionné
 //
@@ -155,7 +139,8 @@ function updateTabInscrits( lignes ) {
 			break;
 		}
 	}
-	
+	if ( userinscrit ) 	$("#msgtabinscrits").text( "Vous êtes inscrit à ce tournoi !" );
+	else $("#msgtabinscrits").text( "Vous n'êtes pas inscrit à ce tournoi !" );
 }
 var prevselected = null;
 $(document).on( "click", "td.clknom", function(ev) {		// tableau des pré-inscrits
@@ -178,7 +163,7 @@ $(document).on( "click", "td.clknom", function(ev) {		// tableau des pré-inscri
 			joueur = ( figs[2] == 'a' ) ? ligne.B : ligne.A;	// inversion
 		}
 		if ( userid > 0 ) {
-			$("#msgtabinscrits").html( "Contactez "+joueur.prenom+" au "+joueur.telephone+"</br>ou par mail: "+joueur.email );
+			$("#msgtabinscrits").html( "Contactez "+joueur.prenom+" au "+(typeof androidPhoneHtml === "function" ? androidPhoneHtml(joueur.telephone, joueur.email) : joueur.telephone)+"</br>ou par mail: "+joueur.email );
 			/*
 			$.get( relpgm+"getfiche.php", { idj:ligne.A.id }, function(fiche) {
 				$("#msgtabinscrits").html( "Contactez "+contact+" au "+fiche.telephone+"</br>ou par mail: "+fiche.email );
@@ -250,13 +235,11 @@ function selPartenaire(idPart) {
 	let cmd = ( userinscrit ) ? "mod" : "add";
 	$.get( relpgm+"f25setpaire.php", { idtournoi:idtournoi, cmd:cmd, ida:userid, idb:idPart }, function(strjson) {
 		console.log( strjson.ret );
-		if ( strjson.ret == "ok" ) {
+		if ( strjson.ret.substring(0, 2) == "ok" ) {
 			// mise à jour tableau des inscrits
 			updateTabInscrits( strjson.lignes );
 		}
-		else {
-			$("#msgtabinscrits").text("La pré-inscription n'est plus possible !");
-		}
+		$("#msgtabinscrits").text(strjson.ret);
 	},"json")
 	.fail( function( jqxhr,settings,ex ) {
 		$("#msgtabinscrits").html('Erreur: '+ ex );
@@ -266,7 +249,7 @@ function selPartenaire(idPart) {
 function annule_inscription() {
 	$.get( relpgm+"f25setpaire.php", { idtournoi:idtournoi, cmd:"del", ida:userid, idb:0 }, function(strjson) {
 		console.log( strjson.ret );
-		if ( strjson.ret == "ok" ) {
+		if ( strjson.ret.substring(0, 2) == "ok" ) {
 			// mise à jour tableau des inscrits
 			updateTabInscrits( strjson.lignes );
 		}
@@ -513,7 +496,7 @@ $(document).ready(function() {
 
 				$.get( relpgm+"f25setjoueur.php", parms, function(strjson) {
 					console.log( strjson.ret );
-					if ( strjson.ret == "ok" ) {
+					if ( strjson.ret.substring(0, 2) == "ok" ) {
 						// mise à jour tableau des inscrits
 						updateTabInscrits( strjson.lignes );
 					}
@@ -541,11 +524,223 @@ $(document).ready(function() {
 	});
 });
 
+
+function isNumeric(str) {
+  return /^(\s*[0-9-]+\s*)+$/.test(str);
+}
+function isEmail(email) {
+  const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(email);
+}
+function oktel() {
+	let phone = $("#phone").val();
+	phone = phone.replaceAll( '-', ' ');
+	phone = phone.trim();
+	$("#phone").val( phone );
+	if ( (phone.length > 0)&&(!isNumeric( phone)) ) {
+		$("#telperso").text( "Téléphone: caractères non numériques" );
+	}
+	else {
+		$.get( relpgm+"f25updatefield.php", { idjoueur:userid, command:'phone', phone:phone },
+		function(strjson) {
+			$("#telperso").text( strjson.msg );
+		}, "json");
+	}
+	setTimeout(function() { $("#telperso").text( "" ); }, 2000);
+}
+function okmail() {
+	// mise en forme de l'email
+	email = $("#email1").val();
+	email = email.trim( email );
+	email = email.toLowerCase();
+	$("#email1").val( email );
+	if ( !isEmail( email) ) {
+		$("#mailperso").text( "email incorrect" );
+	}
+	else {
+		console.log("okmail ok", userid, email);
+		$.get( relpgm+"f25updatefield.php", { idjoueur:userid, command:'email', email:email },
+		function(strjson) {
+			$("#mailperso").text( strjson.msg );
+		}, "json");
+	}
+	setTimeout(function() { $("#mailperso").text( "" ); }, 2000);
+}
+
 //
-// affichage annuaire
-function affiche_annuaire() {
-	$("#section_annuaire").toggle();
+// paramètres de sélection date tournoi spécifique joueur: calendrier n semaines
+//
+function formatISO(d) {
+	return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
-function masque_annuaire() {
-	$("#section_annuaire").hide();
+
+class LimitedWeeksDatePicker {
+	constructor(container, options = {}) {
+		this.container = container;
+		this.weeks = options.weeks ?? 5;
+		this.onSelect = options.onSelect ?? (() => {});
+		this.locale = options.locale ?? 'fr-FR';
+		this.firstDayMonday = options.firstDayMonday ?? true;
+		this.disablePastDays = options.disablePastDays ?? true;
+		this.dayStatus = options.dayStatus ?? null;
+		this.todayCondition = options.todayCondition ?? null;
+
+		this.today = this.#stripTime(new Date());
+		this.selectedDate = null;
+
+		this.startDate = this.#startOfWeek(this.today);
+		this.endDate = this.#addDays(this.startDate, this.weeks * 7 - 1);
+
+		this.#render();
+	}
+
+	#stripTime(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+	#addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+	#startOfWeek(d) {
+		const day = d.getDay();
+		const diff = this.firstDayMonday ? (day + 6) % 7 : day;
+		return this.#addDays(d, -diff);
+	}
+	#isSameDay(a, b) {
+		return a && b && a.getFullYear() === b.getFullYear()
+			&& a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+	}
+
+	setDate(d) {
+		this.selectedDate = this.#stripTime(d);
+		this.#render();
+	}
+
+	#render() {
+		const dayLabels = this.firstDayMonday
+			? ['Lu','Ma','Me','Je','Ve','Sa','Di']
+			: ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+
+		const startLabel = this.startDate.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
+		const endLabel = this.endDate.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
+		const title = startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
+
+		let rowsHtml = '';
+		let cursor = new Date(this.startDate);
+
+		for (let w = 0; w < this.weeks; w++) {
+			let rowCells = '';
+			for (let d = 0; d < 7; d++) {
+				const cellDate = new Date(cursor);
+				let selectable = !(this.disablePastDays && cellDate < this.today);
+				let extraClass = '';
+				let title_ = '';
+
+				if (this.dayStatus) {
+					const status = this.dayStatus(cellDate);
+					if (status) {
+						if (status.selectable === false) selectable = false;
+						if (status.className) extraClass = status.className;
+						if (status.title) title_ = status.title;
+					}
+				}
+
+				const isToday = this.#isSameDay(cellDate, this.today);
+				const isSelected = this.#isSameDay(cellDate, this.selectedDate);
+
+				const classes = ['dp-day'];
+				if (!selectable) classes.push('disabled');
+				if (extraClass) classes.push(extraClass);
+				if (isToday) classes.push('today');
+				if (isToday && this.todayCondition && this.todayCondition(cellDate)) classes.push('today-active');
+				if (isSelected) classes.push('selected');
+
+				const monthTag = cellDate.getDate() === 1
+					? `<span class="dp-month-tag">${cellDate.toLocaleDateString(this.locale, { month: 'short' })}</span>`
+					: '';
+
+				rowCells += `<td>
+					<div class="${classes.join(' ')}" data-date="${cellDate.toISOString()}" title="${title_}">
+						${cellDate.getDate()}${monthTag}
+					</div>
+				</td>`;
+
+				cursor = this.#addDays(cursor, 1);
+			}
+			rowsHtml += `<tr>${rowCells}</tr>`;
+		}
+
+		let headHtml = '<tr>';
+		for ( let i = 0; i < 7; i++ ) {
+			headHtml += '<th>'+dayLabels[i]+'</th>';
+		}
+		headHtml += '</tr>';
+		
+		this.container.innerHTML = `
+			<div class="datepicker">
+				<div class="dp-header"><span class="dp-title">${title}</span></div>
+				<table>
+					<thead>${headHtml}</thead>
+					<tbody>${rowsHtml}</tbody>
+				</table>
+			</div>
+		`;
+
+		this.#bindEvents();
+	}
+
+	#bindEvents() {
+		this.container.querySelectorAll('.dp-day:not(.disabled)').forEach(el => {
+			el.addEventListener('click', () => {
+				this.selectedDate = new Date(el.dataset.date);
+				this.#render();
+				this.onSelect(this.selectedDate);
+			});
+		});
+	}
 }
+
+document.addEventListener('DOMContentLoaded', function() {		// sélection date tournoi
+	const host = document.getElementById('datetournoi');
+
+	const datetournoi = new LimitedWeeksDatePicker(host, {
+		weeks: parametres.maxweeks+1,
+		todayCondition: function (date) {
+			return tournoiEnCours;
+		},
+		dayStatus: function (date) {
+			let datjour = formatISO(date);
+			if ( datjour in calendrier ) {
+				let special = calendrier[datjour];
+				if (special.etat > 0)
+					return { selectable: true, className: "dayopen", title: special.obs };
+				else
+					return { selectable: true, className: "dayclose", title: special.obs };
+			}
+
+			let dd = date.getDay();		// de 0 (dimanche) à 6 (samedi)
+			let jour = listeJours[dd];
+			if ( parametres.opendays[jour] == '1' )
+				return { selectable: true, className: "", title: "Le club est ouvert" };
+			else
+				return { selectable: false, className: "", title: "Pas de tournoi ce jour" };
+		},
+		onSelect: function (date) {
+			let seldate = formatISO(date);
+			$("#errdatetournoi").html( "<p>&nbsp;</p>" );
+			console.log( "change", seldate );
+			// test club ouvert
+			if ( seldate in calendrier ) {
+				let special = calendrier[seldate];
+				$("#errdatetournoi").html( "<p style='color:red'><b>"+special.obs+"</b></p>" );
+				if (special.etat == 0) {
+					$("#section_inscription").hide();
+					return;
+				}
+			}
+			if ( userid > 0 )
+				selectTournoi( seldate );
+			else
+				$("#errdatetournoi").html( "<p style='color:red'>Connectez-vous !</p>" );
+		}
+	});
+
+	// sélection initiale sur aujourd'hui, comme .datepicker('setDate','today')
+	datetournoi.setDate(datetournoi.today);
+});
+

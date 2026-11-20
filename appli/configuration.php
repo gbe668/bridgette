@@ -1,4 +1,10 @@
 <?php
+require_once __DIR__.'/security.php';
+if (PHP_SAPI !== 'cli' && isset($_GET['cmd']) &&
+    in_array($_GET['cmd'], ['install', 'patch', 'droptables', 'gc'], true)) {
+    securityDeny('Utiliser le superviseur opérateur ou la maintenance en ligne de commande.');
+}
+
 //
 // Utilitaires
 //
@@ -75,7 +81,6 @@ catch (PDOException $e) {
 		$errmsg .= '<p>Modifier la config php pour inclure le driver PDO</p>';
 	}
 	$errmsg .= "<p>DSN: $dsn</p>";
-	//header( "Location: erreurbridgette.php?errmsg=".$errmsg );
 	die( $errmsg );
 }
 
@@ -86,6 +91,14 @@ $sql_sessions = "CREATE TABLE IF NOT EXISTS sessions (
 	id varchar(32) NOT NULL, access int(10) unsigned,
 	data text, PRIMARY KEY (id) );";
 $dbh->query( $sql_sessions );
+require_once __DIR__.'/session_maintenance.php';
+try {
+    $purgedSessions = bridgetteMonthlySessionGc($dbh, $db_name);
+    if ($purgedSessions !== null) error_log('Bridgette monthly session GC: '.$purgedSessions.' row(s) deleted');
+} catch (Throwable $e) {
+    // Maintenance must not prevent club/Android connections; retry on a later visit.
+    error_log('Bridgette monthly session GC failed: '.get_class($e).' code='.$e->getCode());
+}
 include("src/database.class.php");	//Include MySQL database class
 include("src/mysql.sessions.php");	//Include PHP MySQL sessions
 try {
@@ -98,66 +111,22 @@ catch (PDOException $e) {
 //
 // initialisation avec cookie si existe
 //
-// priorité token en argument, on ne tient pas compte d'un cookie existant ou des informations de session
-//
-if ( $withtoken = isset($_GET['token']) ){
-	$token = stripslashes($_GET['token']);
-	$token = htmlspecialchars($token);
-	$json  = base64_decode($token);
-	
-	if ( !$json ) {	// erreur sur base64 decodage
-		session_unset();
-		session_destroy();
-		$errmsg = "<b>Erreur 03: Token incorrect, reconnectez-vous !</b>";
-		die( $errmsg );
-	}
-	// décryptage réussi du token, décodage du contenu
-	$club = json_decode($json, true);
-	
-	if ( $club == null ) { // erreur sur json décodage
-		session_unset();
-		session_destroy();
-		$errmsg = "<b>Erreur 04: Décodage token incorrect, reconnectez-vous !</b>";
-		//header( "Location: erreurbridgette.php?errmsg=".$errmsg );
-		die( $errmsg );
-	}
-	// décodage réussi avec token, test d'une session existante avec un autre préfixe
-	if ( isset($_SESSION['prefix']) ) {
-		if ( $_SESSION['prefix'] != $club['prefix'] ) {
-			// efface login directeur si existe
-			unset( $_SESSION["pseudo"], $_SESSION["fonction"] );
-		}
-	}
-	//initialise paramètres session
-	$_SESSION['prefix'] = $club['prefix'];
-	$_SESSION['timex']  = $club['timex'];
-	$_SESSION['ttlast'] = time();
+// Launcher tokens and club cookies select a club, never an identity.
+$withtoken = isset($_GET['token']);
+if ($withtoken || isset($_COOKIE['bridgette'])) {
+    $raw = $withtoken ? $_GET['token'] : $_COOKIE['bridgette'];
+    if (!is_string($raw)) securityDeny('Token incorrect.', 400);
+    $json = base64_decode(strtr($raw, '-_', '+/'), true);
+    $club = securityClub(json_decode($json ?: '', true));
+} else {
+    $club = securityClub(['prefix' => $_SESSION['prefix'] ?? null, 'timex' => $_SESSION['timex'] ?? null]);
 }
-else { 	// pas de token, test si cookie existe
-	if ( isset($_COOKIE['bridgette']) ) {	// cookie existe
-		$token = $_COOKIE['bridgette'];
-		$json = base64_decode($token);
-		$club = json_decode($json, true);
-		// décodage réussi avec cookie, initialise paramètres session
-		$_SESSION['prefix'] = $club['prefix'];
-		$_SESSION['timex']  = $club['timex'];
-	}
-	else {	// cookie absent, cas d'un client refusant les cookies !!!
-		// test d'une session existante
-		if ( !isset($_SESSION['prefix']) ) {
-			session_unset();
-			session_destroy();
-			$errmsg = "<b>Erreur 05: Votre session a expiré, veuillez vous reconnecter !</b>";
-			die( $errmsg );
-		}
-		// récupération des infos sur la session existante
-		$club['prefix'] = $_SESSION['prefix'];
-		$club['timex']  = $_SESSION['timex'];
-	}
-	if ( !isset($_SESSION['ttlast']) ) {
-		$_SESSION['ttlast'] = $_SESSION['timex'];
-	}
+securitySelectClub($club);
+// Never refresh expired privileges just because a launcher token was supplied.
+if (time() - ($_SESSION['ttlast'] ?? 0) > 1440) {
+    unset($_SESSION['pseudo'], $_SESSION['fonction'], $_SESSION['auth_club']);
 }
+$_SESSION['ttlast'] = time();
 
 //
 // Installation cookie
@@ -200,7 +169,6 @@ else {
 	session_unset();
 	session_destroy();
 	$errmsg = "<b>Erreur 06: Fichier de configuration absent !</b>";
-	//header( "Location: erreurbridgette.php?errmsg=".$errmsg );
 	writelogerrors( $errmsg );
 	die( $errmsg );
 }
@@ -221,108 +189,23 @@ $debinvites = 4;
 $max_tables = 15;		# limitation à 15
 
 //
-// test d'une commande à exécuter avec le token
-//
-if ( isset($_GET['cmd'])&&$withtoken ) {
-	$cmd = stripslashes($_GET['cmd']);
-	$cmd = htmlspecialchars($cmd);
-	switch($cmd) {
-		case "install": {
-			writelogerrors( "Installation en cours ..." );
-			echo "<p><b>Installation en cours ...</b></p>";
-			require( "installtablesbdd.php" );
-			echo "<p>----> création des tables si n'existent pas</p>";
-			$dbh->query( $sql_directeurs );
-			$dbh->query( $sql_joueurs );
-			$dbh->query( $sql_tournois );
-			$dbh->query( $sql_connexions );
-			$dbh->query( $sql_pairesNS );
-			$dbh->query( $sql_pairesEO );
-			$dbh->query( $sql_donnes );
-			$dbh->query( $sql_diagrammes );
-			$dbh->query( $sql_events );
-			echo '<p>----> peuplement des tables si vides</p>';
-			init_tab_directeurs($dbh);
-			init_tab_joueurs($dbh);
-			init_tab_connexions($dbh);
-			echo '<p>----> terminé.</p>';
-			break;
-		}
-        case 'patch':
-            writelogerrors('Patch requested by admin');
-            // Charger le script d'installation en local (vérifier existence)
-            $patchFile = __DIR__ . '/patch.php';
-            if (!is_file($patchFile)) {
-                writelogerrors('patch.php missing');
-                exit('Fichier patch absent.');
-            }
-            require $patchFile;
-            // Les scripts SQL doivent utiliser PDO et être sécurisés
-            try {
-                $dbh->beginTransaction();
-                if (function_exists('executepatch'))	executepatch($dbh);
-				else echo '<p>Fonction executepatch absente.</p>';
-                $dbh->commit();
-                echo 'Installation terminée.';
-            } catch (PDOException $e) {
-                $dbh->rollBack();
-                writelogerrors('Patch error: ' . $e->getMessage());
-                exit('Erreur durant l\'exécution du patch.');
-            }
-            break;
-		case "droptables": {
-			writelogerrors( "Suppression des tables avant reinstallation ..." );
-			echo "<p><b>Suppression des tables avant reinstallation ...</b></p>";
-			require( "installtablesbdd.php" );
-			droptablesbdd($dbh);
-			echo '<p>----> terminé.</p>';
-			break;
-		}
-		case "gc": {
-			// garbage collector table sessions
-			$session->_gc($maxjoursgarbage);
-			echo '<p>garbage collector terminé.</p>';
-			break;
-		}
-		default: {
-			$errmsg = "<b>Erreur 07: Commande inconnue !</b> $titre";
-			//header( "Location: erreurbridgette.php?errmsg=".$errmsg );
-			writelogerrors( $errmsg );
-			session_unset();
-			session_destroy(); 
-			die( $errmsg );
-		}
-	}
-}
-
-//
 // test application correctement installée
 //
-$sql ="SELECT count(*) FROM `information_schema`.`tables` WHERE `table_schema`='$db_name' AND table_name like '$prefix%';";
-$res = $dbh->query( $sql );
+$sql = "SELECT count(*) FROM `information_schema`.`tables` WHERE `table_schema`=? AND table_name like ?;";
+$sqlBound = [$db_name, "$prefix%"];
+$res = securityQuery($dbh, $sql, $sqlBound);
 $ntablesbdd = $res->fetchColumn();		// 8 tables en tout
 //print "N tables: $ntablesbdd";
-if ( $ntablesbdd < 8 ) {
+if ( $ntablesbdd < 8 && !(PHP_SAPI === 'cli' && defined('BRIDGETTE_MAINTENANCE')) ) {
 	$errmsg = "<b>Erreur 08: Tables $titre</b> absentes dans la base de données";
 	$errmsg .= "<p>---> Installation / réinstallation requise !</p>";
 	writelogerrors( $errmsg );
 	session_unset();
 	session_destroy(); 
-	//header( "Location: erreurbridgette.php?errmsg=".$errmsg );
 	die( $errmsg );
 }
 // tables OK
 $dbh = null;
 
-//
-// test durée inactivité pour les directeurs/administrateurs
-//
-if ( !$withtoken ) {
-	$agelogin = time() - $_SESSION['ttlast'];
-	$maxloginactif = 1440;	// max 24 minutes d'inactivité = le standard !
-	if ( $agelogin > $maxloginactif )
-		unset( $_SESSION["pseudo"], $_SESSION["fonction"] );
-}
-$_SESSION['ttlast'] = time();
-$agepagemax = 3600;		// 1 heure
+$agepagemax = 3600;
 ?>

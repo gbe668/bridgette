@@ -9,22 +9,23 @@ if ( file_exists( $file_version ) ) {
 }
 else $version = "inconnue";
 
-//$apk_code_request = 8;	// version générée le 14 août 2024
-$apk_code_request = 9;		// numéro dernière version générée le 20 novembre 2024
+//$apk_code_request = 9;		// numéro dernière version générée le 20 novembre 2024
+$apk_code_request = 13;		// numéro dernière version générée le 29 octobre 2026
 
+$userid = securityAndroidRequire();
+// First authentication renews the session: initialize APK metadata afterwards.
 $_SESSION['apk_code'] = htmlspecialchars( $_GET['apk_code'] );
 $apk_name = htmlspecialchars( $_GET['apk_name'] );
-$userid = htmlspecialchars( $_GET['userid'] );
 $joueur = getJoueur( $userid );
 
 $idtournoi = existeTournoiNonClos();
 $paire = 0;
 $ligne = "NS";
 
-function htmlPositionsHowell($idtype, $pns, $npos, $paquet) {
+function htmlPositionsHowell($idtype, $pns, $npos, $paquet, $ndonnes) {
 	$tab = "<h3>Howell $pns paires</h3>";
 	for ( $i = 1; $i <= $npos; $i++ ) {
-		$tab .= "<p>".htmlPositionHowell($idtype, $pns, $i, $paquet)."</p>";
+		$tab .= "<p>".htmlPositionHowell($idtype, $pns, $i, $paquet, $ndonnes)."</p>";
 	}
 	return $tab;
 }
@@ -39,6 +40,7 @@ function htmlPositionsHowell($idtype, $pns, $npos, $paquet) {
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<link  href="/css/bridgestylesheet.css" rel="stylesheet" />
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -116,14 +118,30 @@ function affposprov() {
 		$.get( "<?php echo $relpgm.'getpositionsprovisoires.php' ?>", {idtournoi:idtournoi, w:0}, function( json ) {
 			if ( json.etat == st_phase_init ) {
 				$(posprov).html( json.positions );
-				decompte( maxaffprov );
 				$(idposprov).show();
+				decompte( maxaffprov );
 			}
 		},"json");
 	}
 	else {
 		$(idposprov).hide();
 		clearTimeout( affprovTO );
+	}
+}
+var affprovjoueurTO;
+function affposprovjoueur() {
+	if ( $(idposprovjoueur).is(":hidden") ) {
+		$.get( "<?php echo $relpgm.'getpositionprovisoirejoueur.php' ?>", {idtournoi:idtournoi, userid:<?php echo $userid; ?>, w:0}, function( json ) {
+			if ( json.etat == st_phase_init ) {
+				$(idposprovjoueur).html( json.position );
+				$(idposprovjoueur).show();
+			}
+		},"json");
+		affprovjoueurTO = setTimeout(function() { affposprovjoueur(); }, 1500 );
+	}
+	else {
+		$(idposprovjoueur).hide();
+		clearTimeout( affprovjoueurTO );
 	}
 }
 
@@ -156,6 +174,11 @@ function gotodownloadapk() {
 	var urlDuFichier = "<?php echo $base_url.'/app-release.apk' ?>";
 	window.open(urlDuFichier,"_blank", null);
 }
+
+$(document).on( "click", "h2.clickable", function(event) {
+	affposprovjoueur();
+});
+
 </script>
 
 <body>
@@ -174,8 +197,9 @@ function gotodownloadapk() {
 		
 		if ( $etat == $st_phase_init ) {
 			// définition des paires en cours
-			print '<h2>Tableau des participants</br>en cours de définition.</h2>';
+			print '<h2 class="clickable">Tableau des participants</br>en cours de définition.</h2>';
 			print '<p id="imwaiting">Attendez le démarrage du tournoi.</p>';
+			print "<div id='idposprovjoueur' hidden></div>";
 
 			if ( $parametres['affposprov'] > 0 ) {
 				print "<p><button class='myBigButton' onclick='affposprov()'>Affiche / masque</br>les positions provisoires</button></p>";
@@ -190,6 +214,7 @@ function gotodownloadapk() {
 			print "<h2>Tournoi en cours !</h2>";
 			$idtype = $t['idtype'];
 			$genre  = $t['genre'];
+			$ndonnes = $t['ndonnes'];
 			$paquet	= $t['paquet'];
 			$pns	= $t['pairesNS'];
 			$peo	= $t['pairesEO'];
@@ -232,7 +257,7 @@ function gotodownloadapk() {
 				<div id="section_positions" hidden>
 				<!-- <div style='text-align:center; margin:auto; max-width:350px;' id='realtour'>&nbsp;</div> -->
 				<?php
-				print htmlPositionsHowell($idtype, $pns, $t['npositions'], $paquet);
+				print htmlPositionsHowell($idtype, $pns, $t['npositions'], $paquet, $ndonnes);
 				?>
 				<p><button class="myButton" onclick="$('#section_positions').toggle();">Masque positions Howell</button></p>
 				</div>

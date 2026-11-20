@@ -23,6 +23,7 @@ $etui = htmlspecialchars( $_GET['etui'] );
 	<script src="js/bridge65.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -31,7 +32,7 @@ const relimg = "<?php echo $relimg; ?>";
 
 function goto43() {
 	var nextstring = "bridge43.php?idtournoi=" + idtournoi + "&etui=" + etui + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function supprime() {
 	deletediags(idtournoi, etui, goto43);
@@ -44,11 +45,21 @@ function corrige() {
 	setfocus( 1 );
 }
 
-// ajout analyse diagramme - 30/07/2025
-var Module = {};
+// optimisation analyse diagramme - 30/08/2026
+// A initialiser UNE SEULE FOIS au chargement de la page (pas à chaque donne),
+// par exemple juste après le chargement du DOM.
+let ddsWorker = new Worker('js/ddsWorker.js');
+let ddsWorkerReady = false;
+
+ddsWorker.onmessage = function (e) {
+    if (e.data.type === 'ready') {
+        ddsWorkerReady = true;
+        console.log('DDS worker prêt');
+    }
+    // Le traitement du résultat ('result') est branché dans clickValidiags()
+};
+
 </script>
-<script src="jsdds/out.js"></script>
-<script src="jsdds/dds.js"></script>
 
 <body>
 	<div style="text-align: center">

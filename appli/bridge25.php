@@ -1,6 +1,7 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+securityWebLogin();
 
 if ( file_exists( $file_calendar ) ) {
 	$calendrier = json_decode( file_get_contents( $file_calendar ), true );
@@ -22,35 +23,37 @@ function getMyClassement($userid) {
 	$dbh = connectBDD();
 	
 	// recherche du 1er tournoi avec une date >= date du jour - $nbm mois
-	$sql = "SELECT count(*) FROM $tab_tournois WHERE tournoi >=(DATE_SUB(curdate(), INTERVAL $nbm MONTH)) order by id asc;";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois WHERE tournoi >=(DATE_SUB(curdate(), INTERVAL ? MONTH)) order by id asc;";
+	$sqlBound = [$nbm];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	//print "<p>$sql $nbl</p>";
 	if ( $nbl > 0 ) {
 		$sql = "SELECT idj, COUNT(*) AS nbfois, AVG(noteg) AS perf, MIN(tournoi) AS depuis FROM (
 			(SELECT idj1 AS idj, tournoi, noteg FROM $tab_pairesNS
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesNS.idtournoi 
-			WHERE etat = $st_closed AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH))
-			AND idj1 = $userid ) 
+			WHERE etat = ? AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH))
+			AND idj1 = ? ) 
 			UNION 
 			(SELECT idj2 AS idj, tournoi, noteg FROM $tab_pairesEO
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesEO.idtournoi 
-			WHERE etat = $st_closed AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH))
-			AND idj2 = $userid) 
+			WHERE etat = ? AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH))
+			AND idj2 = ?) 
 			UNION 
 			(SELECT idj3 AS idj, tournoi, noteg FROM $tab_pairesNS
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesNS.idtournoi 
-			WHERE etat = $st_closed AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH))
-			AND idj3 = $userid)
+			WHERE etat = ? AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH))
+			AND idj3 = ?)
 			UNION
 			(SELECT idj4 AS idj, tournoi, noteg FROM $tab_pairesEO
 			INNER JOIN $tab_tournois ON $tab_tournois.id = $tab_pairesEO.idtournoi 
-			WHERE etat = $st_closed AND tournoi >= (DATE_SUB(curdate(), INTERVAL $nbm MONTH))
-			AND idj4 = $userid) 
+			WHERE etat = ? AND tournoi >= (DATE_SUB(curdate(), INTERVAL ? MONTH))
+			AND idj4 = ?) 
 			) T1 group by idj;";
+		$sqlBound = [$st_closed, $nbm, $userid, $st_closed, $nbm, $userid, $st_closed, $nbm, $userid, $st_closed, $nbm, $userid];
 		//print "<p>$sql</p>";
 				
-		$res = $dbh->query( $sql );
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		if ( $row = $res->fetch(PDO::FETCH_ASSOC) ) {
 			$score = sprintf( "%.1f", $row["perf"] );
 			$nbfois = $row["nbfois"];
@@ -70,6 +73,8 @@ function getMyClassement($userid) {
 	$dbh = null;
 	return $str;
 };
+
+$tournoiEnCours = existeTournoiNonClos();
 ?>
 
 <!DOCTYPE HTML>
@@ -79,11 +84,11 @@ function getMyClassement($userid) {
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="<?php echo $relpgm; ?>js/jquery-3.6.0.min.js"></script>
-	<!-- <script src="<?php echo $relpgm; ?>js/jquery-ui-1.13.2.min.js"></script> -->
 	<script src="<?php echo $relpgm; ?>js/bridge25.js"></script>
 	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/bridgestylesheet.css" />
 	<link rel="stylesheet" href="<?php echo $relpgm; ?>css/jquery-ui.css">
 	<link rel="icon" type="image/x-icon" href="<?php echo $relpgm; ?>images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <style>
@@ -116,11 +121,18 @@ function getMyClassement($userid) {
 .dp-day .dp-month-tag{ position:absolute; bottom:-2px; font-size:8px; color:#000000; }
 .dp-day:hover{ background:#f3f4f6; }
 .dp-day.today{ box-shadow: inset 0 0 0 1px #2563eb; font-weight:600; }
+
+.dp-day.today-active{ background-color:#16a34a; color:#fff; font-weight:600; box-shadow:none; animation: dp-blink 1.2s ease-in-out infinite;
+}
+@keyframes dp-blink {
+  0%, 100% { background-color:#16a34a; }
+  50% { background-color:#86efac; }
+}
 .dp-day.selected{ background:#2563eb; color:#fff; font-weight:600; }
 .dp-day.selected:hover{ background:#1d4ed8; }
 .dp-day.disabled{ color:#9ca3af; background:#f3f4f6; cursor:not-allowed; }
-.dp-day.dayopen{ background-color: lightblue !important; color:#006633; }
-.dp-day.dayclose{ background-color:#FFC0CB !important; color:#006633; }
+.dp-day.dayopen{ background-color: lightblue; color:#006633; }
+.dp-day.dayclose{ background-color:#FFC0CB; color:#006633; }
 .dp-range-note{ font-size:11px; color:#9ca3af; margin-top:8px; text-align:center; }
 </style>
 
@@ -130,27 +142,28 @@ var parametres = <?php echo json_encode($parametres); ?>;	// jours d'ouverture
 var calendrier = <?php echo json_encode($calendrier); ?>;
 var userid = <?php echo $userid; ?>;
 var userconnected = true;
+var tournoiEnCours = ( parseInt(<?php echo $tournoiEnCours; ?>) > 0 ) ? true : false;
 
 function loguserin() {
 	var nextstring = "loguserin.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function loguserout() {
 	var nextstring = "loguserout.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto60() {
 	var nextstring = "bridge60.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto24() {
 	var nextstring = "bridge24.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function topwindow() {
 	elmnt = document.getElementById("topwindow");
@@ -159,221 +172,6 @@ function topwindow() {
 //
 // routines mise à jour téléphone
 //
-function isNumeric(str) {
-  return /^(\s*[0-9-]+\s*)+$/.test(str);
-}
-function isEmail(email) {
-  const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return re.test(email);
-}
-function oktel() {
-	let phone = $("#phone").val();
-	phone = phone.replaceAll( '-', ' ');
-	phone = phone.trim();
-	$("#phone").val( phone );
-	if ( (phone.length > 0)&&(!isNumeric( phone)) ) {
-		$("#telperso").text( "Téléphone: caractères non numériques" );
-	}
-	else {
-		$.get( relpgm+"f25updatefield.php", { idjoueur:userid, command:'phone', phone:phone },
-		function(strjson) {
-			$("#telperso").text( strjson.msg );
-		}, "json");
-	}
-	setTimeout(function() { $("#telperso").text( "" ); }, 2000);
-}
-function okmail() {
-	// mise en forme de l'email
-	email = $("#email1").val();
-	email = email.trim( email );
-	email = email.toLowerCase();
-	email = email.replace( "-", " ");
-	$("#email1").val( email );
-	if ( !isEmail( email) ) {
-		$("#mailperso").text( "email incorrect" );
-	}
-	else {
-		console.log("okmail ok", userid, email);
-		$.get( relpgm+"f25updatefield.php", { idjoueur:userid, command:'email', email:email },
-		function(strjson) {
-			$("#mailperso").text( strjson.msg );
-		}, "json");
-	}
-	setTimeout(function() { $("#mailperso").text( "" ); }, 2000);
-}
-
-//
-// paramètres de sélection date tournoi spécifique joueur: calendrier n semaines
-//
-function formatISO(d) {
-	return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-
-class LimitedWeeksDatePicker {
-	constructor(container, options = {}) {
-		this.container = container;
-		this.weeks = options.weeks ?? 5;
-		this.onSelect = options.onSelect ?? (() => {});
-		this.locale = options.locale ?? 'fr-FR';
-		this.firstDayMonday = options.firstDayMonday ?? true;
-		this.disablePastDays = options.disablePastDays ?? true;
-		this.dayStatus = options.dayStatus ?? null;
-
-		this.today = this.#stripTime(new Date());
-		this.selectedDate = null;
-
-		this.startDate = this.#startOfWeek(this.today);
-		this.endDate = this.#addDays(this.startDate, this.weeks * 7 - 1);
-
-		this.#render();
-	}
-
-	#stripTime(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-	#addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
-	#startOfWeek(d) {
-		const day = d.getDay();
-		const diff = this.firstDayMonday ? (day + 6) % 7 : day;
-		return this.#addDays(d, -diff);
-	}
-	#isSameDay(a, b) {
-		return a && b && a.getFullYear() === b.getFullYear()
-			&& a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-	}
-
-	setDate(d) {
-		this.selectedDate = this.#stripTime(d);
-		this.#render();
-	}
-
-	#render() {
-		const dayLabels = this.firstDayMonday
-			? ['Lu','Ma','Me','Je','Ve','Sa','Di']
-			: ['Di','Lu','Ma','Me','Je','Ve','Sa'];
-
-		const startLabel = this.startDate.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
-		const endLabel = this.endDate.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
-		const title = startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
-
-		let rowsHtml = '';
-		let cursor = new Date(this.startDate);
-
-		for (let w = 0; w < this.weeks; w++) {
-			let rowCells = '';
-			for (let d = 0; d < 7; d++) {
-				const cellDate = new Date(cursor);
-				let selectable = !(this.disablePastDays && cellDate < this.today);
-				let extraClass = '';
-				let title_ = '';
-
-				if (this.dayStatus) {
-					const status = this.dayStatus(cellDate);
-					if (status) {
-						if (status.selectable === false) selectable = false;
-						if (status.className) extraClass = status.className;
-						if (status.title) title_ = status.title;
-					}
-				}
-
-				const isToday = this.#isSameDay(cellDate, this.today);
-				const isSelected = this.#isSameDay(cellDate, this.selectedDate);
-
-				const classes = ['dp-day'];
-				if (!selectable) classes.push('disabled');
-				if (extraClass) classes.push(extraClass);
-				if (isToday) classes.push('today');
-				if (isSelected) classes.push('selected');
-
-				const monthTag = cellDate.getDate() === 1
-					? `<span class="dp-month-tag">${cellDate.toLocaleDateString(this.locale, { month: 'short' })}</span>`
-					: '';
-
-				rowCells += `<td>
-					<div class="${classes.join(' ')}" data-date="${cellDate.toISOString()}" title="${title_}">
-						${cellDate.getDate()}${monthTag}
-					</div>
-				</td>`;
-
-				cursor = this.#addDays(cursor, 1);
-			}
-			rowsHtml += `<tr>${rowCells}</tr>`;
-		}
-
-		let headHtml = '<tr>';
-		for ( let i = 0; i < 7; i++ ) {
-			headHtml += '<th>'+dayLabels[i]+'</th>';
-		}
-		headHtml += '</tr>';
-		
-		this.container.innerHTML = `
-			<div class="datepicker">
-				<div class="dp-header"><span class="dp-title">${title}</span></div>
-				<table>
-					<thead>${headHtml}</thead>
-					<tbody>${rowsHtml}</tbody>
-				</table>
-			</div>
-		`;
-
-		this.#bindEvents();
-	}
-
-	#bindEvents() {
-		this.container.querySelectorAll('.dp-day:not(.disabled)').forEach(el => {
-			el.addEventListener('click', () => {
-				this.selectedDate = new Date(el.dataset.date);
-				this.#render();
-				this.onSelect(this.selectedDate);
-			});
-		});
-	}
-}
-
-document.addEventListener('DOMContentLoaded', function() {		// sélection date tournoi
-	const host = document.getElementById('datetournoi');
-
-	const datetournoi = new LimitedWeeksDatePicker(host, {
-		weeks: parametres.maxweeks+1,
-		dayStatus: function (date) {
-			let datjour = formatISO(date);
-			if ( datjour in calendrier ) {
-				let special = calendrier[datjour];
-				if (special.etat > 0)
-					return { selectable: true, className: "dayopen", title: special.obs };
-				else
-					return { selectable: true, className: "dayclose", title: special.obs };
-			}
-
-			let dd = date.getDay();		// de 0 (dimanche) à 6 (samedi)
-			let jour = listeJours[dd];
-			if ( parametres.opendays[jour] == '1' )
-				return { selectable: true, className: "", title: "Le club est ouvert" };
-			else
-				return { selectable: false, className: "", title: "Pas de tournoi ce jour" };
-		},
-		onSelect: function (date) {
-			let seldate = formatISO(date);
-			$("#errdatetournoi").html( "<p>&nbsp;</p>" );
-			console.log( "change", seldate );
-			// test club ouvert
-			if ( seldate in calendrier ) {
-				let special = calendrier[seldate];
-				$("#errdatetournoi").html( "<p style='color:red'><b>"+special.obs+"</b></p>" );
-				if (special.etat == 0) {
-					$("#section_inscription").hide();
-					return;
-				}
-			}
-			if ( userid > 0 )
-				selectTournoi( seldate );
-			else
-				$("#errdatetournoi").html( "<p style='color:red'>Connectez-vous !</p>" );
-		}
-	});
-
-	// sélection initiale sur aujourd'hui, comme .datepicker('setDate','today')
-	datetournoi.setDate(datetournoi.today);
-});
-
 // mécanisme détectant une page expirée
 var agepagemax = "<?php echo $agepagemax; ?>";
 var loadedpage = "<?php echo $_SESSION['ttlast']; ?>";
@@ -428,19 +226,19 @@ document.addEventListener('visibilitychange', function (event) {
 		<td><span class="cross" onclick="close_inscription()" style="border:.5pt solid">&#x274C;</span></td>
 	</tr></tbody></table>
 	<div id="tabinscrits">&nbsp;</div>
-	<p id="msgtabinscrits">&nbsp;</p>
 	</div>
+	<p id="msgtabinscrits">&nbsp;</p>
 	
 	<?php if ( $userid > 0 ) { ?>
 		<div id="menu_noninscrit" hidden>
-		<p>Vous n'êtes pas inscrit à ce tournoi !</p>
+		<!-- <p>Vous n'êtes pas inscrit à ce tournoi !</p> -->
 		<p>Vous pouvez contacter un joueur en recherche de partenaire en cliquant sur son nom</p>
 		<p>ou vous inscrire <button class="myButton" onclick="sans_partenaire()">sans partenaire</button></p>
 		<p>ou vous inscrire <button class="myButton" onclick="avec_partenaire()">avec un partenaire</button> qui peut être un joueur pré-inscrit en recherche de partenaire après avoir obtenu son accord.</p>
 		</div>
 		
 		<div id="menu_inscrit" hidden>
-		<p>Vous êtes inscrit à ce tournoi !</p>
+		<!-- <p>Vous êtes inscrit à ce tournoi !</p> -->
 		<p>Vous pouvez vous <button class="myButton" onclick="annule_inscription()">désinscrire</button></p>
 		<p>ou <button class="myButton" onclick="sans_partenaire()">chercher</button> un partenaire</p>
 		<p>ou <button class="myButton" onclick="avec_partenaire()">changer</button> de partenaire</p>

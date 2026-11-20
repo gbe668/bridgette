@@ -19,6 +19,7 @@ $donne		= htmlspecialchars( $_GET['donne'] );
 	<script src="js/bridge65.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -33,11 +34,11 @@ function supprime() {
 function goto64diags() {
 	var nextstring = "mitch64diags.php?idtournoi=" + idtournoi;
 	nextstring += '&table=' + numtable + '&donne=' + donne;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 
 // mécanisme détectant une page expirée
@@ -53,11 +54,27 @@ document.addEventListener('visibilitychange', function (event) {
     }
 });
 
+// optimisation analyse diagramme - 30/08/2026
+// A initialiser UNE SEULE FOIS au chargement de la page (pas à chaque donne),
+// par exemple juste après le chargement du DOM.
+let ddsWorker = new Worker('js/ddsWorker.js');
+let ddsWorkerReady = false;
+
+ddsWorker.onmessage = function (e) {
+    if (e.data.type === 'ready') {
+        ddsWorkerReady = true;
+        console.log('DDS worker prêt');
+    }
+    // Le traitement du résultat ('result') est branché dans clickValidiags()
+};
+
+</script>
+<!--
 // ajout analyse diagramme - 30/07/2025
 var Module = {};
-</script>
 <script src="jsdds/out.js"></script>
 <script src="jsdds/dds.js"></script>
+-->
 
 <body>
 	<div id="pop" class="popup" style="text-align:center;">
@@ -85,7 +102,7 @@ var Module = {};
 		print "<h2><span class='numpaire'>Table n°$numtable</span></h2>";
 		print "<p>Est Ouest: $nameEst et $nameOuest</p>";
 		print "<h2>Première position, vous êtes en relais.</h2>";
-		print "<p>Vous devez préparer les donnes<br/>et entrer les diagrammes<br>pour la position suivante.</p>";
+		print "<p>Vous devez préparer les donnes<br/>et entrer les diagrammes<br/>pour la position suivante.</p>";
 
 		print "<h3>Récupérez les étuis:</br>";
 		print liste_etuis( $donne, $paquet );
@@ -118,7 +135,6 @@ var Module = {};
 			<p>Diagramme donne <?php echo $donne; ?> déjà enregistré.</p>
 			<div id="section_diagramme">diagramme</div>
 			<script>displaydeal( String( "<?php echo $diagramme; ?>" ), <?php echo $donne; ?> );</script>
-			
 			<div id="section_editdiags" class="edit" hidden>
 				<div id="section_inputdiags">
 				<p id="msg">&nbsp;</p>

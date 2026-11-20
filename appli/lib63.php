@@ -8,8 +8,9 @@ function getPaquet2Play( $idt, $ns, $encours, $paquet ) {
 	$dbh = connectBDD();
 	for ( $i = 0; $i < $paquet; $i++ ) {
 		$j = $first + $i;
-		$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and ns='$ns' and etui='$j';";
-		$res = $dbh->query($sql);
+		$sql = "SELECT count(*) from $tab_donnes where idtournoi=? and ns=? and etui=?;";
+		$sqlBound = [$idt, $ns, $j];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		$Paquet2Play[$i] = $res->fetchColumn();
 		$Donnes2Play[$i] = $j;
 	}

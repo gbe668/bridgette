@@ -12,12 +12,13 @@ $oldtournois = htmlspecialchars( $_GET['n'] );
 $nbl = 0;
 
 $dbh = connectBDD();
-$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed';";
-$res = $dbh->query($sql);
+$sql = "SELECT count(*) FROM $tab_tournois where etat = ?;";
+$sqlBound = [$st_closed];
+$res = securityQuery($dbh, $sql, $sqlBound);
 $nbl = $res->fetchColumn();
 if ( $nbl > 0 ) {
 	// obtention des id tournoi
-	$sth = $dbh->query( "SELECT id FROM $tab_tournois where etat = '$st_closed' order by tournoi asc;" );
+	$sth = securityQuery($dbh, "SELECT id FROM $tab_tournois where etat = ? order by tournoi asc;", [$st_closed]);
 	$nbl = min( $nbl, $oldtournois );
 	for ( $i = 0; $i < $nbl; $i++ ) {
 		$row = $sth->fetch(PDO::FETCH_ASSOC);

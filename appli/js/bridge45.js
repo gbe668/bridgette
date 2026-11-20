@@ -203,7 +203,7 @@ function clickMoyenneDonne() {
 	},"text");
 };
 function numMedian(a) {
-	a = a.slice(0).sort(function(x, y) {
+	a = a.map(Number).sort(function(x, y) {
 		return x - y;
 	});
 	var b = (a.length + 1) / 2;
@@ -224,6 +224,8 @@ function sel_donne( id ) {
 	var j = 0;
 	for ( let i=0; i<tabpoints.length; i++ ) {
 		if ( i==noligne ) continue;
+		// Howell : ignorer les lignes symétriques EO masquées dans le tableau.
+		if ( tabhweo[i] != 0 ) continue;
 		tabmediane[j] = tabpoints[i];
 		j++;
 	}

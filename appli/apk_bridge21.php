@@ -28,6 +28,7 @@ $diagrammes = getdiagrammes($idtournoi);
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/jquery.mobile-1.5.0-rc1.min.js"></script>
 	<script src="/js/bridge65.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -57,17 +58,6 @@ function showAndroidToast(toast) {
 }
 var actuel = 1;		// étui sélectionné
 var selns = seleo = 0;
-function key_select( nbr ) {
-	actuel += parseInt( nbr );
-	if ( actuel < 1 ) actuel = 1;
-	if ( actuel > ndonnes ) actuel = ndonnes;
-	$("#etui").text( actuel );
-	
-	$.get(relpgm+"f64getresultatdonne.php?", {idtournoi:idtournoi, etui:actuel, ns:selns, eo:seleo}, function(strjson) {
-		showresultat( strjson );
-	}, "json")
-	.fail( function( jqxhr, settings, ex ) { console.log('Erreur: '+ ex ); } );
-};
 $(document).ready(function() {
 	$("#etuim10").bind('click', function( event ){ key_select( -10 ); });
 	$("#etuim1").bind('click', function( event ){ key_select( -1 ); });
@@ -89,10 +79,7 @@ $(document).ready(function() {
 			seleo = figs[1];
 		}
 		
-		$.get(relpgm+"f64getresultatdonne.php?", {idtournoi:idtournoi, etui:actuel, ns:selns, eo:seleo}, function(strjson) {
-			showresultat( strjson );
-		}, "json")
-		.fail( function( jqxhr, settings, ex ) { console.log('Erreur: '+ ex ); } );
+		requestResultat21();
 		
 		var axe = (figs[0]=="ns") ? "NS" : "EO";	// ?????????? à vérifier
 		$.get(relpgm+"f21getroadmap.php?", {idtournoi:idtournoi, axe:figs[0], num:figs[1], token:token}, function(strjson) {

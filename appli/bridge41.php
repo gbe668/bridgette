@@ -23,6 +23,7 @@ $screenw = isset( $_GET['w'] ) ? htmlspecialchars( $_GET['w'] ) : '';
 	<script src="js/bridge41.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -43,7 +44,7 @@ function settypetournoi_howell(type) {
 };
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto42() {
 	$.get( "f41inittournoi.php", { idtournoi:idtournoi, okns:okns, okeo:okeo }, function( ret ) {
@@ -51,14 +52,14 @@ function goto42() {
 		if ( parseInt(ret) > 0 ) {
 			var nextstring = "bridge42.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
 			console.log( ret, nextstring );
-			location.replace( nextstring );
+			bridgetteNavigate( nextstring );
 		}
 		else $("#msgerr").html( "type tournoi non configuré" );
 	},"text");
 };
 function reload() {
 	var nextstring = "bridge41.php?idtournoi=" + idtournoi + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 

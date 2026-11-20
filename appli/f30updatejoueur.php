@@ -16,8 +16,9 @@ function updateJoueur( $idj, $gender, $fname, $lname, $phone, $email ) {
 		
 		// test adresse mail déjà utilisée
 		if ( $email !== "" ) { 
-			$sql = "SELECT count(*) from $tab_joueurs where email='$email' and id<>'$idj';";
-			$nbl = $dbh->query($sql)->fetchColumn();
+			$sql = "SELECT count(*) from $tab_joueurs where email=? and id<>?;";
+			$sqlParams = [$email, $idj];
+			$nbl = securityQuery($dbh, $sql, $sqlParams)->fetchColumn();
 			if ( $nbl > 0 ) {
 				$result['success'] = 0;
 				$result["msg"] = "Email $email déjà utilisé.";
@@ -27,16 +28,18 @@ function updateJoueur( $idj, $gender, $fname, $lname, $phone, $email ) {
 		}
 	
 		// test homonyme
-		$sql = "SELECT count(*) from $tab_joueurs where prenom='$fname' and nom='$lname' and id<>'$idj';";
-		$nbl = $dbh->query($sql)->fetchColumn();
+		$sql = "SELECT count(*) from $tab_joueurs where prenom=? and nom=? and id<>?;";
+		$sqlParams = [$fname, $lname, $idj];
+		$nbl = securityQuery($dbh, $sql, $sqlParams)->fetchColumn();
 		if ( $nbl > 0 ) {
 				$result['success'] = 0;
 				$result["msg"] = "$fname $lname déjà utilisé (homonyme).";
 				$dbh = null;
 				return $result;
 		}
-		$sql = "UPDATE $tab_joueurs SET joueur='$joueur' , genre='$gender', prenom='$fname', nom='$lname', telephone='$phone', email='$email' where id='$idj';";
-		$sth = $dbh->query( $sql );
+		$sql = "UPDATE $tab_joueurs SET joueur=? , genre=?, prenom=?, nom=?, telephone=?, email=? where id=?;";
+		$sqlParams = [$joueur, $gender, $fname, $lname, $phone, $email, $idj];
+		$sth = securityQuery($dbh, $sql, $sqlParams);
 		$result['success'] = 1;
 		$result['msg'] = $gender . " " . $fname . " " . $lname . " est à jour.";
 		$dbh = null;

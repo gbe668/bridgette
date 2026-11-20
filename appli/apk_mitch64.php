@@ -28,6 +28,7 @@ $_SESSION['back64'] = $back64;
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/jquery.mobile-1.5.0-rc1.min.js"></script>
 	<script src="/js/bridge65.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -235,7 +236,7 @@ document.addEventListener('visibilitychange', function (event) {
 			print htmlResultatPaquet($idtournoi, $numNS, $oldEO );
 			$enableswipe = 1;
 			
-			setCnxFin( $numtable );
+			renderCnxFin( $numtable );
 			print "<p>La table $numtable a terminé le tournoi.</p>";
 			print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</button></p>';
 			print "<p><button class='mySmallButton' onclick='gotoindex()'>Retour page d'accueil</button></p>";

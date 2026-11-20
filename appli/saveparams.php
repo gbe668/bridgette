@@ -7,12 +7,17 @@ if( !isDirecteur() ){
 	echo "Durée session directeur écoulée !"; 
 }
 else {
-	$jsonparms  = $_POST['jsonparms'];
-	if ( file_put_contents( $file_params, $jsonparms ) ){
+	try {
+		clubParametersSave($file_params, $_POST['jsonparms'] ?? null);
 		logevent("saveparams");
 		echo "Enregistrement terminé.";
 	}
-	else {
+	catch (InvalidArgumentException $e) {
+		http_response_code(400);
+		echo $e->getMessage();
+	}
+	catch (Throwable $e) {
+		http_response_code(500);
 		echo "Erreur écriture fichier de paramètres !";
 	}
 }

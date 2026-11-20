@@ -23,16 +23,17 @@ $joueur = getJoueur( $idjoueur );
 	<script src="js/bridge30.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto30() {
 	var nextstring = "bridge30.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function supprimerjoueur( indice ) {
 	$("#deljoueur").text( oldjoueurs[indice] );

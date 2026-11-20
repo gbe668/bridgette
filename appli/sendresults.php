@@ -30,14 +30,14 @@ function send_mailpwd( $sujet, $dests, $body ) {
 	//$mail->SMTPOptions = array('ssl' => array('verify_peer' => false,'verify_peer_name' => false,'allow_self_signed' => true)); // ignorer l'erreur de certificat.
 	
 	//Recipients
-	$mail->setFrom( $config['mail_setFrom'], 'Bridgette' );
+	$mail->setFrom( $config['mail_setFrom'], $config['titre'] );
 	
 	for ( $i = 0; $i < sizeof( $dests ); $i++ ) {
 		$mail->addAddress( $dests[$i] );               //Name is optional
 	}
 	
 	//$mail->addAddress('joe@example.net', 'Joe User');     //Add a recipient
-	//$mail->addReplyTo('bridgette@coiffier.org', 'Bridgette');
+	$mail->addReplyTo($config['mail_admin']);
 	if ( $parametres['mailcopie'] <> "" ) $mail->addCC( $parametres['mailcopie'] );
 	$mail->addBCC( $config['mail_admin'] );
 

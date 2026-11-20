@@ -28,6 +28,7 @@ $_SESSION['back64'] = $back64;
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/jquery.mobile-1.5.0-rc1.min.js"></script>
 	<script src="/js/bridge65.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -156,8 +157,8 @@ document.addEventListener('visibilitychange', function (event) {
 				print '<script>goto62();</script>';
 			}
 			else {
-				setCnxFin( $numNS );
-				setCnxFin( $numEO );
+				renderCnxFin( $numNS );
+				renderCnxFin( $numEO );
 				print "<p>La table $numtable a terminé le tournoi.</p>";
 				print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</button></p>';
 			}
@@ -207,15 +208,15 @@ document.addEventListener('visibilitychange', function (event) {
 				}
 				else {
 					print "<p><button class='myStartButton' onclick='goto63()'>Passez à la</br>donne suivante</button></p>";
-					if ( $teston > 0 ) print "TEST remplissage auto TEST<script>setTimeout( goto63, 1000 );</script>";
+					if ( $teston == 1 ) print "TEST remplissage auto TEST<script>setTimeout( goto63, 1000 );</script>";
 				}
 			}
 			else {
 				print htmlResultatPaquet($idtournoi, $numNS, $numEO );
 				$enableswipe = 1;
 				
-				setCnxFin( $numNS );
-				setCnxFin( $numEO );
+				renderCnxFin( $numNS );
+				renderCnxFin( $numEO );
 				print "<p>La table $numtable a terminé le tournoi.</p>";
 				print '<p><button class="myButton" onclick="goto66()">Affichage des résultats provisoires</button></p>';
 			}

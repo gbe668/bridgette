@@ -1,10 +1,12 @@
 <?php
 require("configuration.php");
 require("bridgette_bdd.php");
+if (securityPlayerMode() > 0) securityWebLogin();
 
 $resultIdent = getIdent();
 if ( $resultIdent['status'] == $ID_INCORRECT ) {
 	header("Location: loguserin.php");
+	exit;
 }
 else $userid = $resultIdent['userid'];
 
@@ -12,12 +14,13 @@ $idtournoi = existeTournoiNonClos(); // where etat = '$st_phase_init' or etat = 
 // Vérifiez si l'utilisateur est connecté, sinon redirigez-le vers la page de connexion
 if( !isCheckedJoueur($idtournoi) ) {
 	header("Location: checkjoueur.php");
+	exit;
 }
 
-function htmlPositionsHowell($idtype, $pns, $npos, $paquet) {
+function htmlPositionsHowell($idtype, $pns, $npos, $paquet, $ndonnes) {
 	$tab = "<h3>Howell $pns paires</h3>";
 	for ( $i = 1; $i <= $npos; $i++ ) {
-		$tab .= "<p>".htmlPositionHowell($idtype, $pns, $i, $paquet)."</p>";
+		$tab .= "<p>".htmlPositionHowell($idtype, $pns, $i, $paquet, $ndonnes)."</p>";
 	}
 	return $tab;
 }
@@ -33,6 +36,7 @@ function htmlPositionsHowell($idtype, $pns, $npos, $paquet) {
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -45,39 +49,39 @@ var t_howell = 2;
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function loguserout() {
 	var nextstring = "loguserout.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto20() {
 	var nextstring = "bridge20.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto25() {
 	var nextstring = "bridge25.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto59() {
 	var nextstring = "bridge59.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto60() {
 	var nextstring = "bridge60.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto61m() {
 	var nextstring = "mitch61.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 }
 function goto61h() {
 	var nextstring = "howell61.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto66() {
 	var nextstring = "bridge66.php?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function waitPhaseJeu() {
 	$.get( "getetattournoi.php", {idtournoi:idtournoi}, function( strjson ) {
@@ -168,12 +172,13 @@ function affposprov() {
 		
 		if ( $etat == $st_phase_jeu ) {
 			print "<h2>Tournoi en cours !</h2>";
-			$idtype = $t['idtype'];
-			$genre  = $t['genre'];
-			$paquet	= $t['paquet'];
-			$pns	= $t['pairesNS'];
-			$peo	= $t['pairesEO'];
-			$desc	= $t['desc'];
+			$idtype  = $t['idtype'];
+			$genre   = $t['genre'];
+			$ndonnes = $t['ndonnes'];
+			$paquet	 = $t['paquet'];
+			$pns	 = $t['pairesNS'];
+			$peo	 = $t['pairesEO'];
+			$desc	 = $t['desc'];
 			print "<p>$desc</p>";
 			
 			if ( $genre == $t_mitchell )
@@ -188,7 +193,7 @@ function affposprov() {
 			print "<div style='text-align:center; margin:auto; max-width:350px;' id='realtour'>&nbsp;</div>";
 			if ( $genre == $t_howell ) {
 				$npos = $t['npositions'];
-				print htmlPositionsHowell($idtype, $pns, $npos, $paquet);
+				print htmlPositionsHowell($idtype, $pns, $npos, $paquet, $ndonnes);
 			}
 			print "<p><button onclick='cdemoins()'>Masque positions</button></p>";
 			print "</div>";

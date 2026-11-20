@@ -18,6 +18,7 @@ if( !isDirecteur() ){
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -25,27 +26,27 @@ idtournoi  = 0;
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto30() {	// gestion joueurs
 	var nextstring = "bridge30.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto31() {	// ajout d'un nouveau joueur
 	var nextstring = "bridge31.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto33() {
 	var nextstring = "bridge33.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto34() {	// modif / suppression d'un joueur
 	var nextstring = "bridge34.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function exportcsv() {
 	$.get( "f30joueurs2csv.php", function(csvStr) {

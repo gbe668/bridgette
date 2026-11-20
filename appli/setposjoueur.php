@@ -22,13 +22,15 @@ else {
 	
 	if ( $oldtable <> 0 ) {
 		// désélection de l'ancien numéro
-		$sql = "UPDATE $tab_connexions SET stconnexion = '$cnx_ko' where id = '$oldtable';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_connexions SET stconnexion = ? where id = ?;";
+		$sqlBound = [$cnx_ko, $oldtable];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 	if ( $stconn[ $newtable ] == $cnx_ko ) {
 		// case grise, on passe à case occupée
-		$sql = "UPDATE $tab_connexions SET stconnexion = '$cnx_ok' where id = '$newtable';";
-		$res = $dbh->query($sql);
+		$sql = "UPDATE $tab_connexions SET stconnexion = ? where id = ?;";
+		$sqlBound = [$cnx_ok, $newtable];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 			
 		$ok = "Table " . $newtable . " sélectionnée";
 	}

@@ -13,18 +13,21 @@ function updatePoints( $idt, $dd, $ns, $eo, $points ) {
 	$dbh->query("START TRANSACTION;");
 	
 	// test donne déjà enregistrée
-	$sql = "SELECT count(*) from $tab_donnes where idtournoi='$idt' and etui='$dd' and ns='$ns' and eo='$eo';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) from $tab_donnes where idtournoi=? and etui=? and ns=? and eo=?;";
+	$sqlParams = [$idt, $dd, $ns, $eo];
+	$res = securityQuery($dbh, $sql, $sqlParams);
 	if ( $res->fetchColumn() > 0 ) {
-		$sql = "UPDATE $tab_donnes SET points = '$points' where idtournoi='$idt' and etui='$dd' and ns='$ns' and eo='$eo';";
-		$sth = $dbh->query( $sql );
+		$sql = "UPDATE $tab_donnes SET points = ? where idtournoi=? and etui=? and ns=? and eo=?;";
+		$sqlParams = [$points, $idt, $dd, $ns, $eo];
+		$sth = securityQuery($dbh, $sql, $sqlParams);
 		$display_string = "Enregistrement mis à jour.";
 	}
 	else {
 		// donne non enregistrée
-		$sql = "INSERT into $tab_donnes ( idtournoi, etui, ns, eo, contrat, jouepar, entame, resultat, points ) values ( '$idt', '$dd', '$ns', '$eo', '-', '-', '-', '-', '$points' );";
-		print $sql;
-		$sth = $dbh->query( $sql );
+		$sql = "INSERT into $tab_donnes ( idtournoi, etui, ns, eo, contrat, jouepar, entame, resultat, points ) values ( ?, ?, ?, ?, '-', '-', '-', '-', ? );";
+		$sqlParams = [$idt, $dd, $ns, $eo, $points];
+
+		$sth = securityQuery($dbh, $sql, $sqlParams);
 		$display_string = "Enregistrement terminé.";
 	}
 	$dbh->query("COMMIT;");

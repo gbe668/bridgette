@@ -12,8 +12,9 @@ function deleteJoueur( $idj ) {
 	global $tab_joueurs;
 	if ( $idj ) {
 		$dbh = connectBDD();
-		$sql = "DELETE from $tab_joueurs where id='$idj';";
-		$sth = $dbh->query( $sql );
+		$sql = "DELETE from $tab_joueurs where id=?;";
+		$sqlBound = [$idj];
+		$sth = securityQuery($dbh, $sql, $sqlBound);
 		$result['success'] = 1;
 		$result['msg'] = "Joueur supprimé.";
 		$dbh = null;

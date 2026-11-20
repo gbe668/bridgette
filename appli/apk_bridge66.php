@@ -10,6 +10,7 @@ require("bridgette_bdd.php");
 	<title>Apk Bridg'ette</title>
     <meta charset="UTF-8">
 	<link href="/css/bridgestylesheet.css" rel="stylesheet" />
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>

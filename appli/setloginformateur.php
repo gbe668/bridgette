@@ -1,42 +1,20 @@
 <?php
-	require("configuration.php");
-	require("bridgette_bdd.php");
-
-	if ( isset($_POST['pseudo']) ){
-		$pseudo = stripslashes($_REQUEST['pseudo']);
-		$pseudo = htmlspecialchars($pseudo);
-		
-		$password = stripslashes($_REQUEST['password']);
-		$password = htmlspecialchars($password);
-		
-		$dbh = connectBDD();
-		$sql = "SELECT count(*) FROM `$tab_directeurs` WHERE pseudo = '$pseudo';";
-		$res = $dbh->query($sql);
-		$nbl = $res->fetchColumn();
-		if ( $nbl > 0 ) {
-			// pseudonyme déjà enregistré, vérification mot de passe
-			$sql = "SELECT count(*) FROM `$tab_directeurs` WHERE pseudo = '$pseudo' and password = '".hash('sha256', $password)."';";
-			$res = $dbh->query($sql);
-			$nbl = $res->fetchColumn();
-			if ( $nbl == 1 ) {
-				$message =  "Vous êtes déjà enregistré.";
-			}
-			else {
-				$message =  "Erreur, pseudo déjà utilisé.";
-			}
-		}
-		else {
-			// nouveau pseudonyme
-			$sql = "INSERT into `$tab_directeurs` (pseudo, password, droits) VALUES ('$pseudo', '".hash('sha256', $password)."', 'formateur');";
-			$res = $dbh->query($sql);
-			if($res){
-				$message = "Formateur enregistré !";
-				header("Location: admin.php");
-				exit();
-			}
-		}
-		$dbh = null;
-	}
+require("configuration.php"); require("bridgette_bdd.php");
+if (isset($_POST['pseudo'])) {
+    $pseudo = is_string($_POST['pseudo']) ? htmlspecialchars(stripslashes($_POST['pseudo'])) : '';
+    $password = $_POST['password'] ?? null;
+    if (!bridgettePasswordInput($password)) $message = 'Mot de passe vide ou trop long (maximum 1024 octets).';
+    else {
+        $dbh = connectBDD();
+        $rows = securityQuery($dbh, "SELECT * FROM `$tab_directeurs` WHERE pseudo = ?", [$pseudo])->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows) {
+            $message = count($rows) === 1 && bridgettePasswordVerify($password, $rows[0]['password']) ? 'Vous êtes déjà enregistré.' : 'Erreur, pseudo déjà utilisé.';
+        } else {
+            securityQuery($dbh, "INSERT INTO `$tab_directeurs` (pseudo, password, droits) VALUES (?, ?, ?)", [$pseudo, bridgettePasswordHash($password), 'formateur']);
+            header('Location: admin.php'); exit;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -47,12 +25,13 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "admin.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 
@@ -67,7 +46,7 @@ function gotoindex() {
 	<h2>Nouveau formateur du club</br>Entrez les identifiants de connexion</h2>
 	<p>&nbsp;</p>
 
-	<form action="" method="post" name="login">
+	<form action="" method="post" name="login"><?php securityCsrfField(); ?>
 	<p><input type="text" class="box-input" name="pseudo" id="pseudo" placeholder="Pseudo formateur" required ></p>
 	<p><input type="password" class="box-input" name="password" placeholder="Mot de passe" required ></p>
 	

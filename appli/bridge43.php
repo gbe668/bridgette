@@ -21,16 +21,17 @@ if( !isDirecteur() ){
 	<script src="js/bridge43.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function stoptournoi() {
 	$.get( "stoptournoi.php?", {idtournoi:idtournoi}, function(strjson) {
@@ -41,33 +42,33 @@ function goto41() {	// Oups ! Il manque une paire
 	$.get("setphaseinit.php?", { idtournoi:idtournoi }, function(strjson) {
 		if ( strjson.res == st_phase_init ) {
 			var nextstring = "bridge41.php?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
-			location.replace( nextstring );
+			bridgetteNavigate( nextstring );
 		}
 	},"json");
 };
 function goto44() {
 	var nextstring = (genre == t_mitchell) ? "mitch44.php" : "howell44.php";
 	nextstring += "?idtournoi=" + idtournoi+ "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto43c() {		// correction d'une donne
 	var etui = $("#etui").text();
 	var nextstring = "bridge43c.php?idtournoi=" + idtournoi + "&etui=" + etui;
 	console.log( nextstring );
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto46() {
 	var etui = $("#etui").text();
 	var nextstring = "bridge46.php?idtournoi=" + idtournoi + "&etui=" + etui;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto61() {
 	var nextstring = 'mitch61.php?idtournoi=' + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function reload() {
 	var nextstring = "bridge43.php?idtournoi=" + idtournoi + "&etui=" + etui + "&w=" +  window.innerWidth;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function refreshConnexions() {
 	// mise à jour connexions

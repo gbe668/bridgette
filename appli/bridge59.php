@@ -22,6 +22,7 @@ require("lib59.php");
 	echo '<script src="'.$relpgm.'js/bridge63.js" ></script>';
 	?>
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
@@ -29,7 +30,7 @@ var relimg = "<?php echo $relimg; ?>";
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 

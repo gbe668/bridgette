@@ -116,6 +116,17 @@ function diag_keyboard() {
 	str += "</tbody></table>";
 	return str;
 }
+function raz_cartes() {
+	cartesP = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ];	// 13 cartes, As au rang 0
+	cartesC = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ];
+	cartesK = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ];
+	cartesT = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ];
+	cartes = [ cartesP, cartesC, cartesK, cartesT ];
+	for ( let i = 1; i <= 16; i++ ) {
+		ligne = "#ligne_" + i;
+		$(ligne).text( "" );
+	}
+}
 function displaydeal( deal, etui ) {
 	var ligne, enmain;
 	var points = [0,0,0,0,0];
@@ -213,6 +224,7 @@ function initcanselect() {
 }
 var leftwidth = '2.5pt';
 function setfocus( n ) {
+	console.log( "setfocus ", n );
 	if ( n > 12) return;
 	var ligne, key;
 	noligne = parseInt( n );
@@ -258,7 +270,6 @@ function downfocus() {
 	setfocus( noligne );
 }
 
-var msgvalidok = "<span style='color:red'>Attention: le calcul des contrats possibles suivi de l'enregistrement des diagrammes peut durer plusieurs secondes ...</span>"
 function testtermine() {
 	// test nb cartes pour les 3 joueurs N, E, S
 	let nb1 = calculnbcartes(1);
@@ -273,14 +284,13 @@ function testtermine() {
 		buildDealField();
 		$("#msg").text( "Vérifier la main d'Ouest" );
 		$("#section_validiags").show();
-		$("#validok").html( msgvalidok );
 		var elmnt = document.getElementById("msg");
 		elmnt.scrollIntoView();
 		return true;
 	}
 	else {
 		$("#section_validiags").hide();
-		$("#validok").html( "Attente fin d'entrée des diagrammes" );
+		$("#validok").html( "Attente fin d'entrée du diagramme" );
 		return false;
 	}
 }
@@ -367,11 +377,64 @@ function buildDealField() {
 		}
 	}
 }
-function clickValidiags( myCallback ) {
+var msgvalidok = "<span style='color:red'>Attention: le calcul des contrats possibles suivi de l'enregistrement des diagrammes peut durer plusieurs secondes ...</span>"
+function clickValidiags1( myCallback ) {
 	$("#section_inputdiags").hide();
 	$("#section_validiags").hide();
-	
-	let start = Date.now();
+	$("#validok").html( msgvalidok );
+	// affichage display
+	setTimeout( function() {
+		let start = Date.now();
+		
+		// Calcul des contrats possibles, reformate la chaine pour avoir le donneur en premier
+		let etui = etuis[donne];
+		let deal = dealfield.slice(2).split(' ');
+		let validDealers = "NESW";
+		
+		let index = etui[1]-1;	// N:0
+		let str = validDealers[index];
+		str += ":";
+		for (let j=0; j<4; j++) {
+			str += deal[index];
+			if (j!=3) str += " ";
+			index++;
+			if (index==4) index=0;
+		}
+		/**
+		 * board is a PBN-formatted string (e.g. 'N:AKQJ.T98.76.432 ...')
+		 * Returns an object mapping strain -> player -> makeable tricks, e.g.
+		 * {'N': {'N': 1, 'S': 2, 'E': 3, 'W': 4}, 'S': { ... }, ...}
+		 */
+		console.log( "deal reformatté", str );
+		let DDTable = calcDDTable(str);
+		console.log( DDTable );
+		
+		// codage pour la bdd
+		let tabi = ['N','S', 'H', 'D', 'C'];
+		let tabj = ['N', 'S', 'E', 'W'];
+		let dds = "";
+		for ( let j in tabj ) {
+			for ( let i in tabi ) {
+				let value = DDTable[tabi[i]][tabj[j]];
+				dds += String.fromCharCode(97 + value);
+			}
+		}
+		
+		let delta = Date.now() - start;
+		console.log( "dds", dds, "delta", delta );
+		
+		// Enregistrement du diagramme
+		$.get( relpgm+"f65setdiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield, dds:dds },
+		function(strjson) {
+			$('#validok').html( strjson.display + " en "+delta+" ms" );
+			setTimeout( function() { myCallback(); }, 1000 );
+		},"json");
+	}, 100 );
+};
+function clickcorrectiondiags1(myCallback) {
+	$("#section_inputdiags").hide();
+	$("#section_validiags").hide();
+	$("#tstvalidok").show();
 	
 	// Calcul des contrats possibles, reformate la chaine pour avoir le donneur en premier
 	let etui = etuis[donne];
@@ -387,12 +450,8 @@ function clickValidiags( myCallback ) {
 		index++;
 		if (index==4) index=0;
 	}
-	/**
-	 * board is a PBN-formatted string (e.g. 'N:AKQJ.T98.76.432 ...')
-	 * Returns an object mapping strain -> player -> makeable tricks, e.g.
-	 * {'N': {'N': 1, 'S': 2, 'E': 3, 'W': 4}, 'S': { ... }, ...}
-	 */
 	console.log( "deal reformatté", str );
+	
 	let DDTable = calcDDTable(str);
 	console.log( DDTable );
 	
@@ -406,24 +465,171 @@ function clickValidiags( myCallback ) {
 			dds += String.fromCharCode(97 + value);
 		}
 	}
-	
-	let delta = Date.now() - start;
-	console.log( "dds", dds, "delta", delta );
+	console.log( "dds", dds );
 	
 	// Enregistrement du diagramme
-	$.get( relpgm+"f65setdiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield, dds:dds },
-	function(strjson) {
-		$('#validok').html( strjson.display + " en "+delta+" ms" );
-		setTimeout( function() { myCallback(); }, 1000 );
-	},"json");
+	$.get( relpgm+"f65upddiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield, dds:dds }, function(strjson) {
+		$('#validok').html( strjson.display );
+		myCallback();
+	},"json")
+	.done( function() {
+		// do nothing
+	})
+	.fail( function( jqxhr,settings,ex ) {
+		// do nothing
+	});
 };
+
+/**
+ * Demande au worker de calculer la table DD pour un PBN donné.
+ * Retourne une Promise résolue avec { dds, delta }.
+ */
+function calcDDTableAsync(donne, pbnStr) {
+    return new Promise((resolve, reject) => {
+        const handler = function (e) {
+            if (e.data.type === 'result' && e.data.donne === donne) {
+                ddsWorker.removeEventListener('message', handler);
+                resolve({ dds: e.data.dds, delta: e.data.delta });
+            } else if (e.data.type === 'error') {
+                ddsWorker.removeEventListener('message', handler);
+                reject(new Error(e.data.message));
+            }
+        };
+        ddsWorker.addEventListener('message', handler);
+        ddsWorker.postMessage({ donne: donne, pbn: pbnStr });
+    });
+}
+
+function clickValidiags(myCallback) {
+    $("#section_inputdiags").hide();
+    $("#section_validiags").hide();
+    $("#validok").html(msgvalidok);
+
+    setTimeout(function () {
+        let start = Date.now();
+
+        // Reformatage du donne, inchangé par rapport à votre code actuel
+        let etui = etuis[donne];
+        let deal = dealfield.slice(2).split(' ');
+        let validDealers = "NESW";
+
+        let index = etui[1] - 1;
+        let str = validDealers[index];
+        str += ":";
+        for (let j = 0; j < 4; j++) {
+            str += deal[index];
+            if (j != 3) str += " ";
+            index++;
+            if (index == 4) index = 0;
+        }
+
+        console.log("deal reformatté", str);
+
+        // Calcul via le Worker WASM au lieu de calcDDTable(str) en JS pur
+        calcDDTableAsync(donne, str).then(function (res) {
+            let delta = Date.now() - start;
+            console.log("dds", res.dds, "delta (total, worker inclus)", delta, "delta (calcul pur)", res.delta);
+
+            $.get(relpgm + "f65setdiagramme.php",
+                { idtournoi: idtournoi, donne: donne, diagramme: dealfield, dds: res.dds },
+                function (strjson) {
+                    $('#validok').html(strjson.display + " en " + delta + " ms");
+                    setTimeout(function () { myCallback(); }, 1000);
+                }, "json");
+        }).catch(function (err) {
+            console.error("Erreur DDS worker", err);
+            $('#validok').html("Erreur de calcul DDS : " + err.message);
+        });
+
+    }, 100);
+}
+
+function clickcorrectiondiags(myCallback) {
+	$("#section_inputdiags").hide();
+	$("#section_validiags").hide();
+	$("#tstvalidok").show();
+	
+	// Calcul des contrats possibles, reformate la chaine pour avoir le donneur en premier
+	let etui = etuis[donne];
+	let deal = dealfield.slice(2).split(' ');
+	let validDealers = "NESW";
+	
+	let index = etui[1]-1;	// N:0
+	let str = validDealers[index];
+	str += ":";
+	for (let j=0; j<4; j++) {
+		str += deal[index];
+		if (j!=3) str += " ";
+		index++;
+		if (index==4) index=0;
+	}
+	console.log( "deal reformatté", str );
+	/*
+	let DDTable = calcDDTable(str);
+	console.log( DDTable );
+	
+	// codage pour la bdd
+	let tabi = ['N','S', 'H', 'D', 'C'];
+	let tabj = ['N', 'S', 'E', 'W'];
+	let dds = "";
+	for ( let j in tabj ) {
+		for ( let i in tabi ) {
+			let value = DDTable[tabi[i]][tabj[j]];
+			dds += String.fromCharCode(97 + value);
+		}
+	}
+	console.log( "dds", dds );
+	
+	// Enregistrement du diagramme
+	$.get( relpgm+"f65upddiagramme.php", { idtournoi:idtournoi, donne:donne, diagramme:dealfield, dds:dds }, function(strjson) {
+		$('#validok').html( strjson.display );
+		myCallback();
+	},"json")
+	.done( function() {
+		// do nothing
+	})
+	.fail( function( jqxhr,settings,ex ) {
+		// do nothing
+	});
+	*/
+	// Calcul via le Worker WASM au lieu de calcDDTable(str) en JS pur
+	let start = Date.now();
+	calcDDTableAsync(donne, str).then(function (res) {
+		let delta = Date.now() - start;
+		console.log("dds", res.dds, "delta (total, worker inclus)", delta, "delta (calcul pur)", res.delta);
+
+		$.get(relpgm + "f65upddiagramme.php",
+			{ idtournoi: idtournoi, donne: donne, diagramme: dealfield, dds: res.dds },
+			function (strjson) {
+				$('#validok').html(strjson.display);
+				myCallback();
+			}, "json");
+	})
+	.catch(function (err) {
+		console.error("Erreur DDS worker", err);
+		$('#validok').html("Erreur de calcul DDS : " + err.message);
+	});
+};
+function deletediags(idt, dd, myCallback) {
+	$.get( relpgm+"f65deldiagramme.php", { idtournoi:idt, donne:dd }, function(strjson) {
+		$('#validok').html( strjson.display );
+		myCallback();
+	},"json")
+	.done( function() {
+		// do nothing
+	})
+	.fail( function( jqxhr,settings,ex ) {
+		// do nothing
+	});
+}
+function donothing() {
+}
 
 $(document).ready(function() {
 	// click ligne
 	$('td.xsmallDigit').click(function(event) {
 		if ( edition ) {
 			var id = event.target.id;
-			//console.log( "id", id );
 			const figs = id.split('_');
 			switch ( figs[0] ) {
 				case "ligne": {
@@ -718,4 +924,139 @@ function autoDiagramme() {
 	displaydeal( deck.dealfield, 0 )
 	initcanselect();
 	setfocus( 1 );
+}
+
+// ajout affichage résultat analyse - 30/072025
+var pbnfile = false;
+var pbnExportPending = false;
+function onPbnExportResult(success) {
+	pbnExportPending = false;
+	$("#btnexpdds").prop("disabled", false);
+	if (success) {
+		pbnfile = true;
+		$("#btndds").show();
+		$("#btnexpdds").hide();
+	}
+}
+function downloadFile(str, fileType, fileName) {
+	if (typeof Android !== "undefined" && typeof Android.savePbn === "function") {
+		pbnExportPending = true;
+		$("#btnexpdds").prop("disabled", true);
+		try {
+			Android.savePbn(str);
+		} catch (error) {
+			onPbnExportResult(false);
+			alert("Impossible de lancer l'enregistrement du fichier PBN.");
+		}
+		return false; // Android confirme l'enregistrement de façon asynchrone.
+	}
+	var blob = new Blob([str], { type: fileType });
+	var a = document.createElement('a');
+	a.download = fileName;
+	a.href = URL.createObjectURL(blob);
+	a.click();
+	a.remove();
+	return true;
+}
+function exportDDSolver() {
+	console.log( "exportDDSolver" );
+	if ( !pbnfile && !pbnExportPending ) {
+		var suits = ["NT"," S"," H"," D"," C"];
+		var declarer = "NSEW";
+		let validDealers = "-NESW";
+		var i,j,k;
+		var str="";
+		var n = diagrammes.length;
+		if ( n > 0 ) {
+			str += "% PBN 2.1\r\n";
+			str += "% EXPORT\r\n";
+			str += "%Content-type: text/x-pbn; charset=ISO-8859-1\r\n";
+			str += "%Creator: Bridge Solver Online\r\n";
+			str += "[Site \""+ club +"\"]\r\n";
+			str += "[Event \"Tournoi du "+ datef +"\"]\r\n";
+			//str += "[Date \"\"]\r\n";
+			
+			for ( i=0; i< n; i++ ) 	{
+				let diagramme = diagrammes[i];
+				let boardName = diagramme.etui;
+				
+				let etui = etuis[boardName];
+				let dealer = validDealers[etui[1]];
+				let v = etui[2]+etui[3]*2;
+				let vul;
+				switch( v ) {
+					case 0: vul="None";	break;
+					case 1: vul="NS";	break;
+					case 2: vul="EW";	break;
+					case 3: vul="All";	break;
+				}
+				
+				str += "[Board \"" + boardName + "\"]\r\n";
+				//str += "[West \"\"]\r\n";
+				//str += "[North \"\"]\r\n";
+				//str += "[East \"\"]\r\n";
+				//str += "[South \"\"]\r\n";
+				str += "[Dealer \"" + dealer + "\"]\r\n";
+				str += "[Vulnerable \"" + vul + "\"]\r\n";
+				
+				var deal = diagramme.deal.slice(2).split(' ');
+				
+				str += "[Deal \"" + dealer.charAt(0) + ":";
+				
+				//var dealer = g_hands.boards[i].Dealer.charAt(0);
+				
+				var index = 0;
+				
+				if (dealer=='N') index = 0;
+				else if (dealer=='E') index = 1;
+				else if (dealer=='S') index = 2;
+				else index = 3;
+				
+				for (j=0;j<4;j++) {
+					str += deal[index];
+					if (j!=3) str += " ";
+					index++;
+					if (index==4) index=0;
+				}
+				
+				str += "\"]\r\n";
+				
+				//str += "[Scoring \"\"]\r\n";
+				//str += "[Declarer \"\"]\r\n";
+				//str += "[Contract \"\"]\r\n";
+				//str += "[Result \"\"]\r\n";
+
+				str += "\r\n";
+			}
+			
+			//log("button=save");
+			if (downloadFile(str, "text/pbn", "boards.pbn")) {
+				onPbnExportResult(true);
+			}
+		}
+		else {
+			alert("Aucun diagramme enregistré pour ce tournoi !");
+		}
+	}
+}
+function DDSolver() {
+	if (typeof Android !== "undefined" && typeof Android.openDDSolver === "function") {
+		Android.openDDSolver();
+		return;
+	}
+	open( "https://dds.bridgewebs.com/bsol_standalone/ddummy.htm", "_blank" );
+}
+
+// Lecture d'une donne commune aux résultats web et Android (état 21).
+function requestResultat21() {
+    $.get(relpgm + 'f64getresultatdonne.php?', {idtournoi: idtournoi, etui: actuel, ns: selns, eo: seleo}, function(result) {
+        showresultat(result);
+    }, 'json').fail(function(jqxhr, settings, ex) { console.log('Erreur: ' + ex); });
+}
+function key_select(nbr) {
+    actuel += parseInt(nbr);
+    if (actuel < 1) actuel = 1;
+    if (actuel > ndonnes) actuel = ndonnes;
+    $('#etui').text(actuel);
+    requestResultat21();
 }

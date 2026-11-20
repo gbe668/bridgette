@@ -17,8 +17,9 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 	$dbh = connectBDD();
 	// test adresse mail déjà utilisée
 	if ( $email !== "" ) { 
-		$sql = "SELECT count(*) from $tab_joueurs where email='$email';";
-		$nbl = $dbh->query($sql)->fetchColumn();
+		$sql = "SELECT count(*) from $tab_joueurs where email=?;";
+		$sqlParams = [$email];
+		$nbl = securityQuery($dbh, $sql, $sqlParams)->fetchColumn();
 		if ( $nbl > 0 ) {
 			$result["msg"] = "Email $email déjà utilisé.";
 			$dbh = null;
@@ -27,12 +28,14 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 	}
 	
 	// test joueur déjà connu
-	$sql = "SELECT count(*) from $tab_joueurs where prenom='$fname' and nom='$lname';";
-	$nbl = $dbh->query($sql)->fetchColumn();
+	$sql = "SELECT count(*) from $tab_joueurs where prenom=? and nom=?;";
+	$sqlParams = [$fname, $lname];
+	$nbl = securityQuery($dbh, $sql, $sqlParams)->fetchColumn();
 	if ( $nbl == 0 ) {
 		// rechercher un numéro club disponible
-		$sql = "SELECT count(*) FROM $tab_joueurs where numero >= '$min_noclub' and numero < '$max_noclub' order by numero;";
-		$nbl = $dbh->query($sql)->fetchColumn();
+		$sql = "SELECT count(*) FROM $tab_joueurs where numero >= ? and numero < ? order by numero;";
+		$sqlParams = [$min_noclub, $max_noclub];
+		$nbl = securityQuery($dbh, $sql, $sqlParams)->fetchColumn();
 		if ( $nbl == 0 ) {
 			// le 1er joueur à s'enregistrer
 			$prevnum = $min_noclub;
@@ -41,8 +44,9 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 		}
 		else {
 			// pour les joueurs suivants
-			$sql = "SELECT numero FROM $tab_joueurs where numero >= '$min_noclub' and numero < '$max_noclub' order by numero;";
-			$sth = $dbh->query( $sql );
+			$sql = "SELECT numero FROM $tab_joueurs where numero >= ? and numero < ? order by numero;";
+			$sqlParams = [$min_noclub, $max_noclub];
+			$sth = securityQuery($dbh, $sql, $sqlParams);
 			
 			$prevnum = $min_noclub;		// point de départ de la recherche d'un trou entre les numéros déjà attribués
 			for ( $i = 0; $i < $nbl; $i++ ) {
@@ -67,8 +71,9 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 		
 		if ( $result["ok"] == 1 ) {
 			// enregistrer le joueur
-			$sql = "INSERT into $tab_joueurs ( numero, joueur, genre, prenom, nom, telephone,email, password ) values ( '$prevnum', '$joueur', '$gender', '$fname', '$lname', '$phone', '$email', '$password' );";
-			$sth = $dbh->query( $sql );
+			$sql = "INSERT into $tab_joueurs ( numero, joueur, genre, prenom, nom, telephone,email, password ) values ( ?, ?, ?, ?, ?, ?, ?, ? );";
+			$sqlParams = [$prevnum, $joueur, $gender, $fname, $lname, $phone, $email, $password];
+			$sth = securityQuery($dbh, $sql, $sqlParams);
 			if ( $gender == "Me" ) $result["msg"] = "$fname $lname est enregistrée.";
 			else $result["msg"] = "$fname $lname est enregistré.";
 		}
@@ -78,17 +83,21 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 			$datesupp = $date->getTimestamp();	// date du jour
 			$dureemin = 86400*30*$del_noclub;	// $del_noclub exprimé en mois
 			$datesupp = $datesupp - $dureemin;
-			$sql = "SELECT count(*) FROM $tab_joueurs where datesupp < '$datesupp' and datesupp > 0 order by numero;";
-			$nbl = $dbh->query($sql)->fetchColumn();
+			$sql = "SELECT count(*) FROM $tab_joueurs where datesupp < ? and datesupp > 0 order by numero;";
+			$sqlParams = [$datesupp];
+			$nbl = securityQuery($dbh, $sql, $sqlParams)->fetchColumn();
 			if ( $nbl > 0 ) {
-				$sql = "SELECT id, numero FROM $tab_joueurs where datesupp < '$datesupp' and datesupp > 0 order by numero;";
-				$sth = $dbh->query( $sql );
+				$sql = "SELECT id, numero FROM $tab_joueurs where datesupp < ? and datesupp > 0 order by numero;";
+				$sqlParams = [$datesupp];
+				$sth = securityQuery($dbh, $sql, $sqlParams);
 				$row = $sth->fetch(PDO::FETCH_ASSOC);
 				$idj = $row[ 'id' ];
 				$numero = $row[ 'numero' ];
 				
-				$sql = "UPDATE $tab_joueurs SET joueur='$joueur', genre='$gender', prenom='$fname', nom='$lname', telephone='$phone', email='$email', password='$password', datesupp=0 where id='$idj';";
-				$sth = $dbh->query( $sql );
+				$sql = "UPDATE $tab_joueurs SET joueur=?, genre=?, prenom=?, nom=?, telephone=?, email=?, password=?, datesupp=0 where id=?;";
+				
+				$sqlParams = [$joueur, $gender, $fname, $lname, $phone, $email, $password, $idj];
+				$sth = securityQuery($dbh, $sql, $sqlParams);
 				$result["ok"] = 1;
 				$result["noclub"] = $numero;
 				if ( $gender == "Me" ) $result[2] = "$joueur est enregistrée.";
@@ -104,8 +113,9 @@ function insertJoueur( $gender, $fname, $lname, $phone, $email, $password ) {
 	else {
 		$result["ok"] = 0;
 		if ( $nbl == 1 ) {	// un seul joueur heureusement, recherche numéro
-			$sql = "SELECT numero, joueur from $tab_joueurs where genre='$gender' and prenom='$fname' and nom='$lname';";
-			$sth = $dbh->query( $sql );
+			$sql = "SELECT numero, joueur from $tab_joueurs where genre=? and prenom=? and nom=?;";
+			$sqlParams = [$gender, $fname, $lname];
+			$sth = securityQuery($dbh, $sql, $sqlParams);
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
 			$result["noclub"] = $row[ 'numero' ];
 			$joueur = $row[ 'joueur' ];

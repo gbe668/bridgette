@@ -24,11 +24,12 @@ $vuleo = $row[ 'vuleo' ];
 $info = getinfoetui( $etui );
 
 // resultats donnes
-$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = '$idtournoi' and etui='$etui';";
-$res = $dbh->query($sql);
+$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = ? and etui=?;";
+$sqlBound = [$idtournoi, $etui];
+$res = securityQuery($dbh, $sql, $sqlBound);
 $nbl = $res->fetchColumn();
 if ( $nbl > 0 ) { 
-	$sth = $dbh->query( "SELECT * FROM $tab_donnes where idtournoi = '$idtournoi' and etui='$etui' order by ns;" );
+	$sth = securityQuery($dbh, "SELECT * FROM $tab_donnes where idtournoi = ? and etui=? order by ns;", [$idtournoi, $etui]);
 	for ( $i = 0; $i < $nbl; $i++ ) {
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$tab1[$i] = $row['ns'];

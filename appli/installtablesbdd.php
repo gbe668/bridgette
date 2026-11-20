@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/security.php';
 $sql_createbdd ="create database IF NOT EXISTS $db_name character set UTF8 collate utf8_general_ci;";
 
 $sql_directeurs = "CREATE TABLE IF NOT EXISTS $tab_directeurs (
@@ -59,36 +60,42 @@ $sql_connexions = "CREATE TABLE IF NOT EXISTS $tab_connexions (
 	
 $sql_pairesNS = "CREATE TABLE IF NOT EXISTS $tab_pairesNS (
 	id INT primary key not null auto_increment,
-    idtournoi INT,
+	idtournoi INT NOT NULL,
 	num INT,
-    idj1 INT, 	/* indice joueur 1 */
+	idj1 INT, 	/* indice joueur 1 */
 	idj3 INT,
-	noteg DECIMAL(5,2)
+	noteg DECIMAL(5,2),
+	
+	INDEX idx_idtournoi (idtournoi)
 	);";
 	
 $sql_pairesEO = "CREATE TABLE IF NOT EXISTS $tab_pairesEO (
 	id INT primary key not null auto_increment,
-    idtournoi INT,
-    num INT,
-    idj2 INT,
-    idj4 INT,
-	noteg DECIMAL(5,2)
+	idtournoi INT NOT NULL,
+	num INT,
+	idj2 INT,
+	idj4 INT,
+	noteg DECIMAL(5,2),
+	
+	INDEX idx_idtournoi (idtournoi)
 	);";
 
 $sql_donnes = "CREATE TABLE IF NOT EXISTS $tab_donnes (
 	id INT primary key not null auto_increment,
-    idtournoi INT,
-    etui INT,
+	idtournoi INT NOT NULL,
+	etui INT,
 	ns INT,
 	eo INT,
-    contrat VARCHAR(10),
-    jouepar VARCHAR(5),
-    entame VARCHAR(5),
-    resultat VARCHAR(5),
-    points INT,
-    rang float,
-    note float,
-	hweo TINYINT not null default 0
+	contrat VARCHAR(10),
+	jouepar VARCHAR(5),
+	entame VARCHAR(5),
+	resultat VARCHAR(5),
+	points INT,
+	rang float,
+	note float,
+	hweo TINYINT not null default 0,
+	
+	INDEX idx_idtournoi (idtournoi)
 	);";
 
 $sql_diagrammes = "CREATE TABLE IF NOT EXISTS $tab_diagrammes (
@@ -100,7 +107,9 @@ $sql_diagrammes = "CREATE TABLE IF NOT EXISTS $tab_diagrammes (
 	h2 INT,
 	h3 INT,
 	h4 INT,
-	dds VARCHAR(32) default null		/* ajout 30/07/2025 */
+	dds VARCHAR(32) default null,		/* ajout 30/07/2025 */
+	
+	INDEX idx_idtournoi (idtournoi)
 	);";
 
 $sql_events = "CREATE TABLE IF NOT EXISTS $tab_events (
@@ -113,40 +122,25 @@ $sql_events = "CREATE TABLE IF NOT EXISTS $tab_events (
 function droptablesbdd($dbh) {
 	global $tab_directeurs, $tab_joueurs, $tab_tournois, $tab_pairesNS, $tab_pairesEO, $tab_donnes, $tab_diagrammes, $tab_connexions, $tab_events;
 	
-	try { $sql = "DROP TABLE $tab_directeurs;"; $sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_joueurs;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_tournois;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_pairesNS;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_pairesEO;";	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_donnes;";		$sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_diagrammes;"; $sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_connexions;"; $sth = $dbh->query( $sql ); } catch (Exception $e) {}
-	try { $sql = "DROP TABLE $tab_events;"; 	$sth = $dbh->query( $sql ); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_directeurs;"; $sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_joueurs;";	$sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_tournois;";	$sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_pairesNS;";	$sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_pairesEO;";	$sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_donnes;";		$sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_diagrammes;"; $sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_connexions;"; $sth = $dbh->query($sql); } catch (Exception $e) {}
+	try { $sql = "DROP TABLE $tab_events;"; 	$sth = $dbh->query($sql); } catch (Exception $e) {}
 }
 
-function init_tab_directeurs($dbh) {
-	global $tab_directeurs;
-	// test table déjà remplie
-	$sql = "Select count(*) from $tab_directeurs;";
-	$res = $dbh->query($sql);
-	$nbl = $res->fetchColumn();
-	if ( $nbl > 0 ) return;
-	// au moins 1 admin
-	$sql = "Insert into $tab_directeurs( pseudo, password, droits ) values 
-	( 'zorglub', '32783cef30bc23d9549623aa48aa8556346d78bd3ca604f277d63d6e573e8ce0', 'admin' ),
-	( 'admin', '863e1627716dbfc8eae82381bbcb5c840ef268304991364fb19801c1d77cea07', 'admin' );";
-	// le premier directeur zorglub est masqué
-	// pwd zorglub: backdoor
-	// pwd admin:	bridgette
-	$res = $dbh->query( $sql );
-};
 function init_tab_joueurs($dbh) {
 	global $tab_joueurs, $max_tables, $debinvites;
 	$max_guests = $max_tables * 4 +4;
 	$txt_position = ["Nord","Est","Sud","Ouest"];
 	// test table déjà remplie
 	$sql = "Select count(*) from $tab_joueurs;";
-	$res = $dbh->query($sql);
+	$sqlBound = [];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) return;
 	// base vide
@@ -158,15 +152,17 @@ function init_tab_joueurs($dbh) {
 		$pos = $i%4;
 		$prenom = $txt_position[$pos];
 		$nom = "Table " . (intval($i/4)+1);
-		$sql = "Insert into $tab_joueurs ( numero, joueur, genre, prenom, nom ) values ( '$numero', '$joueur', '$genre', '$prenom', '$nom' );";
-		$res = $dbh->query( $sql );
+		$sql = "Insert into $tab_joueurs ( numero, joueur, genre, prenom, nom ) values ( ?, ?, ?, ?, ? );";
+		$sqlBound = [$numero, $joueur, $genre, $prenom, $nom];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 	}
 };
 function init_tab_connexions($dbh) {
 	global $tab_connexions;
 	// test table déjà remplie
 	$sql = "Select count(*) from $tab_connexions;";
-	$res = $dbh->query($sql);
+	$sqlBound = [];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) return;
 	// base vide
@@ -175,6 +171,8 @@ function init_tab_connexions($dbh) {
 	(5,0,0,0,0,0,0,0),  (6,0,0,0,0,0,0,0),  (7,0,0,0,0,0,0,0),  (8,0,0,0,0,0,0,0),
 	(9,0,0,0,0,0,0,0),  (10,0,0,0,0,0,0,0), (11,0,0,0,0,0,0,0), (12,0,0,0,0,0,0,0),
 	(13,0,0,0,0,0,0,0), (14,0,0,0,0,0,0,0), (15,0,0,0,0,0,0,0);";
-	$res = $dbh->query( $sql );
+	$sqlBound = [];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 };
 ?>
+

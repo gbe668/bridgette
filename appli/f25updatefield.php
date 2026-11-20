@@ -7,8 +7,9 @@ function updatePhone( $idj, $phone ) {
 	$result = [];
 	if ( $idj ) {
 		$dbh = connectBDD();
-		$sql = "UPDATE $tab_joueurs SET telephone='$phone' where id='$idj';";
-		$sth = $dbh->query( $sql );
+		$sql = "UPDATE $tab_joueurs SET telephone=? where id=?;";
+		$sqlParams = [$phone, $idj];
+		$sth = securityQuery($dbh, $sql, $sqlParams);
 		$result['success'] = 1;
 		$result['msg'] = "Numéro téléphone enregistré.";
 		$dbh = null;
@@ -27,25 +28,29 @@ function updateMail( $idj, $email ) {
 		$dbh = connectBDD();
 		// test adresse mail nulle
 		if ( $email == "" ) {
-			$sql = "UPDATE $tab_joueurs SET email='$email' where id='$idj';";
-			$dbh->query( $sql );
+			$sql = "UPDATE $tab_joueurs SET email=? where id=?;";
+			$sqlParams = [$email, $idj];
+			securityQuery($dbh, $sql, $sqlParams);
 			$result['success'] = 1;
 			$result['msg'] = "Mail effacé.";
 		}
 		else {
 			// test adresse mail déjà utilisée
-			$sql = "SELECT count(*) from $tab_joueurs where email='$email';";
-			$nbl = $dbh->query($sql)->fetchColumn();
+			$sql = "SELECT count(*) from $tab_joueurs where email=?;";
+			$sqlParams = [$email];
+			$nbl = securityQuery($dbh, $sql, $sqlParams)->fetchColumn();
 			switch( $nbl ) {
 				case 0:
-					$sql = "UPDATE $tab_joueurs SET email='$email' where id='$idj';";
-					$dbh->query( $sql );
+					$sql = "UPDATE $tab_joueurs SET email=? where id=?;";
+					$sqlParams = [$email, $idj];
+					securityQuery($dbh, $sql, $sqlParams);
 					$result['success'] = 1;
 					$result['msg'] = "Nouveau mail enregistré.";
 					break;
 				case 1: 
-					$sql = "SELECT * from $tab_joueurs where email='$email';";
-					$sth = $dbh->query($sql);
+					$sql = "SELECT * from $tab_joueurs where email=?;";
+					$sqlParams = [$email];
+					$sth = securityQuery($dbh, $sql, $sqlParams);
 					$row = $sth->fetch(PDO::FETCH_ASSOC);
 					if ( $row['id'] == $idj ) {
 						$result["msg"] = "$email inchangé.";

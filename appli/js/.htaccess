@@ -1,0 +1,11 @@
+# Corrige le type MIME des fichiers .wasm, requis pour que les
+# navigateurs puissent utiliser la compilation WebAssembly "streaming"
+# (plus rapide) au lieu de la méthode de secours ArrayBuffer.
+#
+# A placer dans le dossier où se trouvent dds.js / dds.wasm / ddsWorker.js
+# (pas forcément à la racine du site : un .htaccess s'applique au dossier
+# où il est déposé et à ses sous-dossiers).
+
+<IfModule mod_mime.c>
+    AddType application/wasm .wasm
+</IfModule>

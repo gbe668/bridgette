@@ -12,11 +12,12 @@ function getclosedtournois() {
 	global $tab_tournois, $st_closed, $parametres;
 	global $nbl, $idtournois, $datetournois, $npairess, $genres, $st_typetournoi;
 	$dbh = connectBDD();
-	$sql = "SELECT count(*) FROM $tab_tournois where etat = '$st_closed';";
-	$res = $dbh->query($sql);
+	$sql = "SELECT count(*) FROM $tab_tournois where etat = ?;";
+	$sqlBound = [$st_closed];
+	$res = securityQuery($dbh, $sql, $sqlBound);
 	$nbl = $res->fetchColumn();
 	if ( $nbl > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_tournois where etat = '$st_closed' order by tournoi desc, id;" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_tournois where etat = ? order by tournoi desc, id;", [$st_closed]);
 		$nbl = min( $nbl, $parametres['maxt'] );
 		for ( $i = 0; $i < $nbl; $i++ ) {
 			$row = $sth->fetch(PDO::FETCH_ASSOC);
@@ -69,6 +70,7 @@ function displayLignesTournois() {
 	<link  href="/css/jquery-ui.css" rel="stylesheet" >
 	<script src="/js/jquery-3.6.0.min.js"></script>
 	<script src="/js/jquery-ui-1.13.2.min.js"></script>
+<?php securityCsrfHead(); ?>
 </head>
 
 <style>

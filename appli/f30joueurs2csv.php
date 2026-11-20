@@ -13,17 +13,19 @@ if( !isDirecteur() ){
 $tt = date('Y-m-d');
 $strdate = strdatet( $tt );
 
-$sql1 = "SELECT count(*) FROM $tab_joueurs where numero >= '$min_noclub';";
-$sql2 = "SELECT * FROM $tab_joueurs where numero >= '$min_noclub' order by nom;";
+$sql1 = "SELECT count(*) FROM $tab_joueurs where numero >= ?;";
+$sql1Bound = [$min_noclub];
+$sql2 = "SELECT * FROM $tab_joueurs where numero >= ? order by nom;";
+$sql2Bound = [$min_noclub];
 
 $dbh = connectBDD();
-$res = $dbh->query( $sql1 );
+$res = securityQuery($dbh, $sql1, $sql1Bound);
 $nbl = $res->fetchColumn();
 if ( $nbl > 0 ) { 
 	$str = "$nbl joueurs à la date du $strdate" . "\n";
 	$str .= "Numéro,M/Me,Prénom,Nom,Tél.,email,supp\n";
 
-	$sth = $dbh->query( $sql2 );
+	$sth = securityQuery($dbh, $sql2, $sql2Bound);
 	for ( $i = 0; $i < $nbl; $i++ ) {
 		$row = $sth->fetch(PDO::FETCH_ASSOC);
 		$str .= $row[ 'numero' ] . ',';

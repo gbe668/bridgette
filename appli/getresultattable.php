@@ -22,20 +22,22 @@ $dbh = connectBDD();
 // resultats de la table spécifiée
 if ( $eo > 0 ) {
 	// avec la paire eo spécifiée
-	$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = '$idtournoi' and ns='$ns' ans eo='$eo';";
+	$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = ? and ns=? and eo=?;";
+	$sqlBound = [$idtournoi, $ns, $eo];
 }
 else {
 	// tous les résultats de la table
-	$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = '$idtournoi' and ns='$ns';";
+	$sql = "SELECT count(*) FROM $tab_donnes where idtournoi = ? and ns=?;";
+	$sqlBound = [$idtournoi, $ns];
 }
-$res = $dbh->query($sql);
+$res = securityQuery($dbh, $sql, $sqlBound);
 $nbl = $res->fetchColumn();
 if ( $nbl > 0 ) {
 	if ( $eo > 0 ) {
-		$sth = $dbh->query( "SELECT * FROM $tab_donnes where idtournoi = '$idtournoi' and ns='$ns' ans eo='$eo' order by etui;" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_donnes where idtournoi = ? and ns=? and eo=? order by etui;", [$idtournoi, $ns, $eo]);
 	}
 	else {
-		$sth = $dbh->query( "SELECT * FROM $tab_donnes where idtournoi = '$idtournoi' and ns='$ns' order by etui;" );
+		$sth = securityQuery($dbh, "SELECT * FROM $tab_donnes where idtournoi = ? and ns=? order by etui;", [$idtournoi, $ns]);
 	}
 	for ( $i = 0; $i < $nbl; $i++ ) {
 		$row = $sth->fetch(PDO::FETCH_ASSOC);

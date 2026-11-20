@@ -19,19 +19,20 @@ $opendays = $parametres['opendays'];
 	<script src="js/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
-var parametres = <?php echo json_encode($parametres); ?>;
+var parametres = <?php echo json_encode($parametres, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 console.log( <?php echo $opendays['mardi']; ?> );
 
 function gotoindex() {
 	var nextstring = "bridgette.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function goto40() {
 	var nextstring = "bridge40.php";
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 function isNumeric(x) {
 	return (parseFloat(x) == x);
@@ -242,14 +243,6 @@ function verifSyntaxe() {
 		$("#param1").focus();
 		return false;
 	}
-	str = $("#param2").val();
-	if ( isNumeric(str) ) {
-		parametres.param2 = parseInt( str );
-	}
-	else {
-		//$("#msgerr1").text( "Erreur param2" );
-		//return false;
-	}
 	return true;
 }
 function saveparams() {
@@ -262,7 +255,7 @@ function saveparams() {
 			$("#msgerr1").html(strjson);
 		},"text")
 		//.done( function() { $("#msgerr1").html( "Enregistrement terminé." ); } )
-		.fail( function( jqxhr, settings, ex ) { $("#msgerr1").html('Erreur: '+ ex ); } );
+		.fail( function( jqxhr, settings, ex ) { $("#msgerr1").text(jqxhr.responseText || ('Erreur: '+ ex)); } );
 	}
 };
 </script>
@@ -274,7 +267,7 @@ function saveparams() {
 	<h2>Paramétrage application</h2>
 	<table border="0" style="margin:auto;"><tbody>
 	<tr><td colspan="2" style="background-color:lightgreen;">Mail en copie des résultats</td></tr>
-	<tr><td colspan="2"><input type="text" id="mailcopie" name="mailcopie" value="<?php echo $parametres['mailcopie'] ?>"  placeholder="adresse mail" size="40"></td></tr>
+	<tr><td colspan="2"><input type="text" id="mailcopie" name="mailcopie" value="<?php echo htmlspecialchars($parametres['mailcopie'], ENT_QUOTES, 'UTF-8') ?>"  placeholder="adresse mail" size="40"></td></tr>
 	
 	<tr><td colspan="2" style="background-color:lightgreen;">Ouverture du club</td></tr>
 	<tr><td colspan="2" class="defparm">
@@ -306,12 +299,13 @@ function saveparams() {
 	<tr><td class="defparm">Largeur chronomètre grand écran</br>exprimé en % fenêtre:</br><em>défaut 50%, min 20%, max 80%</em></td><td class="valparm"><input type="text" id="sizpix" name="sizpix" value="<?php echo $parametres['sizpix'] ?>" size="2"> %</td></tr>
 
 	<tr><td colspan="2" style="background-color:lightgreen;">Fonctions optionnelles</td></tr>
-	<tr><td class="defparm">Demande du code pour</br>rejoindre le tournoi en cours</br>pour les joueurs:</td>
+	<tr><td class="defparm">Demande du code pour</br>rejoindre le tournoi en cours</br>sur le site web (pas dans l’application Android):</td>
 	<td class="valparm">Oui<input type="radio" id="codey" name="checkin" <?php echo ($parametres['checkin']==1)?'checked':'' ?> value="1"></br>Non<input type="radio" id="coden" name="checkin" <?php echo ($parametres['checkin']==0)?'checked':'' ?> value="0"></td></tr>
 	
 	<tr><td class="defparm">Identification des joueurs pour rejoindre le tournoi en cours:</br>
-	Oui, seulement Membres du club</br>
-	Oui, seulement Participants</td>
+	Non : aucune connexion joueur demandée sur le site web</br>
+	M : membre du club, même non inscrit (prêt de téléphone possible)</br>
+	P : participant inscrit au tournoi</td>
 	<td class="valparm"></br>
 	Non<input type="radio" id="checkuser0" name="checkuser" <?php echo ($parametres['checkuser']==0)?'checked':'' ?> value="0"></br>
 	M<input type="radio" id="checkuser1" name="checkuser" <?php echo ($parametres['checkuser']==1)?'checked':'' ?> value="1"></br>

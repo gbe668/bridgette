@@ -17,12 +17,13 @@ if( !isDirecteur() ){
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="css/bridgestylesheet.css" />
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+<?php securityCsrfHead(); ?>
 </head>
 
 <script>
 function goto41() {
 	var nextstring = "bridge41.php?idtournoi=" + idtournoi;
-	location.replace( nextstring );
+	bridgetteNavigate( nextstring );
 };
 </script>
 
@@ -44,14 +45,16 @@ function goto41() {
 	for ( $i = 1; $i <= $maxlignesNS; $i++ ) {
 		$idj1 = $i*4 -3;
 		$idj3 = $idj1 + 2;
-		$sql = "INSERT $tab_pairesNS ( idtournoi, num, idj1, idj3 ) VALUES ( '$idtournoi', '$i', '$idj1', '$idj3' );";
-		$res = $dbh->query($sql);
+		$sql = "INSERT $tab_pairesNS ( idtournoi, num, idj1, idj3 ) VALUES ( ?, ?, ?, ? );";
+		$sqlBound = [$idtournoi, $i, $idj1, $idj3];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		};
 	for ( $i = 1; $i <= $maxlignesEO; $i++ ) {
 		$idj2 = $i*4 -2;
 		$idj4 = $idj2 + 2;
-		$sql = "INSERT $tab_pairesEO ( idtournoi, num, idj2, idj4 ) VALUES ( '$idtournoi', '$i', '$idj2', '$idj4' );";
-		$res = $dbh->query($sql);
+		$sql = "INSERT $tab_pairesEO ( idtournoi, num, idj2, idj4 ) VALUES ( ?, ?, ?, ? );";
+		$sqlBound = [$idtournoi, $i, $idj2, $idj4];
+		$res = securityQuery($dbh, $sql, $sqlBound);
 		};
 	$dbh = null;
 	?>
