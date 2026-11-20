@@ -38,7 +38,6 @@ function loadFunction($file, $name) {
     eval($body);
 }
 foreach (['_logevent', '_getJoueur', 'getListeJoueurs', 'htmlAnnuaire', 'getClassement', '_razCnxTables', '_getlignes', 'set_etat'] as $name) loadFunction('bridgette_bdd.php', $name);
-loadFunction('getannuaire.php', 'getAnnuaire');
 foreach (['joueurs','tournois','pairesNS','pairesEO','events','connexions'] as $table) ${'tab_'.$table} = 'tst_'.$table;
 $min_noclub = 100; $max_tables = 15; $cnx_ko = 0; $st_closed = 4;
 $_SESSION = ['pseudo' => "O'Brien"];
@@ -47,11 +46,25 @@ _logevent($db, $attack);
 _getJoueur($db, $attack);
 foreach (['', "O'Brien", $attack] as $filter) {
     foreach ([1, 2, 3] as $list) {
-        getListeJoueurs($list, $attack, $filter);
-        getAnnuaire($list, 'nom', $filter);
+        foreach (['nom', 'nbfois', 'tournoi', $attack] as $order) {
+            getListeJoueurs($list, $order, $filter);
+            [$sql, $args] = end($db->queries);
+            $expectedOrder = ['nom'=>'nom', 'nbfois'=>'nbfois', 'tournoi'=>'tournoi desc, nom'][$order] ?? 'nom';
+            if (!str_contains($sql, 'ORDER BY '.$expectedOrder.';') ||
+                $args !== array_merge([$min_noclub], $filter === '' ? [] : [$filter.'%'])) {
+                throw new RuntimeException('Player list order/filter bindings');
+            }
+        }
     }
 }
-htmlAnnuaire();
+foreach ([false, true] as $withEmail) {
+    htmlAnnuaire($withEmail);
+    [$sql, $args] = end($db->queries);
+    $fields = 'SELECT id, prenom, nom, telephone'.($withEmail ? ', email' : '');
+    if (!preg_match('/^'.preg_quote($fields, '/').'\s+FROM\b/', $sql) || $args !== [$min_noclub]) {
+        throw new RuntimeException('Directory email projection or club bindings');
+    }
+}
 $parametres = ['nbmperf' => $attack, 'minperf' => 15, 'nbjperf' => 10];
 ob_start(); getClassement(); ob_end_clean();
 _razCnxTables($db);

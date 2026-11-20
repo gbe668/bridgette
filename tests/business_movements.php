@@ -4,7 +4,6 @@ $t_unknown = 0; $t_mitchell = 1; $t_howell = 2;
 $st_position = [0=>'???',1=>'Nord',2=>'Est',3=>'Sud',4=>'Ouest'];
 $st_vulnerable = [0=>'Personne vulnérable',1=>'Nord-Sud vulnerables',2=>'Est-Ouest vulnerables',3=>'Tous vulnérables'];
 require_once __DIR__.'/../appli/libmouvements.php';
-require_once __DIR__.'/../appli/libmouvements.php';
 set_error_handler(function ($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
@@ -15,6 +14,7 @@ function movementSame($actual, $expected, $label) {
     if ($actual !== $expected) throw new RuntimeException($label.': '.var_export($actual, true));
 }
 $snapshots = [];
+$howellPackets = [4=>6, 5=>4, 6=>5, 7=>7, 8=>7, 32=>9, 33=>9, 34=>11, 35=>11];
 $types = array_merge(range(4,30), [32,33,34,35,47,48]);
 foreach ($types as $id) {
     $tt = gettypetournoi($id);
@@ -22,19 +22,30 @@ foreach ($types as $id) {
     $isHowell = $tt['genre'] === $t_howell;
     if ($isHowell) {
         movementSame(computetype($tt['npaires'], 0), $id, 'Howell type '.$id);
+        movementSame($tt['npaquets'], $howellPackets[$id], 'Howell packet stock '.$id);
+        movementSame($tt['maxpaquet'], intdiv(36, $howellPackets[$id]), 'Howell packet limit '.$id);
+        if (in_array($id, [34,35], true)) {
+            movementSame($tt['npositions'], 9, 'default rounds '.$id);
+            movementSame($tt['maxpos'], 11, 'maximum rounds '.$id);
+        }
     } else {
         $pns = $tt['ntables']; $peo = $tt['npaires'] - $pns;
         movementSame(computetype($pns, $peo), $id, 'Mitchell type '.$id);
     }
     for ($packet = 1; $packet <= $tt['maxpaquet']; $packet++) {
-        $values = [$tt, getmaxpositions($id, $packet)];
+        // The new stock field is checked independently above; keep historical
+        // fingerprints comparable for otherwise unchanged catalogue entries.
+        $catalogueSnapshot = $tt;
+        unset($catalogueSnapshot['npaquets']);
+        $values = [$catalogueSnapshot, getmaxpositions($id, $packet)];
         if ($isHowell) {
-            // Include all rounds present in the schedules, even the historical
-            // 11/12-pair rounds beyond the catalogue's nine playable positions.
-            $rounds = $tt['npaires'] >= 11 ? 11 : $tt['npositions'];
+            // Exercise the complete schedule, including optional rounds 10/11.
+            $rounds = $tt['maxpos'];
+            $stock = $howellPackets[$id] * $packet;
             for ($round = 1; $round <= $rounds; $round++) {
                 for ($pair = 1; $pair <= $tt['npaires']; $pair++) {
                     $p = getposhowell($id, $pair, $round, $packet);
+                    movementSame($p['last'] >= 0 && $p['last'] + $packet <= $stock, true, 'boards within stock');
                     $values[] = $p;
                     if ((int)$p['adversaire'] > 0) {
                         $other = getposhowell($id, (int)$p['adversaire'], $round, $packet);
@@ -45,7 +56,12 @@ foreach ($types as $id) {
                     }
                 }
                 $values[] = getrelaishowell($id, $round, $packet);
-                $values[] = htmlPositionHowell($id, $tt['npaires'], $round, $packet);
+                $html = htmlPositionHowell($id, $tt['npaires'], $round, $packet, $stock);
+                // Fixed regression: eleven pairs must keep packet 11 (31–33).
+                if ($id === 34 && $round === 4 && $packet === 3) {
+                    movementSame(str_contains($html, ">6</td><td class='xNum3'>4</td><td class='xNum3'>EO</td><td class='xNum3'>31-33</td>"), true, 'Howell 11 rendered packet 11');
+                }
+                $values[] = $html;
             }
             for ($first = 1; $first <= 36; $first += $packet) {
                 $values[] = getfeuillesuivihowell($id, $packet, $first);

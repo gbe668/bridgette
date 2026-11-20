@@ -19,6 +19,9 @@ for path in files:
 print(f'{len(files)} PHP files: syntax OK', flush=True)
 subprocess.run([node, str(root/'tests/business_median.cjs')], check=True)
 subprocess.run([node, str(root/'tests/business_web_android.cjs')], check=True)
+for name in ['android_phone.cjs', 'android_dds_export.cjs', 'howell_packets.cjs', 'security_csrf_js.cjs']:
+    subprocess.run([node, str(root/'tests'/name)], cwd=root, check=True)
+subprocess.run([php, '-n', str(root/'tests/howell_packets.php')], check=True)
 subprocess.run([php, '-n', str(root/'tests/business_calculations.php')], check=True)
 subprocess.run([php, '-n', str(root/'tests/business_movements.php')], check=True)
 subprocess.run([php, '-n', str(root/'tests/business_results.php')], check=True)

@@ -8,19 +8,27 @@ function securityAndroidRequire() {
     return 7;
 }
 $source = file_get_contents(__DIR__.'/../appli/apk_bridgette.php');
-$start = strpos($source, '$apk_code_request = 9;');
+// Find an executable assignment, ignoring obsolete values in comments.
+$offset = 0; $start = false;
+foreach (token_get_all($source) as $token) {
+    if (is_array($token) && $token[0] === T_VARIABLE && $token[1] === '$apk_code_request') {
+        $start = $offset; break;
+    }
+    $offset += strlen(is_array($token) ? $token[1] : $token);
+}
+if ($start === false) throw new RuntimeException('Executable version assignment not found');
 $end = strpos($source, '$joueur = getJoueur', $start);
 if ($start === false || $end === false) throw new RuntimeException('Startup block not found');
 $startup = substr($source, $start, $end - $start);
 foreach ([true, false] as $firstLogin) {
-    foreach ([8, 9, 10] as $version) {
+    foreach ([8, 9, 12, 13, 14] as $version) {
         $_SESSION = ['prefix' => 'test_'];
         $_GET = ['apk_code' => (string)$version, 'apk_name' => 'test'];
         eval($startup);
-        if (($_SESSION['apk_code'] ?? null) !== (string)$version ||
-            (($_SESSION['apk_code'] < $apk_code_request) !== ($version < 9))) {
+        if ($apk_code_request !== 13 || ($_SESSION['apk_code'] ?? null) !== (string)$version ||
+            (($_SESSION['apk_code'] < $apk_code_request) !== ($version < 13))) {
             throw new RuntimeException('Version lost: '.($firstLogin ? 'first login' : 'refresh').', '.$version);
         }
     }
 }
-echo "6 Android version startup cases passed\n";
+echo "10 Android version startup cases passed (legacy, below/at/above threshold 13)\n";
